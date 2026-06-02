@@ -155,133 +155,133 @@ export default function HomePage() {
         </div>
       </header>
 
-      {/* ========== HERO SECTION NEON ULTRA MODERNE - VIDÉO MAX ========== */}
-<section className="relative bg-black overflow-hidden">
-  {/* Effet de fond néon dynamique */}
-  <div className="absolute inset-0 bg-gradient-to-br from-black via-gray-950 to-black"></div>
-  
-  {/* Grille de fond lumineuse */}
-  <div className="absolute inset-0 bg-[linear-gradient(rgba(249,115,22,0.05)_1px,transparent_1px),linear-gradient(90deg,rgba(249,115,22,0.05)_1px,transparent_1px)] bg-[size:50px_50px]"></div>
-  
-  {/* Effet de lumière néon centrale */}
-  <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[800px] h-[800px] bg-orange-500/20 rounded-full blur-[120px] animate-pulse"></div>
-  
-  {/* Effet de faisceaux lumineux */}
-  <div className="absolute top-0 left-0 w-full h-full overflow-hidden">
-    <div className="absolute -top-40 -left-40 w-80 h-80 bg-orange-500/30 rounded-full blur-[80px] animate-pulse"></div>
-    <div className="absolute -bottom-40 -right-40 w-80 h-80 bg-orange-600/30 rounded-full blur-[80px] animate-pulse delay-1000"></div>
-    <div className="absolute top-1/2 left-1/4 w-40 h-40 bg-orange-400/20 rounded-full blur-[60px] animate-ping"></div>
-  </div>
-  
-  {/* Lignes néon décoratives */}
-  <div className="absolute top-0 left-0 w-full h-px bg-gradient-to-r from-transparent via-orange-500 to-transparent animate-pulse"></div>
-  <div className="absolute bottom-0 left-0 w-full h-px bg-gradient-to-r from-transparent via-orange-500 to-transparent animate-pulse"></div>
-
-  <div className="relative max-w-7xl mx-auto px-6 lg:px-8 py-16 lg:py-20 z-10">
-    <div className="grid lg:grid-cols-2 gap-8 items-center">
-      
-      {/* TEXTE GAUCHE - EFFET NEON */}
-      <div className="text-center lg:text-left space-y-5">
+      {/* ========== HERO SECTION NEON ULTRA MODERNE - VIDÉO CLOUDINARY ========== */}
+      <section className="relative bg-black overflow-hidden">
+        {/* Effet de fond néon dynamique */}
+        <div className="absolute inset-0 bg-gradient-to-br from-black via-gray-950 to-black"></div>
         
-        {/* Badge avec effet néon */}
-        <div className="inline-flex items-center gap-2 bg-orange-500/10 backdrop-blur-sm rounded-full px-4 py-2 border border-orange-500/50 shadow-[0_0_15px_rgba(249,115,22,0.3)]">
-          <span className="relative flex h-2.5 w-2.5">
-            <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75"></span>
-            <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-green-500 shadow-[0_0_8px_rgba(34,197,94,0.8)]"></span>
-          </span>
-          <span className="text-xs font-bold text-orange-400 tracking-wider drop-shadow-[0_0_4px_rgba(249,115,22,0.5)]">EXPERT EN RÉPARATION</span>
-        </div>
-
-        {/* Titre principal néon */}
-        <h1 className="text-4xl lg:text-6xl font-black leading-tight">
-          <span className="bg-gradient-to-r from-white via-gray-200 to-white bg-clip-text text-transparent drop-shadow-[0_0_20px_rgba(255,255,255,0.3)]">
-            Réparation pro
-          </span>
-          <span className="block text-transparent bg-clip-text bg-gradient-to-r from-orange-400 via-orange-500 to-orange-600 drop-shadow-[0_0_15px_rgba(249,115,22,0.5)] animate-pulse">
-            & pièces sur mobilax.fr
-          </span>
-        </h1>
-
-        {/* Description avec effet lumineux */}
-        <p className="text-gray-300 text-sm leading-relaxed max-w-xl mx-auto lg:mx-0 drop-shadow-[0_0_5px_rgba(0,0,0,0.5)]">
-          <span className="text-orange-400 font-semibold">✨ Envoyez votre appareil par colis</span>, nous le réparons et vous pouvez commander vos accessoires, coques, chargeurs et pièces détachées. 
-          <span className="block mt-1 text-orange-300 font-medium text-xs">📦 Le tout retourné ensemble dans le même colis !</span>
-        </p>
-
-        {/* Bouton vidéo néon */}
-        <div className="flex flex-col sm:flex-row gap-4 justify-center lg:justify-start pt-2">
-          <button
-            onClick={() => setShowVideo(true)}
-            className="group relative flex items-center justify-center gap-2 px-6 py-3 bg-black/50 backdrop-blur-sm border-2 border-orange-500 rounded-xl font-bold text-orange-400 transition-all duration-300 overflow-hidden shadow-[0_0_20px_rgba(249,115,22,0.3)] hover:shadow-[0_0_35px_rgba(249,115,22,0.6)] hover:scale-105 text-sm"
-          >
-            <span className="absolute inset-0 bg-gradient-to-r from-orange-600 to-orange-500 opacity-0 group-hover:opacity-20 transition-opacity duration-300"></span>
-            <span className="relative z-10 flex items-center gap-2">
-              <span className="text-lg group-hover:animate-pulse">▶</span>
-              <span>REGARDER LA VIDÉO</span>
-            </span>
-          </button>
-        </div>
-
-        {/* Statistiques néon */}
-        <div className="flex flex-wrap gap-6 pt-6 justify-center lg:justify-start">
-          <div className="text-center">
-            <div className="text-xl mb-1">📱</div>
-            <div className="text-xl font-black text-orange-400 drop-shadow-[0_0_8px_rgba(249,115,22,0.5)]">10K+</div>
-            <div className="text-[10px] text-gray-400">Appareils réparés</div>
-          </div>
-          <div className="text-center">
-            <div className="text-xl mb-1">⭐</div>
-            <div className="text-xl font-black text-orange-400 drop-shadow-[0_0_8px_rgba(249,115,22,0.5)]">98%</div>
-            <div className="text-[10px] text-gray-400">Clients satisfaits</div>
-          </div>
-          <div className="text-center">
-            <div className="text-xl mb-1">⚡</div>
-            <div className="text-xl font-black text-orange-400 drop-shadow-[0_0_8px_rgba(249,115,22,0.5)]">24h</div>
-            <div className="text-[10px] text-gray-400">Délai moyen</div>
-          </div>
-        </div>
-      </div>
-
-      {/* VIDÉO À DROITE - AGRANDIE ET OPTIMISÉE */}
-      <div className="relative flex justify-center">
-        {/* Cadre néon extérieur - Plus grand */}
-        <div className="absolute -inset-6 bg-gradient-to-r from-orange-500 via-orange-400 to-orange-500 rounded-2xl blur-xl opacity-60 animate-pulse"></div>
-        <div className="absolute -inset-6 bg-gradient-to-r from-orange-500 via-orange-400 to-orange-500 rounded-2xl opacity-30 animate-spin-slow"></div>
-        <div className="absolute -inset-3 border-2 border-orange-500/50 rounded-2xl shadow-[0_0_40px_rgba(249,115,22,0.6)]"></div>
+        {/* Grille de fond lumineuse */}
+        <div className="absolute inset-0 bg-[linear-gradient(rgba(249,115,22,0.05)_1px,transparent_1px),linear-gradient(90deg,rgba(249,115,22,0.05)_1px,transparent_1px)] bg-[size:50px_50px]"></div>
         
-        {/* Conteneur vidéo - Plus grand */}
-        <div className="relative rounded-2xl overflow-hidden shadow-2xl w-full max-w-lg">
-          <video 
-            autoPlay
-            loop
-            muted
-            playsInline
-            className="relative rounded-2xl w-full h-auto object-cover border-2 border-orange-500/50"
-            style={{ maxHeight: "400px" }}
-          >
-            <source src="/video.mp4" type="video/mp4" />
-            <img src="/imagesoudure.png" alt="Réparation carte mère" className="w-full h-auto" />
-          </video>
-          
-          {/* Overlay néon sur la vidéo */}
-          <div className="absolute inset-0 bg-gradient-to-t from-orange-500/30 via-transparent to-transparent pointer-events-none"></div>
-          
-          {/* Badge lecture néon */}
-          <div className="absolute bottom-3 right-3 bg-black/70 backdrop-blur-md rounded-full px-2.5 py-1 border border-orange-500/50 shadow-[0_0_10px_rgba(249,115,22,0.3)]">
-            <span className="text-orange-400 text-[10px] font-bold flex items-center gap-1">
-              <span className="w-1.5 h-1.5 bg-red-500 rounded-full animate-pulse"></span>
-              MBX
-            </span>
-          </div>
+        {/* Effet de lumière néon centrale */}
+        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[800px] h-[800px] bg-orange-500/20 rounded-full blur-[120px] animate-pulse"></div>
+        
+        {/* Effet de faisceaux lumineux */}
+        <div className="absolute top-0 left-0 w-full h-full overflow-hidden">
+          <div className="absolute -top-40 -left-40 w-80 h-80 bg-orange-500/30 rounded-full blur-[80px] animate-pulse"></div>
+          <div className="absolute -bottom-40 -right-40 w-80 h-80 bg-orange-600/30 rounded-full blur-[80px] animate-pulse delay-1000"></div>
+          <div className="absolute top-1/2 left-1/4 w-40 h-40 bg-orange-400/20 rounded-full blur-[60px] animate-ping"></div>
         </div>
         
-        {/* Effets de particules néon */}
-        <div className="absolute -bottom-4 -left-4 w-16 h-16 bg-orange-500/20 rounded-full blur-2xl animate-pulse"></div>
-        <div className="absolute -top-4 -right-4 w-16 h-16 bg-orange-600/20 rounded-full blur-2xl animate-pulse delay-700"></div>
-      </div>
-    </div>
-  </div>
-</section>
+        {/* Lignes néon décoratives */}
+        <div className="absolute top-0 left-0 w-full h-px bg-gradient-to-r from-transparent via-orange-500 to-transparent animate-pulse"></div>
+        <div className="absolute bottom-0 left-0 w-full h-px bg-gradient-to-r from-transparent via-orange-500 to-transparent animate-pulse"></div>
+
+        <div className="relative max-w-7xl mx-auto px-6 lg:px-8 py-16 lg:py-20 z-10">
+          <div className="grid lg:grid-cols-2 gap-8 items-center">
+            
+            {/* TEXTE GAUCHE - EFFET NEON */}
+            <div className="text-center lg:text-left space-y-5">
+              
+              {/* Badge avec effet néon */}
+              <div className="inline-flex items-center gap-2 bg-orange-500/10 backdrop-blur-sm rounded-full px-4 py-2 border border-orange-500/50 shadow-[0_0_15px_rgba(249,115,22,0.3)]">
+                <span className="relative flex h-2.5 w-2.5">
+                  <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75"></span>
+                  <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-green-500 shadow-[0_0_8px_rgba(34,197,94,0.8)]"></span>
+                </span>
+                <span className="text-xs font-bold text-orange-400 tracking-wider drop-shadow-[0_0_4px_rgba(249,115,22,0.5)]">EXPERT EN RÉPARATION</span>
+              </div>
+
+              {/* Titre principal néon */}
+              <h1 className="text-4xl lg:text-6xl font-black leading-tight">
+                <span className="bg-gradient-to-r from-white via-gray-200 to-white bg-clip-text text-transparent drop-shadow-[0_0_20px_rgba(255,255,255,0.3)]">
+                  Réparation pro
+                </span>
+                <span className="block text-transparent bg-clip-text bg-gradient-to-r from-orange-400 via-orange-500 to-orange-600 drop-shadow-[0_0_15px_rgba(249,115,22,0.5)] animate-pulse">
+                  & pièces sur mobilax.fr
+                </span>
+              </h1>
+
+              {/* Description avec effet lumineux */}
+              <p className="text-gray-300 text-sm leading-relaxed max-w-xl mx-auto lg:mx-0 drop-shadow-[0_0_5px_rgba(0,0,0,0.5)]">
+                <span className="text-orange-400 font-semibold">✨ Envoyez votre appareil par colis</span>, nous le réparons et vous pouvez commander vos accessoires, coques, chargeurs et pièces détachées. 
+                <span className="block mt-1 text-orange-300 font-medium text-xs">📦 Le tout retourné ensemble dans le même colis !</span>
+              </p>
+
+              {/* Bouton vidéo néon */}
+              <div className="flex flex-col sm:flex-row gap-4 justify-center lg:justify-start pt-2">
+                <button
+                  onClick={() => setShowVideo(true)}
+                  className="group relative flex items-center justify-center gap-2 px-6 py-3 bg-black/50 backdrop-blur-sm border-2 border-orange-500 rounded-xl font-bold text-orange-400 transition-all duration-300 overflow-hidden shadow-[0_0_20px_rgba(249,115,22,0.3)] hover:shadow-[0_0_35px_rgba(249,115,22,0.6)] hover:scale-105 text-sm"
+                >
+                  <span className="absolute inset-0 bg-gradient-to-r from-orange-600 to-orange-500 opacity-0 group-hover:opacity-20 transition-opacity duration-300"></span>
+                  <span className="relative z-10 flex items-center gap-2">
+                    <span className="text-lg group-hover:animate-pulse">▶</span>
+                    <span>REGARDER LA VIDÉO</span>
+                  </span>
+                </button>
+              </div>
+
+              {/* Statistiques néon */}
+              <div className="flex flex-wrap gap-6 pt-6 justify-center lg:justify-start">
+                <div className="text-center">
+                  <div className="text-xl mb-1">📱</div>
+                  <div className="text-xl font-black text-orange-400 drop-shadow-[0_0_8px_rgba(249,115,22,0.5)]">10K+</div>
+                  <div className="text-[10px] text-gray-400">Appareils réparés</div>
+                </div>
+                <div className="text-center">
+                  <div className="text-xl mb-1">⭐</div>
+                  <div className="text-xl font-black text-orange-400 drop-shadow-[0_0_8px_rgba(249,115,22,0.5)]">98%</div>
+                  <div className="text-[10px] text-gray-400">Clients satisfaits</div>
+                </div>
+                <div className="text-center">
+                  <div className="text-xl mb-1">⚡</div>
+                  <div className="text-xl font-black text-orange-400 drop-shadow-[0_0_8px_rgba(249,115,22,0.5)]">24h</div>
+                  <div className="text-[10px] text-gray-400">Délai moyen</div>
+                </div>
+              </div>
+            </div>
+
+            {/* VIDÉO CLOUDINARY À DROITE */}
+            <div className="relative flex justify-center">
+              {/* Cadre néon extérieur */}
+              <div className="absolute -inset-6 bg-gradient-to-r from-orange-500 via-orange-400 to-orange-500 rounded-2xl blur-xl opacity-60 animate-pulse"></div>
+              <div className="absolute -inset-6 bg-gradient-to-r from-orange-500 via-orange-400 to-orange-500 rounded-2xl opacity-30 animate-spin-slow"></div>
+              <div className="absolute -inset-3 border-2 border-orange-500/50 rounded-2xl shadow-[0_0_40px_rgba(249,115,22,0.6)]"></div>
+              
+              {/* Conteneur vidéo */}
+              <div className="relative rounded-2xl overflow-hidden shadow-2xl w-full max-w-lg">
+                <video 
+                  autoPlay
+                  loop
+                  muted
+                  playsInline
+                  className="relative rounded-2xl w-full h-auto object-cover border-2 border-orange-500/50"
+                  style={{ maxHeight: "400px" }}
+                >
+                  <source src="https://res.cloudinary.com/dwzyavrgz/video/upload/v1780425459/video_hmrh3o.mov" type="video/mp4" />
+                  <img src="/imagesoudure.png" alt="Réparation carte mère" className="w-full h-auto" />
+                </video>
+                
+                {/* Overlay néon */}
+                <div className="absolute inset-0 bg-gradient-to-t from-orange-500/30 via-transparent to-transparent pointer-events-none"></div>
+                
+                {/* Badge MBX */}
+                <div className="absolute bottom-3 right-3 bg-black/70 backdrop-blur-md rounded-full px-2.5 py-1 border border-orange-500/50 shadow-[0_0_10px_rgba(249,115,22,0.3)]">
+                  <span className="text-orange-400 text-[10px] font-bold flex items-center gap-1">
+                    <span className="w-1.5 h-1.5 bg-red-500 rounded-full animate-pulse"></span>
+                    MBX
+                  </span>
+                </div>
+              </div>
+              
+              {/* Effets de particules */}
+              <div className="absolute -bottom-4 -left-4 w-16 h-16 bg-orange-500/20 rounded-full blur-2xl animate-pulse"></div>
+              <div className="absolute -top-4 -right-4 w-16 h-16 bg-orange-600/20 rounded-full blur-2xl animate-pulse delay-700"></div>
+            </div>
+          </div>
+        </div>
+      </section>
 
       {/* ========== MBX CENTRE DE RÉPARATION & FORMATION ========== */}
       <section id="centre" className="py-28 bg-gradient-to-br from-gray-900 via-gray-800 to-gray-900">

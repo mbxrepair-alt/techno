@@ -1,0 +1,391 @@
+[1mdiff --git a/app/repairs/[id]/page.js b/app/repairs/[id]/page.js[m
+[1mindex d32cc2e..924ac92 100644[m
+[1m--- a/app/repairs/[id]/page.js[m
+[1m+++ b/app/repairs/[id]/page.js[m
+[36m@@ -47,13 +47,20 @@[m [mexport default function RepairDetailPage() {[m
+   const [showEmailModal, setShowEmailModal] = useState(false);[m
+   const [emailTo, setEmailTo] = useState("");[m
+ [m
+[32m+[m[32m  // GESTION DES TECHNICIENS[m
+[32m+[m[32m  const [technicians, setTechnicians] = useState([]);[m
+[32m+[m[32m  const [selectedTechnician, setSelectedTechnician] = useState("");[m
+[32m+[m[32m  const [showTechModal, setShowTechModal] = useState(false);[m
+[32m+[m[32m  const [newTechName, setNewTechName] = useState("");[m
+[32m+[m
+   // Pour éviter les doublons d'historique[m
+   const lastSavedRef = useRef({[m
+     diagnostic: "",[m
+     repairDescription: "",[m
+     risks: "",[m
+     testsPassed: "",[m
+[31m-    finalPrice: 0[m
+[32m+[m[32m    finalPrice: 0,[m
+[32m+[m[32m    technician: ""[m
+   });[m
+ [m
+   const EMAILJS_PUBLIC_KEY = "DezSbYxdfKhdK_HlF";[m
+[36m@@ -61,7 +68,7 @@[m [mexport default function RepairDetailPage() {[m
+   const EMAILJS_TEMPLATE_ID = "template_9q8ge09";[m
+ [m
+   const quickActions = [[m
+[31m-    { status: "📤 Envoyé à l'atelier", label: "Envoyé", icon: "📤", color: "bg-blue-500", textColor: "text-white" },[m
+[32m+[m[32m    { status: "📤 Envoyé à l'atelier", label: "Envoyé", color: "bg-blue-500", textColor: "text-white" },[m
+     { label: "⏳ Attente validation client", status: "⏳ Attente validation client", color: "bg-amber-500", textColor: "text-white" },[m
+     { label: "🔐 Mot de passe incorrect", status: "🔐 Mot de passe incorrect", color: "bg-red-500", textColor: "text-white" },[m
+     { label: "📦 Attente pièce", status: "📦 Attente pièce", color: "bg-orange-500", textColor: "text-white" },[m
+[36m@@ -82,11 +89,37 @@[m [mexport default function RepairDetailPage() {[m
+         await loadRepair();[m
+         await loadHistorique();[m
+         await loadAllDataForSearch();[m
+[32m+[m[32m        await loadTechnicians();[m
+       }[m
+     };[m
+     init();[m
+   }, [id]);[m
+ [m
+[32m+[m[32m  const loadTechnicians = async () => {[m
+[32m+[m[32m    try {[m
+[32m+[m[32m      const user = await getCurrentUser();[m
+[32m+[m[32m      if (!user) return;[m
+[32m+[m[32m      const { data, error } = await supabase[m
+[32m+[m[32m        .from("technicians")[m
+[32m+[m[32m        .select("*")[m
+[32m+[m[32m        .eq("user_id", user.id)[m
+[32m+[m[32m        .eq("is_active", true);[m
+[32m+[m[32m      if (error) throw error;[m
+[32m+[m[32m      setTechnicians(data || []);[m
+[32m+[m[32m    } catch (error) {[m
+[32m+[m[32m      console.error("Erreur chargement techniciens:", error);[m
+[32m+[m[32m    }[m
+[32m+[m[32m  };[m
+[32m+[m
+[32m+[m[32m  const addTechnician = async () => {[m
+[32m+[m[32m    if (!newTechName.trim()) return;[m
+[32m+[m[32m    const user = await getCurrentUser();[m
+[32m+[m[32m    await supabase.from("technicians").insert([{ name: newTechName, user_id: user.id, is_active: true }]);[m
+[32m+[m[32m    setNewTechName("");[m
+[32m+[m[32m    setShowTechModal(false);[m
+[32m+[m[32m    loadTechnicians();[m
+[32m+[m[32m  };[m
+[32m+[m
+   const loadAllDataForSearch = async () => {[m
+     try {[m
+       const user = await getCurrentUser();[m
+[36m@@ -119,15 +152,16 @@[m [mexport default function RepairDetailPage() {[m
+       setRisks(data.risks || "");[m
+       setTestsPassed(data.tests_passed || "");[m
+       setPhotos(data.photos || []);[m
+[32m+[m[32m      setSelectedTechnician(data.technician || data.repaired_by || "");[m
+       if (data.parts_used) { try { setParts(JSON.parse(data.parts_used)); } catch { setParts([]); } }[m
+       [m
+[31m-      // Initialiser les refs pour éviter les doublons[m
+       lastSavedRef.current = {[m
+         diagnostic: data.diagnostic_technicien || "",[m
+         repairDescription: data.repair_description || "",[m
+         risks: data.risks || "",[m
+         testsPassed: data.tests_passed || "",[m
+[31m-        finalPrice: parseFloat(data.final_price || 0)[m
+[32m+[m[32m        finalPrice: parseFloat(data.final_price || 0),[m
+[32m+[m[32m        technician: data.technician || data.repaired_by || ""[m
+       };[m
+     } catch (err) {[m
+       console.error(err);[m
+[36m@@ -184,6 +218,26 @@[m [mexport default function RepairDetailPage() {[m
+     }[m
+   };[m
+ [m
+[32m+[m[32m  const updateTechnician = async (newTechnician) => {[m
+[32m+[m[32m    const oldTechnician = selectedTechnician;[m
+[32m+[m[32m    setSelectedTechnician(newTechnician);[m
+[32m+[m[41m    [m
+[32m+[m[32m    const { error } = await supabase[m
+[32m+[m[32m      .from("repairs")[m
+[32m+[m[32m      .update({ technician: newTechnician, repaired_by: newTechnician })[m
+[32m+[m[32m      .eq("id", id);[m
+[32m+[m[41m    [m
+[32m+[m[32m    if (!error && newTechnician !== oldTechnician) {[m
+[32m+[m[32m      await ajouterHistorique([m
+[32m+[m[32m        'changement_technicien',[m
+[32m+[m[32m        `👨‍🔧 Technicien assigné : "${newTechnician}"`,[m
+[32m+[m[32m        oldTechnician || "Non assigné",[m
+[32m+[m[32m        newTechnician[m
+[32m+[m[32m      );[m
+[32m+[m[32m      showMessage(`Technicien: ${newTechnician}`);[m
+[32m+[m[32m    }[m
+[32m+[m[32m  };[m
+[32m+[m
+   const autoSave = async () => {[m
+     const updateData = {[m
+       diagnostic_technicien: diagnosticTechnicien,[m
+[36m@@ -193,66 +247,43 @@[m [mexport default function RepairDetailPage() {[m
+       tests_passed: testsPassed,[m
+       parts_used: JSON.stringify(parts), [m
+       photos: photos,[m
+[32m+[m[32m      technician: selectedTechnician,[m
+[32m+[m[32m      repaired_by: selectedTechnician,[m
+     };[m
+     [m
+     const { error } = await supabase.from("repairs").update(updateData).eq("id", id);[m
+     if (error) console.error("Erreur sauvegarde auto:", error);[m
+     [m
+[31m-    // Diagnostic Technicien[m
+     if (diagnosticTechnicien !== lastSavedRef.current.diagnostic && diagnosticTechnicien !== "") {[m
+[31m-      await ajouterHistorique([m
+[31m-        'modification',[m
+[31m-        `📝 Diagnostic technicien modifié`,[m
+[31m-        lastSavedRef.current.diagnostic || "(vide)",[m
+[31m-        diagnosticTechnicien[m
+[31m-      );[m
+[32m+[m[32m      await ajouterHistorique('modification', `📝 Diagnostic technicien modifié`, lastSavedRef.current.diagnostic || "(vide)", diagnosticTechnicien);[m
+       lastSavedRef.current.diagnostic = diagnosticTechnicien;[m
+     }[m
+     [m
+[31m-    // Travaux effectués[m
+     if (repairDescription !== lastSavedRef.current.repairDescription && repairDescription !== "") {[m
+[31m-      await ajouterHistorique([m
+[31m-        'modification',[m
+[31m-        `🔧 Travaux effectués modifiés`,[m
+[31m-        lastSavedRef.current.repairDescription || "(vide)",[m
+[31m-        repairDescription[m
+[31m-      );[m
+[32m+[m[32m      await ajouterHistorique('modification', `🔧 Travaux effectués modifiés`, lastSavedRef.current.repairDescription || "(vide)", repairDescription);[m
+       lastSavedRef.current.repairDescription = repairDescription;[m
+     }[m
+     [m
+[31m-    // Risques[m
+     if (risks !== lastSavedRef.current.risks && risks !== "") {[m
+[31m-      await ajouterHistorique([m
+[31m-        'modification',[m
+[31m-        `⚠️ Risques & préconisations modifiés`,[m
+[31m-        lastSavedRef.current.risks || "(vide)",[m
+[31m-        risks[m
+[31m-      );[m
+[32m+[m[32m      await ajouterHistorique('modification', `⚠️ Risques modifiés`, lastSavedRef.current.risks || "(vide)", risks);[m
+       lastSavedRef.current.risks = risks;[m
+     }[m
+     [m
+[31m-    // Tests[m
+     if (testsPassed !== lastSavedRef.current.testsPassed && testsPassed !== "") {[m
+[31m-      await ajouterHistorique([m
+[31m-        'modification',[m
+[31m-        `✅ Tests & contrôles qualité modifiés`,[m
+[31m-        lastSavedRef.current.testsPassed || "(vide)",[m
+[31m-        testsPassed[m
+[31m-      );[m
+[32m+[m[32m      await ajouterHistorique('modification', `✅ Tests modifiés`, lastSavedRef.current.testsPassed || "(vide)", testsPassed);[m
+       lastSavedRef.current.testsPassed = testsPassed;[m
+     }[m
+     [m
+[31m-    // Prix[m
+     const newPrice = parseFloat(finalPrice || 0);[m
+     if (newPrice !== lastSavedRef.current.finalPrice && finalPrice !== "") {[m
+[31m-      await ajouterHistorique([m
+[31m-        'modification',[m
+[31m-        `💰 Prix modifié`,[m
+[31m-        `${lastSavedRef.current.finalPrice}€`,[m
+[31m-        `${newPrice}€`[m
+[31m-      );[m
+[32m+[m[32m      await ajouterHistorique('modification', `💰 Prix modifié`, `${lastSavedRef.current.finalPrice}€`, `${newPrice}€`);[m
+       lastSavedRef.current.finalPrice = newPrice;[m
+     }[m
+[32m+[m[41m    [m
+[32m+[m[32m    if (selectedTechnician !== lastSavedRef.current.technician && selectedTechnician !== "") {[m
+[32m+[m[32m      await ajouterHistorique('modification', `👨‍🔧 Technicien modifié`, lastSavedRef.current.technician || "(vide)", selectedTechnician);[m
+[32m+[m[32m      lastSavedRef.current.technician = selectedTechnician;[m
+[32m+[m[32m    }[m
+   };[m
+ [m
+   useEffect(() => {[m
+[36m@@ -260,7 +291,7 @@[m [mexport default function RepairDetailPage() {[m
+       const timer = setTimeout(() => autoSave(), 2000);[m
+       return () => clearTimeout(timer);[m
+     }[m
+[31m-  }, [diagnosticTechnicien, risks, repairDescription, finalPrice, testsPassed, parts, photos]);[m
+[32m+[m[32m  }, [diagnosticTechnicien, risks, repairDescription, finalPrice, testsPassed, parts, photos, selectedTechnician]);[m
+ [m
+   const showMessage = (text, type = "success") => {[m
+     setMessage({ text, type });[m
+[36m@@ -309,8 +340,8 @@[m [mexport default function RepairDetailPage() {[m
+       const { data: { publicUrl } } = supabase.storage.from('repair-photos').getPublicUrl(filePath);[m
+       const newPhotos = [...photos, publicUrl];[m
+       setPhotos(newPhotos);[m
+[31m-      await ajouterHistorique('modification', `📸 Photo ajoutée à la réparation`);[m
+[31m-      showMessage("Photo ajoutée avec succès", "success");[m
+[32m+[m[32m      await ajouterHistorique('modification', `📸 Photo ajoutée`);[m
+[32m+[m[32m      showMessage("Photo ajoutée", "success");[m
+     } catch (error) {[m
+       console.error("Erreur upload:", error);[m
+       showMessage("Erreur lors de l'upload", "error");[m
+[36m@@ -322,7 +353,7 @@[m [mexport default function RepairDetailPage() {[m
+   const deletePhoto = async (photoUrl) => {[m
+     const newPhotos = photos.filter(p => p !== photoUrl);[m
+     setPhotos(newPhotos);[m
+[31m-    await ajouterHistorique('modification', `🗑️ Photo supprimée de la réparation`);[m
+[32m+[m[32m    await ajouterHistorique('modification', `🗑️ Photo supprimée`);[m
+     showMessage("Photo supprimée", "success");[m
+   };[m
+ [m
+[36m@@ -334,20 +365,7 @@[m [mexport default function RepairDetailPage() {[m
+     if (error) {[m
+       showMessage("Erreur mise à jour", "error");[m
+     } else {[m
+[31m-      await ajouterHistorique([m
+[31m-        'changement_statut',[m
+[31m-        `🔄 Changement de statut : "${oldStatus}" → "${newStatus}"`,[m
+[31m-        oldStatus,[m
+[31m-        newStatus[m
+[31m-      );[m
+[31m-      [m
+[31m-      if (newStatus === "✅ Terminé") {[m
+[31m-        await ajouterHistorique([m
+[31m-          'modification',[m
+[31m-          `✅ Réparation terminée : ${repairDescription || 'Réparation effectuée'} | Prix final: ${finalPrice || 0}€`[m
+[31m-        );[m
+[31m-      }[m
+[31m-      [m
+[32m+[m[32m      await ajouterHistorique('changement_statut', `🔄 Statut : "${oldStatus}" → "${newStatus}"`, oldStatus, newStatus);[m
+       showMessage(`Statut: ${newStatus}`);[m
+       loadRepair();[m
+     }[m
+[36m@@ -360,12 +378,8 @@[m [mexport default function RepairDetailPage() {[m
+     setParts(newParts);[m
+     setCurrentPart({ name: "", quantity: 1, price: 0 });[m
+     setShowPartModal(false);[m
+[31m-    [m
+[31m-    await ajouterHistorique([m
+[31m-      'modification',[m
+[31m-      `🔩 Pièce ajoutée : ${currentPart.name} x${currentPart.quantity} (${currentPart.price * currentPart.quantity}€)`[m
+[31m-    );[m
+[31m-    showMessage(`Pièce "${currentPart.name}" ajoutée`, "success");[m
+[32m+[m[32m    await ajouterHistorique('modification', `🔩 Pièce ajoutée : ${currentPart.name} x${currentPart.quantity} (${currentPart.price * currentPart.quantity}€)`);[m
+[32m+[m[32m    showMessage(`Pièce ajoutée`, "success");[m
+   };[m
+ [m
+   const removePart = async (partId) => {[m
+[36m@@ -377,7 +391,7 @@[m [mexport default function RepairDetailPage() {[m
+   };[m
+ [m
+   const sendEmailReceipt = async () => {[m
+[31m-    if (!emailTo || !emailTo.trim()) { showMessage("Aucun email client renseigné", "error"); return; }[m
+[32m+[m[32m    if (!emailTo || !emailTo.trim()) { showMessage("Aucun email client", "error"); return; }[m
+     setSendingEmail(true);[m
+     try {[m
+       const repairsHtml = `<div>🔧 Ticket #${repair.id}<br/>📱 ${repair.device}<br/>🔧 ${repair.issue}<br/>💰 ${finalPrice || 0}€</div>`;[m
+[36m@@ -389,10 +403,10 @@[m [mexport default function RepairDetailPage() {[m
+       };[m
+       await emailjs.send(EMAILJS_SERVICE_ID, EMAILJS_TEMPLATE_ID, templateParams, EMAILJS_PUBLIC_KEY);[m
+       await ajouterHistorique('commentaire', `✉️ Email envoyé à ${emailTo}`);[m
+[31m-      showMessage(`✅ Email envoyé à ${emailTo}`, "success");[m
+[32m+[m[32m      showMessage(`✅ Email envoyé`, "success");[m
+       setShowEmailModal(false);[m
+     } catch (err) { [m
+[31m-      showMessage(`❌ Échec envoi email`, "error"); [m
+[32m+[m[32m      showMessage(`❌ Échec envoi`, "error");[m[41m [m
+     } finally { [m
+       setSendingEmail(false); [m
+     }[m
+[36m@@ -464,6 +478,29 @@[m [mexport default function RepairDetailPage() {[m
+         </div>[m
+       )}[m
+ [m
+[32m+[m[32m      {/* MODAL TECHNICIENS */}[m
+[32m+[m[32m      {showTechModal && ([m
+[32m+[m[32m        <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">[m
+[32m+[m[32m          <div className="bg-white rounded-xl w-full max-w-md p-5">[m
+[32m+[m[32m            <h3 className="text-lg font-bold mb-3">👨‍🔧 Techniciens</h3>[m
+[32m+[m[32m            <div className="space-y-2 mb-4 max-h-48 overflow-y-auto">[m
+[32m+[m[32m              {technicians.map(t => ([m
+[32m+[m[32m                <div key={t.id} className="flex justify-between items-center p-2 bg-gray-50 rounded-lg">[m
+[32m+[m[32m                  <span>{t.name}</span>[m
+[32m+[m[32m                  <span className="text-xs text-green-500">● Actif</span>[m
+[32m+[m[32m                </div>[m
+[32m+[m[32m              ))}[m
+[32m+[m[32m              {technicians.length === 0 && <p className="text-gray-400 text-sm">Aucun technicien</p>}[m
+[32m+[m[32m            </div>[m
+[32m+[m[32m            <input type="text" placeholder="Nom du technicien" className="w-full border rounded-lg p-2 mb-3" value={newTechName} onChange={(e) => setNewTechName(e.target.value)} />[m
+[32m+[m[32m            <div className="flex gap-2">[m
+[32m+[m[32m              <button onClick={addTechnician} className="flex-1 bg-blue-600 text-white py-2 rounded-lg">Ajouter</button>[m
+[32m+[m[32m              <button onClick={() => setShowTechModal(false)} className="flex-1 bg-gray-200 py-2 rounded-lg">Fermer</button>[m
+[32m+[m[32m            </div>[m
+[32m+[m[32m          </div>[m
+[32m+[m[32m        </div>[m
+[32m+[m[32m      )}[m
+[32m+[m
+       {showPhotoModal && selectedPhoto && ([m
+         <div className="fixed inset-0 bg-black/90 z-50 flex items-center justify-center p-4" onClick={() => setShowPhotoModal(false)}>[m
+           <div className="relative" onClick={(e) => e.stopPropagation()}>[m
+[36m@@ -520,7 +557,7 @@[m [mexport default function RepairDetailPage() {[m
+ [m
+       <div className="max-w-7xl mx-auto px-4 py-4">[m
+ [m
+[31m-        {/* BARRE DE RECHERCHE */}[m
+[32m+[m[32m        {/* BARRE DE RECHERCHE - CLIENT EXISTANT UNIQUEMENT */}[m
+         <div className="mb-5 relative">[m
+           <div className="bg-white rounded-lg shadow-sm border p-3">[m
+             <div className="flex gap-2">[m
+[36m@@ -534,8 +571,13 @@[m [mexport default function RepairDetailPage() {[m
+               <div className="absolute z-20 left-0 right-0 mt-1 bg-white border rounded-lg shadow-lg max-h-60 overflow-auto">[m
+                 {searchResults.map((result) => ([m
+                   <div key={result.id} onClick={() => goToRepair(result.id)} className="p-2 hover:bg-gray-50 cursor-pointer border-b flex justify-between items-center text-sm">[m
+[31m-                    <div><span className="font-semibold">MBX-{result.id}</span> - {result.clientName}<br/><span className="text-xs text-gray-500">{result.device}</span></div>[m
+[31m-                    <button className="bg-blue-600 text-white px-3 py-1 rounded text-xs">GO</button>[m
+[32m+[m[32m                    <div>[m
+[32m+[m[32m                      <span className="font-bold text-blue-600 text-base">🎫 MBX-{result.id}</span>[m
+[32m+[m[32m                      <span className="ml-2 text-gray-700">- {result.clientName}</span>[m
+[32m+[m[32m                      <br/>[m
+[32m+[m[32m                      <span className="text-xs text-gray-500">{result.device}</span>[m
+[32m+[m[32m                    </div>[m
+[32m+[m[32m                    <button className="bg-blue-600 text-white px-3 py-1 rounded text-xs">Voir</button>[m
+                   </div>[m
+                 ))}[m
+               </div>[m
+[36m@@ -548,13 +590,13 @@[m [mexport default function RepairDetailPage() {[m
+           <div className="p-5">[m
+             <div className="flex flex-wrap justify-between items-start gap-3">[m
+               <div className="flex-1">[m
+[31m-                <div className="flex items-center gap-2 mb-2">[m
+[31m-                  <span className="bg-gray-700 text-gray-200 text-xs px-2 py-0.5 rounded">Ticket #{id}</span>[m
+[32m+[m[32m                <div className="flex items-center gap-3 mb-2 flex-wrap">[m
+[32m+[m[32m                  <span className="bg-blue-600 text-white font-bold text-sm px-3 py-1 rounded-full shadow-lg">🎫 MBX-{id}</span>[m
+                   {repair?.client_response && repair.client_response_type === "accepte" && <span className="bg-green-100 text-green-700 text-xs px-2 py-0.5 rounded">✅ Accepté</span>}[m
+                   {repair?.client_response && repair.client_response_type === "refuse" && <span className="bg-red-100 text-red-700 text-xs px-2 py-0.5 rounded">❌ Refusé</span>}[m
+                 </div>[m
+                 [m
+[31m-                <h1 className="text-3xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-orange-400 to-orange-200 mb-2">[m
+[32m+[m[32m                <h1 className="text-3xl font-bold text-white mb-2">[m
+                   {client?.name || "Client"}[m
+                 </h1>[m
+                 [m
+[36m@@ -621,6 +663,32 @@[m [mexport default function RepairDetailPage() {[m
+           </div>[m
+         </div>[m
+ [m
+[32m+[m[32m        {/* SECTION TECHNICIEN */}[m
+[32m+[m[32m        <div className="mb-5 bg-white rounded-lg shadow-sm border p-4">[m
+[32m+[m[32m          <label className="block text-sm font-medium text-gray-700 mb-2">👨‍🔧 Technicien assigné</label>[m
+[32m+[m[32m          <div className="flex gap-2">[m
+[32m+[m[32m            <select[m
+[32m+[m[32m              value={selectedTechnician}[m
+[32m+[m[32m              onChange={(e) => updateTechnician(e.target.value)}[m
+[32m+[m[32m              className="flex-1 border rounded-lg p-2 text-sm focus:ring-2 focus:ring-blue-500"[m
+[32m+[m[32m            >[m
+[32m+[m[32m              <option value="">-- Sélectionner un technicien --</option>[m
+[32m+[m[32m              {technicians.map((tech) => ([m
+[32m+[m[32m                <option key={tech.id} value={tech.name}>{tech.name}</option>[m
+[32m+[m[32m              ))}[m
+[32m+[m[32m            </select>[m
+[32m+[m[32m            <button[m
+[32m+[m[32m              onClick={() => setShowTechModal(true)}[m
+[32m+[m[32m              className="bg-gray-600 text-white px-3 py-2 rounded-lg text-sm hover:bg-gray-700"[m
+[32m+[m[32m            >[m
+[32m+[m[32m              +[m
+[32m+[m[32m            </button>[m
+[32m+[m[32m          </div>[m
+[32m+[m[32m          {technicians.length === 0 && ([m
+[32m+[m[32m            <p className="text-xs text-amber-600 mt-2">⚠️ Aucun technicien. Cliquez sur + pour en ajouter.</p>[m
+[32m+[m[32m          )}[m
+[32m+[m[32m        </div>[m
+[32m+[m
+         {repair?.client_response && ([m
+           <div className="mb-5 bg-red-50 border-l-4 border-red-500 rounded-lg p-3">[m
+             <div className="flex items-center gap-2 mb-1">[m

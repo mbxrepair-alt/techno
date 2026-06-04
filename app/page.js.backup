@@ -351,7 +351,7 @@ export default function HomePage() {
             <div className="w-24 h-24 bg-white/20 rounded-2xl flex items-center justify-center text-5xl mx-auto mb-6 backdrop-blur-sm">🎓</div>
             <h3 className="text-3xl lg:text-4xl font-bold mb-4 text-white">Centre de Formation Professionnelle</h3>
             <p className="text-white/90 text-lg max-w-3xl mx-auto mb-8">
-
+              MBX accompagne les futurs techniciens avec des formations spécialisées en réparation mobile et microsoudure.
             </p>
             <div className="grid md:grid-cols-3 gap-4 max-w-3xl mx-auto mb-8">
               {["Diagnostic de panne", "Réparation toutes marques", "Changement de composants", "Lecture de schémas", "Réparation carte mère", "Microsoudure pro"].map((item, i) => (

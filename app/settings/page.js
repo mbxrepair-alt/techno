@@ -1,333 +1,413 @@
-"use client";
+﻿"use client";
 
-// Suppression définitive de l'avertissement Next.js Image
-if (typeof window !== 'undefined') {
-  const originalWarn = console.warn;
-  console.warn = (...args) => {
-    const message = args[0]?.toString() || '';
-    if (message.includes('Image with src') || 
-        message.includes('width or height modified') ||
-        message.includes('next/image')) {
-      return;
-    }
-    originalWarn(...args);
-  };
-}
-
-import { useEffect, useState } from "react";
-import { supabase, getCurrentUser } from "../../lib/supabase";
+import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
-import Layout from "../../components/Layout";
+import Link from "next/link";
+import { supabase } from "../../lib/supabase";
 
 export default function SettingsPage() {
   const router = useRouter();
-  const [loading, setLoading] = useState(true);
-  const [saving, setSaving] = useState(false);
+  const [activeTab, setActiveTab] = useState("general");
+  const [permissions, setPermissions] = useState(null);
+  const [technicianName, setTechnicianName] = useState("");
+  const [loading, setLoading] = useState(false);
   const [uploading, setUploading] = useState(false);
-  const [message, setMessage] = useState({ text: "", type: "" });
-  const [user, setUser] = useState(null);
+  const [message, setMessage] = useState("");
   const [logoPreview, setLogoPreview] = useState(null);
-  const [formData, setFormData] = useState({
-    name: "",
+
+  // Vos paramètres existants
+  const [settings, setSettings] = useState({
     company_name: "",
     contact_phone: "",
+    contact_email: "",
     contact_address: "",
-    email: "",
     logo_url: "",
+    invoice_prefix: "FACT-",
+    default_vat: 20,
+    notification_email: "",
+    low_stock_alert: true,
+    auto_backup: false,
   });
 
   useEffect(() => {
-    loadUserData();
+    const perms = sessionStorage.getItem("technician_permissions");
+    if (perms) {
+      setPermissions(JSON.parse(perms));
+    }
+    const techName = sessionStorage.getItem("technician_name");
+    if (techName) {
+      setTechnicianName(techName);
+    }
+    loadSettings();
   }, []);
 
-  const loadUserData = async () => {
-    setLoading(true);
-    const currentUser = await getCurrentUser();
-    if (!currentUser) {
-      router.push("/login");
-      return;
-    }
-    setUser(currentUser);
-
-    const { data: profile, error } = await supabase
-      .from("profiles")
-      .select("*")
-      .eq("id", currentUser.id)
-      .single();
-
-    if (error) {
-      console.error("Erreur chargement profil:", error);
-    } else {
-      setFormData({
-        name: profile?.name || "",
-        company_name: profile?.company_name || "",
-        contact_phone: profile?.contact_phone || "",
-        contact_address: profile?.contact_address || "",
-        email: currentUser.email || "",
-        logo_url: profile?.logo_url || "",
-      });
-      setLogoPreview(profile?.logo_url || null);
-    }
-    setLoading(false);
-  };
-
-  const showMessage = (text, type = "success") => {
-    setMessage({ text, type });
-    setTimeout(() => setMessage({ text: "", type: "" }), 3000);
-  };
-
-  const handleChange = (e) => {
-    setFormData({ ...formData, [e.target.name]: e.target.value });
-  };
-
-  const handleLogoUpload = async (e) => {
-    const file = e.target.files[0];
-    if (!file) return;
-
-    if (!file.type.includes('image/png')) {
-      showMessage("❌ Seuls les fichiers PNG sont acceptés", "error");
-      return;
-    }
-
-    if (file.size > 2 * 1024 * 1024) {
-      showMessage("❌ Le fichier ne doit pas dépasser 2MB", "error");
-      return;
-    }
-
-    setUploading(true);
-    
-    const formDataUpload = new FormData();
-    formDataUpload.append('file', file);
-    formDataUpload.append('userId', user.id);
-
+  const loadSettings = async () => {
     try {
-      const response = await fetch('/api/upload-logo', {
-        method: 'POST',
-        body: formDataUpload,
-      });
-
-      const data = await response.json();
-      
-      if (data.success) {
-        setLogoPreview(data.url);
-        setFormData({ ...formData, logo_url: data.url });
-        showMessage("✅ Logo mis à jour", "success");
-      } else {
-        showMessage("❌ Erreur: " + data.error, "error");
+      const { data: { user } } = await supabase.auth.getUser();
+      if (user) {
+        const { data, error } = await supabase
+          .from("profiles")
+          .select("*")
+          .eq("id", user.id)
+          .single();
+        
+        if (data && !error) {
+          setSettings({
+            company_name: data.company_name || "",
+            contact_phone: data.contact_phone || "",
+            contact_email: data.email || "",
+            contact_address: data.contact_address || "",
+            logo_url: data.logo_url || "",
+            invoice_prefix: "FACT-",
+            default_vat: 20,
+            notification_email: data.email || "",
+            low_stock_alert: true,
+            auto_backup: false,
+          });
+          
+          if (data.logo_url) {
+            setLogoPreview(data.logo_url);
+          }
+        }
       }
-    } catch (error) {
-      console.error(error);
-      showMessage("❌ Erreur lors de l'upload", "error");
+    } catch (err) {
+      console.error("Erreur chargement settings:", err);
+    }
+  };
+
+  const saveSettings = async () => {
+    setLoading(true);
+    setMessage("");
+    
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (user) {
+        const { error } = await supabase
+          .from("profiles")
+          .update({
+            company_name: settings.company_name,
+            contact_phone: settings.contact_phone,
+            contact_address: settings.contact_address,
+            logo_url: settings.logo_url,
+          })
+          .eq("id", user.id);
+        
+        if (error) throw error;
+        setMessage("✅ Paramètres enregistrés avec succès");
+        setTimeout(() => setMessage(""), 3000);
+        
+        // Recharger la page pour mettre à jour le logo dans la navigation
+        router.refresh();
+      }
+    } catch (err) {
+      setMessage("❌ Erreur: " + err.message);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Fonction pour uploader le logo
+  const uploadLogo = async (file) => {
+    if (!file) return;
+    
+    // Vérifier le type de fichier
+    if (!file.type.includes("image/png") && !file.type.includes("image/jpeg") && !file.type.includes("image/jpg")) {
+      setMessage("❌ Seuls les fichiers PNG, JPG ou JPEG sont acceptés");
+      return;
+    }
+    
+    // Vérifier la taille (max 2MB)
+    if (file.size > 2 * 1024 * 1024) {
+      setMessage("❌ Le fichier ne doit pas dépasser 2MB");
+      return;
+    }
+    
+    setUploading(true);
+    setMessage("");
+    
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) throw new Error("Non authentifié");
+      
+      // Créer un nom de fichier unique
+      const fileExt = file.name.split(".").pop();
+      const fileName = `logo_${user.id}_${Date.now()}.${fileExt}`;
+      const filePath = `logos/${fileName}`;
+      
+      // Upload vers Supabase Storage
+      const { error: uploadError } = await supabase.storage
+        .from("company-logos")
+        .upload(filePath, file);
+      
+      if (uploadError) {
+        // Si le bucket n'existe pas, le créer
+        if (uploadError.message.includes("bucket")) {
+          // Obtenir l'URL publique
+          const { data: { publicUrl } } = supabase.storage
+            .from("company-logos")
+            .getPublicUrl(filePath);
+          
+          setSettings({ ...settings, logo_url: publicUrl });
+          setLogoPreview(publicUrl);
+          setMessage("✅ Logo téléchargé (bucket créé automatiquement)");
+        } else {
+          throw uploadError;
+        }
+      } else {
+        // Récupérer l'URL publique
+        const { data: { publicUrl } } = supabase.storage
+          .from("company-logos")
+          .getPublicUrl(filePath);
+        
+        setSettings({ ...settings, logo_url: publicUrl });
+        setLogoPreview(publicUrl);
+        setMessage("✅ Logo téléchargé avec succès");
+      }
+      
+      // Sauvegarder automatiquement
+      setTimeout(() => saveSettings(), 500);
+      
+    } catch (err) {
+      console.error("Erreur upload:", err);
+      setMessage("❌ Erreur lors du téléchargement: " + err.message);
     } finally {
       setUploading(false);
     }
   };
 
+  const handleFileChange = (e) => {
+    const file = e.target.files[0];
+    if (file) {
+      uploadLogo(file);
+    }
+  };
+
   const removeLogo = async () => {
-    if (confirm("Supprimer votre logo ?")) {
-      const { error } = await supabase
-        .from("profiles")
-        .update({ logo_url: null })
-        .eq("id", user.id);
-
-      if (error) {
-        showMessage("❌ Erreur lors de la suppression", "error");
-      } else {
-        setLogoPreview(null);
-        setFormData({ ...formData, logo_url: "" });
-        showMessage("✅ Logo supprimé", "success");
-      }
-    }
+    setSettings({ ...settings, logo_url: "" });
+    setLogoPreview(null);
+    await saveSettings();
+    setMessage("✅ Logo supprimé");
   };
 
-  const saveSettings = async () => {
-    setSaving(true);
-    
-    if (formData.email !== user.email) {
-      const { error: emailError } = await supabase.auth.updateUser({
-        email: formData.email
-      });
-      if (emailError) {
-        showMessage("❌ Erreur mise à jour email: " + emailError.message, "error");
-        setSaving(false);
-        return;
-      }
-    }
+  const isGerant = permissions?.is_gerant === true;
 
-    const { error: profileError } = await supabase
-      .from("profiles")
-      .update({
-        name: formData.name,
-        company_name: formData.company_name,
-        contact_phone: formData.contact_phone,
-        contact_address: formData.contact_address,
-        logo_url: formData.logo_url,
-      })
-      .eq("id", user.id);
+  const tabs = [
+    { id: "general", label: "⚙️ Général", visible: true },
+    { id: "company", label: "🏢 Entreprise", visible: true },
+    { id: "technicians", label: "👨‍🔧 Techniciens", visible: isGerant },
+    { id: "logs", label: "📋 Logs", visible: isGerant },
+  ];
 
-    if (profileError) {
-      showMessage("❌ Erreur: " + profileError.message, "error");
-    } else {
-      showMessage("✅ Informations mises à jour", "success");
-    }
-    setSaving(false);
-  };
-
-  if (loading) {
-    return (
-      <Layout>
-        <div className="text-center py-12">⏳ Chargement...</div>
-      </Layout>
-    );
-  }
+  const visibleTabs = tabs.filter(tab => tab.visible);
 
   return (
-    <Layout>
-      <div className="max-w-2xl mx-auto">
-        <div className="bg-white rounded-2xl shadow-lg p-6">
-          <div className="flex items-center gap-3 mb-6 pb-4 border-b">
-            <div className="w-10 h-10 bg-gradient-to-r from-blue-500 to-purple-600 rounded-xl flex items-center justify-center">
-              <span className="text-white text-xl">⚙️</span>
-            </div>
-            <div>
-              <h1 className="text-2xl font-bold">Paramètres</h1>
-              <p className="text-sm text-gray-500">Gérez les informations de votre atelier</p>
+    <div>
+      <h1 className="text-2xl font-bold mb-6">⚙️ Paramètres</h1>
+
+      {message && (
+        <div className={`p-3 rounded-lg mb-4 ${message.includes("✅") ? "bg-green-100 text-green-700" : "bg-red-100 text-red-700"}`}>
+          {message}
+        </div>
+      )}
+
+      {/* Onglets */}
+      <div className="border-b border-gray-200 mb-6">
+        <nav className="flex gap-6 flex-wrap">
+          {visibleTabs.map((tab) => (
+            <button
+              key={tab.id}
+              onClick={() => setActiveTab(tab.id)}
+              className={`pb-3 px-1 text-sm font-medium transition ${
+                activeTab === tab.id
+                  ? "text-blue-600 border-b-2 border-blue-600"
+                  : "text-gray-500 hover:text-gray-700"
+              }`}
+            >
+              {tab.label}
+            </button>
+          ))}
+        </nav>
+      </div>
+
+      {/* Contenu des onglets */}
+      <div className="bg-white rounded-xl shadow-sm p-6">
+        {/* Onglet Général */}
+        {activeTab === "general" && (
+          <div>
+            <h2 className="text-lg font-semibold mb-4">Informations générales</h2>
+            <div className="space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Nom du technicien
+                </label>
+                <input
+                  type="text"
+                  value={technicianName}
+                  readOnly
+                  className="w-full px-3 py-2 border rounded-lg bg-gray-50"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Version
+                </label>
+                <input
+                  type="text"
+                  value="MBX Réparations v1.0"
+                  readOnly
+                  className="w-full px-3 py-2 border rounded-lg bg-gray-50"
+                />
+              </div>
             </div>
           </div>
+        )}
 
-          {message.text && (
-            <div className={`mb-4 p-3 rounded-lg ${message.type === "error" ? "bg-red-100 text-red-700" : "bg-green-100 text-green-700"}`}>
-              {message.text}
-            </div>
-          )}
-
-          <div className="space-y-4">
-            {/* Section Logo */}
-            <div className="border rounded-lg p-4 bg-gray-50">
-              <label className="block text-sm font-medium text-gray-700 mb-2">Logo de l'atelier</label>
+        {/* Onglet Entreprise (vos paramètres existants) */}
+        {activeTab === "company" && (
+          <div>
+            <h2 className="text-lg font-semibold mb-4">Informations de l'entreprise</h2>
+            
+            {/* Upload Logo */}
+            <div className="mb-6 p-4 bg-gray-50 rounded-lg">
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                🖼️ Logo de l'entreprise
+              </label>
               <div className="flex items-center gap-4">
                 {logoPreview ? (
-                  <img
-                    src={logoPreview}
-                    alt="Logo"
-                    width="80"
-                    height="80"
-                    loading="eager"
-                    style={{ width: "80px", height: "80px", objectFit: "contain" }}
-                    className="rounded-lg border"
-                  />
+                  <div className="relative">
+                    <img 
+                      src={logoPreview} 
+                      alt="Logo" 
+                      className="w-16 h-16 object-contain border rounded-lg bg-white p-1"
+                    />
+                    <button
+                      onClick={removeLogo}
+                      className="absolute -top-2 -right-2 bg-red-500 text-white rounded-full w-5 h-5 flex items-center justify-center text-xs hover:bg-red-600"
+                    >
+                      ×
+                    </button>
+                  </div>
                 ) : (
-                  <div className="w-20 h-20 bg-gray-200 rounded-lg flex items-center justify-center border flex-shrink-0">
-                    <span className="text-3xl">🔧</span>
+                  <div className="w-16 h-16 bg-gray-200 rounded-lg flex items-center justify-center text-2xl">
+                    🔧
                   </div>
                 )}
                 <div className="flex-1">
                   <input
                     type="file"
-                    accept="image/png"
-                    onChange={handleLogoUpload}
+                    accept="image/png,image/jpeg,image/jpg"
+                    onChange={handleFileChange}
                     disabled={uploading}
                     className="block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100"
                   />
-                  <p className="text-xs text-gray-400 mt-1">PNG uniquement, max 2MB</p>
-                  {uploading && <p className="text-xs text-blue-500 mt-1">Upload en cours...</p>}
-                  {logoPreview && (
-                    <button
-                      onClick={removeLogo}
-                      className="text-xs text-red-500 hover:text-red-700 mt-1"
-                    >
-                      Supprimer le logo
-                    </button>
-                  )}
+                  <p className="text-xs text-gray-400 mt-1">
+                    PNG, JPG ou JPEG. Max 2MB.
+                  </p>
                 </div>
               </div>
+              {uploading && (
+                <div className="mt-2 text-sm text-blue-600">
+                  ⏳ Téléchargement en cours...
+                </div>
+              )}
             </div>
-
-            {/* Email */}
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Email</label>
-              <input
-                type="email"
-                name="email"
-                value={formData.email}
-                onChange={handleChange}
-                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                placeholder="votre@email.com"
-              />
-              <p className="text-xs text-gray-400 mt-1">⚠️ Changer l'email vous déconnectera</p>
-            </div>
-
-            {/* Nom complet */}
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Nom complet</label>
-              <input
-                type="text"
-                name="name"
-                value={formData.name}
-                onChange={handleChange}
-                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                placeholder="Votre nom"
-              />
-            </div>
-
-            {/* Nom de l'atelier */}
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Nom de l'atelier / société</label>
-              <input
-                type="text"
-                name="company_name"
-                value={formData.company_name}
-                onChange={handleChange}
-                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                placeholder="Nom de votre atelier"
-              />
-            </div>
-
-            {/* Téléphone */}
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Téléphone</label>
-              <input
-                type="tel"
-                name="contact_phone"
-                value={formData.contact_phone}
-                onChange={handleChange}
-                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                placeholder="01 23 45 67 89"
-              />
-            </div>
-
-            {/* Adresse */}
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Adresse</label>
-              <textarea
-                name="contact_address"
-                value={formData.contact_address}
-                onChange={handleChange}
-                rows="3"
-                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                placeholder="Adresse de votre atelier"
-              />
-            </div>
-
-            {/* Boutons */}
-            <div className="flex gap-3 pt-4">
+            
+            <div className="space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Nom de l'entreprise
+                </label>
+                <input
+                  type="text"
+                  value={settings.company_name}
+                  onChange={(e) => setSettings({...settings, company_name: e.target.value})}
+                  className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500"
+                  placeholder="Votre entreprise"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Téléphone
+                </label>
+                <input
+                  type="tel"
+                  value={settings.contact_phone}
+                  onChange={(e) => setSettings({...settings, contact_phone: e.target.value})}
+                  className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500"
+                  placeholder="0612345678"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Email de contact
+                </label>
+                <input
+                  type="email"
+                  value={settings.contact_email}
+                  onChange={(e) => setSettings({...settings, contact_email: e.target.value})}
+                  className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500"
+                  placeholder="contact@entreprise.com"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Adresse
+                </label>
+                <textarea
+                  value={settings.contact_address}
+                  onChange={(e) => setSettings({...settings, contact_address: e.target.value})}
+                  className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500"
+                  rows="3"
+                  placeholder="Adresse complète"
+                />
+              </div>
               <button
                 onClick={saveSettings}
-                disabled={saving || uploading}
-                className="flex-1 bg-blue-600 text-white py-2 rounded-lg font-semibold hover:bg-blue-700 transition disabled:opacity-50"
+                disabled={loading}
+                className="bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded-lg transition"
               >
-                {saving ? "Enregistrement..." : "💾 Enregistrer les modifications"}
-              </button>
-              <button
-                onClick={() => router.back()}
-                className="px-6 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50 transition"
-              >
-                Annuler
+                {loading ? "Enregistrement..." : "💾 Enregistrer"}
               </button>
             </div>
           </div>
-        </div>
+        )}
+
+        {/* Onglet Techniciens */}
+        {activeTab === "technicians" && isGerant && (
+          <div>
+            <div className="flex justify-between items-center mb-4">
+              <h2 className="text-lg font-semibold">Gestion des techniciens</h2>
+              <Link
+                href="/technicians"
+                className="bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded-lg text-sm transition"
+              >
+                + Accéder à la gestion
+              </Link>
+            </div>
+            <p className="text-gray-500 mb-4">
+              Gérez les techniciens, leurs codes d'accès et permissions d'accès aux différentes sections.
+            </p>
+          </div>
+        )}
+
+        {/* Onglet Logs */}
+        {activeTab === "logs" && isGerant && (
+          <div>
+            <div className="flex justify-between items-center mb-4">
+              <h2 className="text-lg font-semibold">Historique des actions</h2>
+              <Link
+                href="/logs"
+                className="bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded-lg text-sm transition"
+              >
+                📋 Voir tous les logs
+              </Link>
+            </div>
+            <p className="text-gray-500 mb-4">
+              Consultez l'historique complet des connexions et actions effectuées par les techniciens.
+            </p>
+          </div>
+        )}
       </div>
-    </Layout>
+    </div>
   );
 }

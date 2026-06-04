@@ -1,0 +1,26 @@
+import { NextResponse } from "next/server";
+
+export function middleware(req) {
+  // Récupérer le token depuis le cookie (plus sécurisé que sessionStorage)
+  const token = req.cookies.get("token")?.value;
+  
+  const isLoginPage = req.nextUrl.pathname === "/login";
+  const isTechnicianLoginPage = req.nextUrl.pathname === "/";
+  const isPublicPage = isLoginPage || isTechnicianLoginPage;
+  
+  // Si pas de token et pas sur page publique → redirect login
+  if (!token && !isPublicPage) {
+    return NextResponse.redirect(new URL("/login", req.url));
+  }
+  
+  // Si token et sur page publique → redirect dashboard
+  if (token && isPublicPage) {
+    return NextResponse.redirect(new URL("/dashboard", req.url));
+  }
+  
+  return NextResponse.next();
+}
+
+export const config = {
+  matcher: ["/((?!_next/static|_next/image|favicon.ico).*)"],
+};

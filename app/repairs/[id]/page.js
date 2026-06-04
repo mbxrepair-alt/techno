@@ -152,12 +152,26 @@ export default function RepairDetailPage() {
     }
   };
 
+  // 🔧 FONCTION AJOUTER HISTORIQUE CORRIGÉE
   const ajouterHistorique = async (action, description, oldValue = null, newValue = null) => {
     try {
       const user = await getCurrentUser();
       if (!user) return;
       
+      // Récupérer le vrai nom du technicien connecté depuis sessionStorage
       let userName = user.email?.split('@')[0] || 'Utilisateur';
+      let technicianId = null;
+      
+      if (typeof window !== "undefined") {
+        const techPermissions = sessionStorage.getItem("technician_permissions");
+        if (techPermissions) {
+          const tech = JSON.parse(techPermissions);
+          if (tech && tech.name) {
+            userName = tech.name;
+            technicianId = tech.id;
+          }
+        }
+      }
       
       const { error } = await supabase
         .from('historique')
@@ -169,6 +183,7 @@ export default function RepairDetailPage() {
           old_value: oldValue,
           new_value: newValue,
           user_id: user.id,
+          technician_id: technicianId,
           user_type: 'technicien',
           user_name: userName,
           created_at: new Date().toISOString()
@@ -382,7 +397,6 @@ export default function RepairDetailPage() {
     };
     return (
       <div className="w-14 h-14 relative">
-        {/* Cercle lumineux au début du schéma */}
         {pointsIds.length > 0 && (
           <div className="absolute -top-1 -left-1 w-3 h-3 bg-green-500 rounded-full shadow-[0_0_8px_rgba(34,197,94,0.8)] animate-pulse"></div>
         )}
@@ -488,7 +502,6 @@ export default function RepairDetailPage() {
       )}
 
       <div className="w-full mx-auto px-0 py-4">
-
 
         {/* BARRE DE RECHERCHE */}
         <div className="mb-5 relative">
@@ -649,7 +662,7 @@ export default function RepairDetailPage() {
           </button>
         </div>
 
-        {/* HISTORIQUE */}
+        {/* HISTORIQUE - AFFICHAGE CORRIGÉ AVEC LE NOM DU TECHNICIEN */}
         {showHistorique && (
           <div className="mb-6 bg-white rounded-lg shadow-lg border border-gray-200 overflow-hidden">
             <div className="bg-gradient-to-r from-gray-800 to-gray-900 px-4 py-3">
@@ -679,9 +692,11 @@ export default function RepairDetailPage() {
                         </span>
                       </div>
                       <div className="flex justify-between items-center mt-2">
-                        <span className="text-xs text-gray-400">👤 {entry.user_name || 'Inconnu'}</span>
+                        <span className="text-xs text-gray-400">
+                          👤 {entry.user_name || 'Inconnu'}
+                        </span>
                         <span className={`text-xs px-2 py-0.5 rounded-full ${entry.user_type === 'client' ? 'bg-green-100 text-green-700' : 'bg-blue-100 text-blue-700'}`}>
-                          {entry.user_type === 'client' ? 'Client' : 'Technicien'}
+                          {entry.user_type === 'client' ? '👤 Client' : `🔧 ${entry.user_name || 'Technicien'}`}
                         </span>
                       </div>
                       {entry.old_value && entry.new_value && (

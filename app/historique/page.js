@@ -44,17 +44,6 @@ const formatDateTime = (dateString) => {
   });
 };
 
-const formatDateShort = (dateString) => {
-  if (!dateString) return "-";
-  const date = new Date(dateString);
-  return date.toLocaleDateString('fr-FR', {
-    day: '2-digit',
-    month: '2-digit',
-    hour: '2-digit',
-    minute: '2-digit'
-  });
-};
-
 export default function HistoriquePage() {
   const router = useRouter();
   
@@ -74,6 +63,51 @@ export default function HistoriquePage() {
   const [selectedPhoto, setSelectedPhoto] = useState(null);
   const [appareilHistorique, setAppareilHistorique] = useState([]);
   const [showFullHistory, setShowFullHistory] = useState(false);
+  
+  // Map pour convertir email -> nom du technicien
+  const [emailToNameMap, setEmailToNameMap] = useState({});
+  // Map pour convertir user_name -> nom du technicien (pour remplacer mbxrepair par Julie)
+  const [userNameToNameMap, setUserNameToNameMap] = useState({});
+
+  // Charger la correspondance email -> nom technicien
+  const loadTechnicians = async () => {
+    try {
+      const user = await getCurrentUser();
+      if (!user) return;
+      
+      const { data } = await supabase
+        .from("technicians")
+        .select("*")
+        .eq("user_id", user.id);
+      
+      const emailMap = {};
+      const nameMap = {};
+      
+      data?.forEach(tech => {
+        // Map par email
+        if (tech.user_email) {
+          emailMap[tech.user_email] = tech.name;
+        }
+        // Map par nom d'utilisateur (pour remplacer mbxrepair)
+        if (tech.name) {
+          nameMap[tech.name.toLowerCase()] = tech.name;
+        }
+      });
+      
+      // Ajouter des correspondances manuelles courantes
+      emailMap["mbxrepair@gmail.com"] = "Julie (Tech)";
+      emailMap["mbxrepair"] = "Julie (Tech)";
+      nameMap["mbxrepair"] = "Julie (Tech)";
+      
+      setEmailToNameMap(emailMap);
+      setUserNameToNameMap(nameMap);
+      
+      console.log("Map email -> nom:", emailMap);
+      console.log("Map user_name -> nom:", nameMap);
+    } catch (error) {
+      console.error("Erreur chargement techniciens:", error);
+    }
+  };
 
   const loadHistory = useCallback(async () => {
     setLoading(true);
@@ -156,6 +190,7 @@ export default function HistoriquePage() {
 
   useEffect(() => {
     loadHistory();
+    loadTechnicians();
   }, [loadHistory]);
 
   const loadAppareilHistorique = async (repairId) => {
@@ -230,10 +265,34 @@ export default function HistoriquePage() {
     setShowFullHistory(false);
   }, []);
 
-  const calculatePartsTotal = useCallback((partsList) => {
-    if (!partsList || partsList.length === 0) return 0;
-    return partsList.reduce((sum, part) => sum + (part.price * part.quantity), 0);
-  }, []);
+  // Fonction pour obtenir le nom affichable d'un utilisateur
+  const getUserDisplayName = (entry) => {
+    if (entry.user_type === 'client') {
+      return '👤 Client';
+    }
+    
+    // Technicien : chercher par user_email
+    if (entry.user_email && emailToNameMap[entry.user_email]) {
+      return `🔧 ${emailToNameMap[entry.user_email]}`;
+    }
+    
+    // Technicien : chercher par user_name
+    if (entry.user_name) {
+      // Vérifier si user_name correspond à un technicien
+      const lowerName = entry.user_name.toLowerCase();
+      if (userNameToNameMap[lowerName]) {
+        return `🔧 ${userNameToNameMap[lowerName]}`;
+      }
+      
+      // Remplacer mbxrepair par Julie (Tech) manuellement
+      if (lowerName === 'mbxrepair' || entry.user_name === 'mbxrepair@gmail.com') {
+        return `🔧 Julie (Tech)`;
+      }
+    }
+    
+    // Dernier fallback
+    return `🔧 ${entry.user_name || entry.user_email?.split('@')[0] || 'Technicien'}`;
+  };
 
   // Composant d'affichage de l'historique complet avec DATE et HEURE
   const FullHistoryTimeline = ({ historique }) => {
@@ -315,14 +374,14 @@ export default function HistoriquePage() {
               <div className="flex justify-between items-center mt-2 pt-2 border-t border-gray-100">
                 <div className="flex items-center gap-2 text-xs">
                   <span className="text-gray-500">
-                    👤 {entry.user_name || 'Utilisateur inconnu'}
+                    👤 {getUserDisplayName(entry)}
                   </span>
                   <span className={`px-2 py-0.5 rounded-full text-xs ${
                     entry.user_type === 'client' 
                       ? 'bg-green-100 text-green-700' 
                       : 'bg-blue-100 text-blue-700'
                   }`}>
-                    {entry.user_type === 'client' ? '👤 Client' : '🔧 Technicien'}
+                    {entry.user_type === 'client' ? 'Client' : 'Technicien'}
                   </span>
                 </div>
                 <button

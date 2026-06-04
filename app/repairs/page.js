@@ -1,9 +1,10 @@
-"use client";
+﻿"use client";
 
 import { useEffect, useState, useMemo } from "react";
 import { supabase, getCurrentUser } from "../../lib/supabase";
 import { useRouter } from "next/navigation";
 import Layout from "../../components/Layout";
+import { addHistoriqueAction, getCurrentTechnician } from "../../lib/historique";
 
 // ========== NORMALISATION DES STATUTS ==========
 const normalizeStatus = (status) => {
@@ -92,17 +93,17 @@ export default function RepairsPage() {
   const [filterStatus, setFilterStatus] = useState("all");
   const [filterPeriod, setFilterPeriod] = useState("all");
   const [technicians, setTechnicians] = useState([]);
-  const [showTechModal, setShowTechModal] = useState(false);
-  const [newTechName, setNewTechName] = useState("");
-  const [selectedRepairId, setSelectedRepairId] = useState(null);
-  const [showTechSelectModal, setShowTechSelectModal] = useState(false);
-  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
-  const [techToDelete, setTechToDelete] = useState(null);
   const [showChangeTechModal, setShowChangeTechModal] = useState(false);
   const [changingRepair, setChangingRepair] = useState(null);
   const [selectedNewTech, setSelectedNewTech] = useState("");
+  const [currentTechnician, setCurrentTechnician] = useState(null);
+  
+  // État pour le modal d'avertissement
+  const [showWarningModal, setShowWarningModal] = useState(false);
+  const [pendingRepair, setPendingRepair] = useState(null);
 
   useEffect(() => {
+    loadCurrentTechnician();
     loadData();
     loadTechnicians();
     
@@ -118,6 +119,16 @@ export default function RepairsPage() {
     };
   }, []);
 
+  const loadCurrentTechnician = async () => {
+    try {
+      const tech = getCurrentTechnician();
+      setCurrentTechnician(tech);
+      console.log("Technicien connecté:", tech);
+    } catch (error) {
+      console.error("Erreur chargement technicien:", error);
+    }
+  };
+
   const loadTechnicians = async () => {
     try {
       const user = await getCurrentUser();
@@ -130,72 +141,6 @@ export default function RepairsPage() {
       setTechnicians(data || []);
     } catch (error) {
       console.error("Erreur chargement techniciens:", error);
-    }
-  };
-
-  const addTechnician = async () => {
-    if (!newTechName.trim()) return;
-    const user = await getCurrentUser();
-    await supabase.from("technicians").insert([{ name: newTechName, user_id: user.id, is_active: true }]);
-    setNewTechName("");
-    setShowTechModal(false);
-    loadTechnicians();
-  };
-
-  const deleteTechnician = async () => {
-    if (!techToDelete) return;
-    await supabase
-      .from("technicians")
-      .update({ is_active: false })
-      .eq("id", techToDelete.id);
-    setShowDeleteConfirm(false);
-    setTechToDelete(null);
-    loadTechnicians();
-    
-    await supabase
-      .from("repairs")
-      .update({ technician: null, repaired_by: null })
-      .eq("technician", techToDelete.name);
-    loadData();
-  };
-
-  const changeTechnician = async () => {
-    if (!changingRepair || !selectedNewTech) return;
-    
-    await supabase
-      .from("repairs")
-      .update({ technician: selectedNewTech, repaired_by: selectedNewTech })
-      .eq("id", changingRepair.id);
-    
-    setShowChangeTechModal(false);
-    setChangingRepair(null);
-    setSelectedNewTech("");
-    loadData();
-  };
-
-  const openChangeTechModal = (repair, e) => {
-    e.stopPropagation();
-    setChangingRepair(repair);
-    setSelectedNewTech(repair.technician || "");
-    setShowChangeTechModal(true);
-  };
-
-  const assignTechnicianAndOpen = async (repairId, technicianName) => {
-    await supabase
-      .from("repairs")
-      .update({ technician: technicianName, repaired_by: technicianName })
-      .eq("id", repairId);
-    setShowTechSelectModal(false);
-    setSelectedRepairId(null);
-    router.push(`/repairs/${repairId}`);
-  };
-
-  const handleRowClick = (repair) => {
-    if (!repair.technician) {
-      setSelectedRepairId(repair.id);
-      setShowTechSelectModal(true);
-    } else {
-      router.push(`/repairs/${repair.id}`);
     }
   };
 
@@ -215,6 +160,120 @@ export default function RepairsPage() {
 
     setRepairs(normalizedRepairs);
     setLoading(false);
+  };
+
+  const changeTechnician = async () => {
+    if (!changingRepair || !selectedNewTech) return;
+    
+    const oldTechnician = changingRepair.technician;
+    
+    await supabase
+      .from("repairs")
+      .update({ technician: selectedNewTech, repaired_by: selectedNewTech })
+      .eq("id", changingRepair.id);
+    
+    // Enregistrer dans l'historique
+    await addHistoriqueAction({
+      repairId: changingRepair.id,
+      action: "changement_technicien",
+      description: `Changement de technicien : "${oldTechnician || 'Non assigné'}" → "${selectedNewTech}"`,
+      oldValue: oldTechnician || "Non assigné",
+      newValue: selectedNewTech
+    });
+    
+    setShowChangeTechModal(false);
+    setChangingRepair(null);
+    setSelectedNewTech("");
+    loadData();
+  };
+
+  const openChangeTechModal = (repair, e) => {
+    e.stopPropagation();
+    setChangingRepair(repair);
+    setSelectedNewTech(repair.technician || "");
+    setShowChangeTechModal(true);
+  };
+
+  // Auto-assignation avec historique
+  const assignRepairToCurrentTechnician = async (repair) => {
+    if (!currentTechnician) return;
+    
+    const oldTechnician = repair.technician;
+    
+    await supabase
+      .from("repairs")
+      .update({ 
+        technician: currentTechnician.name,
+        repaired_by: currentTechnician.name,
+        assigned_at: new Date().toISOString()
+      })
+      .eq("id", repair.id);
+    
+    // Enregistrer dans l'historique
+    await addHistoriqueAction({
+      repairId: repair.id,
+      action: "changement_technicien",
+      description: `Assignation automatique à ${currentTechnician.name}`,
+      oldValue: oldTechnician || "Non assigné",
+      newValue: currentTechnician.name
+    });
+    
+    await loadData();
+  };
+
+  // Gestion du clic avec avertissement
+  const handleRowClick = async (repair) => {
+    // Si c'est un gérant, pas d'avertissement
+    if (currentTechnician?.is_gerant) {
+      router.push(`/repairs/${repair.id}`);
+      return;
+    }
+
+    // Cas 1 : Réparation non assignée -> assigner directement
+    if (!repair.technician) {
+      await assignRepairToCurrentTechnician(repair);
+      router.push(`/repairs/${repair.id}`);
+      return;
+    }
+
+    // Cas 2 : Réparation assignée à un autre technicien -> avertissement
+    if (repair.technician !== currentTechnician?.name) {
+      setPendingRepair(repair);
+      setShowWarningModal(true);
+      return;
+    }
+
+    // Cas 3 : Réparation déjà assignée au technicien connecté -> accès direct
+    router.push(`/repairs/${repair.id}`);
+  };
+
+  // Prendre la main sur une réparation (pour le 2ème technicien)
+  const takeOverRepair = async () => {
+    if (!pendingRepair || !currentTechnician) return;
+    
+    const oldTechnician = pendingRepair.technician;
+    
+    await supabase
+      .from("repairs")
+      .update({ 
+        technician: currentTechnician.name,
+        repaired_by: currentTechnician.name,
+        assigned_at: new Date().toISOString()
+      })
+      .eq("id", pendingRepair.id);
+    
+    // Enregistrer dans l'historique
+    await addHistoriqueAction({
+      repairId: pendingRepair.id,
+      action: "changement_technicien",
+      description: `${currentTechnician.name} a pris la main sur la réparation (était à ${oldTechnician})`,
+      oldValue: oldTechnician,
+      newValue: currentTechnician.name
+    });
+    
+    setShowWarningModal(false);
+    await loadData();
+    router.push(`/repairs/${pendingRepair.id}`);
   };
 
   const statsByStatus = useMemo(() => {
@@ -276,318 +335,215 @@ export default function RepairsPage() {
     <Layout>
       <div className="w-full mx-auto px-2 sm:px-3 md:px-4 py-3">
         
-        {/* HEADER AVEC BARRE DE RECHERCHE */}
+        {/* HEADER */}
         <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-3 mb-5">
           <div>
-            <h1 className="text-3xl font-black bg-gradient-to-r from-blue-600 to-blue-400 bg-clip-text text-transparent drop-shadow-[0_0_15px_rgba(37,99,235,0.5)]">
+            <h1 className="text-3xl font-black bg-gradient-to-r from-blue-600 to-blue-400 bg-clip-text text-transparent">
               🔧 Flux Atelier
             </h1>
             <p className="text-sm text-gray-500 font-medium uppercase tracking-wider mt-1">
               Gestion en temps réel
             </p>
+            {currentTechnician && (
+              <div className="mt-2 flex items-center gap-2">
+                <div className="w-6 h-6 rounded-full bg-green-100 flex items-center justify-center text-green-600 text-xs font-bold">
+                  {currentTechnician.name?.charAt(0)}
+                </div>
+                <span className="text-xs text-green-600 font-medium">
+                  ✓ Connecté : {currentTechnician.name}
+                  {currentTechnician.is_gerant && " (Gérant)"}
+                </span>
+              </div>
+            )}
           </div>
 
           {/* BARRE DE RECHERCHE */}
           <div className="relative w-full md:w-80">
-            <div className="relative group">
-              <div className="absolute -inset-0.5 bg-gradient-to-r from-blue-500 to-cyan-500 rounded-xl blur opacity-0 group-focus-within:opacity-100 transition duration-300"></div>
-              <input 
-                type="text" 
-                placeholder="🔍 Rechercher par ticket, nom, modèle ou panne..." 
-                className="relative w-full p-2.5 pl-10 bg-white border-2 border-blue-200 rounded-xl focus:outline-none focus:border-blue-500 text-gray-800 placeholder-gray-400 shadow-[0_0_10px_rgba(37,99,235,0.1)] focus:shadow-[0_0_20px_rgba(37,99,235,0.3)] transition-all duration-300" 
-                value={searchTerm} 
-                onChange={(e) => setSearchTerm(e.target.value)} 
-              />
-              <div className="absolute left-3 top-1/2 -translate-y-1/2 text-blue-500">🔍</div>
-              {searchTerm && (
-                <button 
-                  className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-blue-500 transition"
-                  onClick={() => setSearchTerm("")}
-                >
-                  ✕
-                </button>
-              )}
-            </div>
+            <input 
+              type="text" 
+              placeholder="🔍 Rechercher par ticket, nom, modèle ou panne..." 
+              className="w-full p-2.5 pl-10 bg-white border-2 border-blue-200 rounded-xl focus:outline-none focus:border-blue-500" 
+              value={searchTerm} 
+              onChange={(e) => setSearchTerm(e.target.value)} 
+            />
+            <div className="absolute left-3 top-1/2 -translate-y-1/2 text-blue-500">🔍</div>
           </div>
         </div>
 
         {/* FILTRES */}
-        <div className="flex flex-wrap items-center justify-between gap-3 mb-4">
-          <div className="flex flex-wrap items-center gap-3">
-            <div className="flex items-center gap-2">
-              <span className="text-sm font-medium text-gray-600">Statut :</span>
-              <select
-                value={filterStatus}
-                onChange={(e) => setFilterStatus(e.target.value)}
-                className="px-3 py-1.5 bg-white border-2 border-blue-200 rounded-xl text-sm font-medium outline-none focus:ring-2 focus:ring-blue-500"
-              >
-                <option value="all">📊 Tous ({totalRepairs})</option>
-                {Object.keys(STATUS_ORDER).map((status) => {
-                  const count = statsByStatus[status] || 0;
-                  return (
-                    <option key={status} value={status}>
-                      {status} ({count})
-                    </option>
-                  );
-                })}
-              </select>
-            </div>
+        <div className="flex flex-wrap items-center gap-3 mb-4">
+          <select
+            value={filterStatus}
+            onChange={(e) => setFilterStatus(e.target.value)}
+            className="px-3 py-1.5 bg-white border-2 border-blue-200 rounded-xl text-sm"
+          >
+            <option value="all">📊 Tous ({totalRepairs})</option>
+            {Object.keys(STATUS_ORDER).map((status) => (
+              <option key={status} value={status}>{status} ({statsByStatus[status] || 0})</option>
+            ))}
+          </select>
 
-            <div className="flex items-center gap-2">
-              <span className="text-sm font-medium text-gray-600">Période :</span>
-              <select
-                value={filterPeriod}
-                onChange={(e) => setFilterPeriod(e.target.value)}
-                className="px-3 py-1.5 bg-white border-2 border-blue-200 rounded-xl text-sm font-medium outline-none focus:ring-2 focus:ring-blue-500"
-              >
-                {PERIOD_OPTIONS.map(option => (
-                  <option key={option.value} value={option.value}>{option.label}</option>
-                ))}
-              </select>
-            </div>
+          <select
+            value={filterPeriod}
+            onChange={(e) => setFilterPeriod(e.target.value)}
+            className="px-3 py-1.5 bg-white border-2 border-blue-200 rounded-xl text-sm"
+          >
+            {PERIOD_OPTIONS.map(option => (
+              <option key={option.value} value={option.value}>{option.label}</option>
+            ))}
+          </select>
+
+          {(searchTerm || filterStatus !== "all" || filterPeriod !== "all") && (
+            <button onClick={resetFilters} className="text-sm text-blue-500 hover:text-blue-600">
+              🔄 Réinitialiser
+            </button>
+          )}
+        </div>
+
+        {/* TABLEAU DES REPARATIONS */}
+        <div className="bg-white rounded-xl border-2 border-blue-200 shadow-md overflow-hidden">
+          <div className="grid grid-cols-12 bg-blue-50 px-4 py-3 text-xs font-bold text-blue-600 border-b border-blue-200">
+            <div className="col-span-2">Ticket</div>
+            <div className="col-span-4">Client / Appareil</div>
+            <div className="col-span-2">Date</div>
+            <div className="col-span-2">Technicien</div>
+            <div className="col-span-1">Statut</div>
+            <div className="col-span-1 text-right">Prix</div>
           </div>
 
-          {/* BOUTON GÉRER LES TECHNICIENS */}
-          <div className="relative">
-            <button
-              onClick={() => setShowTechModal(!showTechModal)}
-              className="flex items-center gap-2 px-3 py-1.5 bg-blue-600 text-white rounded-xl text-sm font-bold hover:bg-blue-700 transition-all duration-300 shadow-md hover:shadow-lg"
-            >
-              <span>👨‍🔧</span>
-              <span>Gérer les techniciens</span>
-              <svg className={`w-3 h-3 transition-transform duration-200 ${showTechModal ? 'rotate-180' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-              </svg>
-            </button>
-            
-            {showTechModal && (
-              <div className="absolute right-0 mt-2 w-64 bg-white rounded-xl border-2 border-blue-200 shadow-xl z-50 overflow-hidden">
-                <div className="p-3 bg-blue-50 border-b border-blue-200">
-                  <h3 className="font-bold text-blue-800">Ajouter un technicien</h3>
-                  <div className="flex mt-2">
-                    <input 
-                      type="text" 
-                      className="flex-1 border-2 border-blue-200 rounded-l-lg p-2 text-sm focus:border-blue-500 focus:outline-none" 
-                      placeholder="Nom" 
-                      value={newTechName} 
-                      onChange={(e) => setNewTechName(e.target.value)}
-                      onKeyPress={(e) => e.key === 'Enter' && addTechnician()}
-                    />
-                    <button onClick={addTechnician} className="bg-blue-600 text-white px-3 rounded-r-lg hover:bg-blue-700">+</button>
-                  </div>
-                </div>
-                <div className="max-h-48 overflow-y-auto">
-                  {technicians.length === 0 ? (
-                    <p className="text-center text-gray-400 text-sm p-4">Aucun technicien</p>
-                  ) : (
-                    technicians.map((tech) => (
-                      <div key={tech.id} className="flex items-center justify-between p-3 border-b border-gray-100 hover:bg-gray-50">
+          <div className="divide-y divide-blue-100">
+            {sortedRepairs.length === 0 ? (
+              <div className="text-center py-16 text-gray-400">Aucune réparation</div>
+            ) : (
+              sortedRepairs.map((repair) => {
+                const dateObj = new Date(repair.created_at);
+                const formattedDate = dateObj.toLocaleDateString('fr-FR', { day: '2-digit', month: '2-digit' });
+
+                return (
+                  <div 
+                    key={repair.id}
+                    onClick={() => handleRowClick(repair)}
+                    className={`grid grid-cols-12 items-center px-4 py-3 cursor-pointer hover:bg-blue-50 transition ${
+                      !repair.technician ? "bg-yellow-50/30" : ""
+                    }`}
+                  >
+                    <div className="col-span-2">
+                      <span className="font-mono font-bold text-blue-600 text-sm bg-blue-50 px-2 py-1 rounded-lg">
+                        #{repair.id}
+                      </span>
+                    </div>
+
+                    <div className="col-span-4">
+                      <div className="font-bold text-gray-900 text-sm">{repair.clients?.name || "Client inconnu"}</div>
+                      <div className="text-xs text-gray-500">{repair.device || "?"}</div>
+                    </div>
+
+                    <div className="col-span-2 text-sm text-gray-600">{formattedDate}</div>
+
+                    <div className="col-span-2">
+                      {repair.technician ? (
                         <div className="flex items-center gap-2">
-                          <div className="w-7 h-7 rounded-full bg-blue-100 flex items-center justify-center text-blue-600 font-bold text-xs">
-                            {tech.name.charAt(0)}
+                          <div className="w-6 h-6 rounded-full bg-green-100 flex items-center justify-center text-green-600 text-xs font-bold">
+                            {repair.technician.charAt(0)}
                           </div>
-                          <span className="text-sm font-medium text-gray-700">{tech.name}</span>
+                          <span className="text-xs font-medium text-gray-700">{repair.technician}</span>
+                          {currentTechnician?.is_gerant && (
+                            <button onClick={(e) => openChangeTechModal(repair, e)} className="text-gray-400 hover:text-blue-500">✏️</button>
+                          )}
                         </div>
-                        <button
-                          onClick={() => {
-                            setTechToDelete(tech);
-                            setShowDeleteConfirm(true);
-                            setShowTechModal(false);
-                          }}
-                          className="text-red-500 hover:text-red-700 transition p-1"
-                          title="Supprimer"
-                        >
-                          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-                          </svg>
-                        </button>
-                      </div>
-                    ))
-                  )}
-                </div>
-              </div>
+                      ) : (
+                        <div className="flex items-center gap-1">
+                          <span className="text-xs text-amber-600 bg-amber-50 px-2 py-1 rounded-full">⚠️ Non assigné</span>
+                          {currentTechnician && !currentTechnician.is_gerant && (
+                            <span className="text-xs text-blue-500">(Cliquez pour prendre)</span>
+                          )}
+                        </div>
+                      )}
+                    </div>
+
+                    <div className="col-span-1">
+                      <span className={`inline-block px-2 py-1 rounded-lg text-[10px] font-bold border ${STATUS_STYLE[repair.status] || "bg-gray-100"}`}>
+                        {repair.status}
+                      </span>
+                    </div>
+
+                    <div className="col-span-1 text-right font-bold text-blue-600 text-sm">
+                      {repair.final_price || repair.estimated_price || 0}€
+                    </div>
+                  </div>
+                );
+              })
             )}
           </div>
         </div>
 
-        {/* BOUTON RÉINITIALISER */}
-        {(searchTerm || filterStatus !== "all" || filterPeriod !== "all") && (
-          <div className="flex justify-end mb-3">
-            <button
-              onClick={resetFilters}
-              className="text-sm font-medium text-blue-500 hover:text-blue-600 flex items-center gap-1"
-            >
-              🔄 Réinitialiser
-            </button>
+        {/* MODAL D'AVERTISSEMENT - TECHNICIEN DÉJÀ ASSIGNÉ */}
+        {showWarningModal && pendingRepair && (
+          <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50">
+            <div className="bg-white rounded-xl p-6 w-96 border-2 border-orange-200 shadow-2xl">
+              <div className="text-center mb-4">
+                <div className="w-16 h-16 bg-orange-100 rounded-full flex items-center justify-center mx-auto mb-3">
+                  <span className="text-3xl">⚠️</span>
+                </div>
+                <h3 className="text-xl font-bold text-orange-600">Attention !</h3>
+              </div>
+              
+              <p className="text-gray-700 text-center mb-2">
+                Cette réparation est déjà assignée à :
+              </p>
+              <div className="bg-gray-100 rounded-lg p-3 text-center mb-4">
+                <div className="flex items-center justify-center gap-2">
+                  <div className="w-8 h-8 rounded-full bg-blue-100 flex items-center justify-center text-blue-600 font-bold">
+                    {pendingRepair.technician?.charAt(0)}
+                  </div>
+                  <span className="font-semibold text-gray-800">{pendingRepair.technician}</span>
+                </div>
+              </div>
+              
+              <p className="text-gray-600 text-sm text-center mb-5">
+                Voulez-vous prendre la main sur cette réparation ?
+                <br />
+                <span className="text-xs text-gray-400">Le précédent technicien n'aura plus accès</span>
+              </p>
+              
+              <div className="flex gap-3">
+                <button
+                  onClick={() => {
+                    setShowWarningModal(false);
+                    setPendingRepair(null);
+                  }}
+                  className="flex-1 bg-gray-200 text-gray-700 py-2 rounded-lg hover:bg-gray-300 transition font-medium"
+                >
+                  ❌ Annuler
+                </button>
+                <button
+                  onClick={takeOverRepair}
+                  className="flex-1 bg-orange-500 text-white py-2 rounded-lg hover:bg-orange-600 transition font-medium"
+                >
+                  ✅ Prendre la main
+                </button>
+              </div>
+            </div>
           </div>
         )}
 
-        {/* TABLEAU DES TICKETS - PLEINE LARGEUR */}
-        <div className="bg-white rounded-xl border-2 border-blue-200 shadow-md overflow-hidden">
-          <div className="overflow-x-auto">
-            <div className="grid grid-cols-12 bg-gradient-to-r from-blue-50 to-white px-4 py-3 text-xs font-bold text-blue-600 uppercase tracking-wider border-b border-blue-200">
-              <div className="col-span-2">Ticket</div>
-              <div className="col-span-4">Client / Appareil</div>
-              <div className="col-span-2">Date / Heure</div>
-              <div className="col-span-2">Technicien</div>
-              <div className="col-span-1">Statut</div>
-              <div className="col-span-1 text-right">Prix</div>
-            </div>
-
-            <div className="divide-y divide-blue-100">
-              {sortedRepairs.length === 0 ? (
-                <div className="text-center py-16 text-gray-400">
-                  <div className="text-5xl mb-3">📭</div>
-                  <p className="font-bold uppercase tracking-wider">Aucune réparation</p>
-                  <p className="text-sm mt-1">Modifie les filtres ou crée une nouvelle réparation</p>
-                </div>
-              ) : (
-                sortedRepairs.map((repair) => {
-                  const dateObj = new Date(repair.created_at);
-                  const formattedDate = dateObj.toLocaleDateString('fr-FR', { day: '2-digit', month: '2-digit' });
-                  const formattedTime = dateObj.toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' });
-
-                  return (
-                    <div 
-                      key={repair.id}
-                      onClick={() => handleRowClick(repair)}
-                      className={`grid grid-cols-12 items-center px-4 py-3 transition-all cursor-pointer ${
-                        repair.technician 
-                          ? "hover:bg-blue-50/50" 
-                          : "bg-yellow-50/30 hover:bg-yellow-50/70"
-                      }`}
-                    >
-                      <div className="col-span-2">
-                        <span className="font-mono font-bold text-blue-600 text-sm bg-blue-50 px-2 py-1 rounded-lg">
-                          #{repair.id}
-                        </span>
-                      </div>
-
-                      <div className="col-span-4 pr-3">
-                        <div className="flex items-center gap-2 mb-1 flex-wrap">
-                          <span className="font-bold text-gray-900 text-sm">{repair.clients?.name || "Client inconnu"}</span>
-                          <span className="bg-blue-50 text-blue-600 text-[10px] px-2 py-0.5 rounded font-bold uppercase border border-blue-200">
-                            {repair.device?.substring(0, 18) || "?"}
-                          </span>
-                        </div>
-                        <div className="flex items-start gap-2">
-                          <span className="text-xs text-blue-500">🛠️</span>
-                          <p className="text-xs text-gray-500 font-medium line-clamp-1">
-                            {repair.issue || "Panne non spécifiée"}
-                          </p>
-                        </div>
-                      </div>
-
-                      <div className="col-span-2">
-                        <p className="text-sm font-semibold text-gray-800">{formattedDate}</p>
-                        <p className="text-xs text-blue-500 font-mono">{formattedTime}</p>
-                      </div>
-
-                      <div className="col-span-2">
-                        {repair.technician ? (
-                          <div className="flex items-center gap-2 group/tech">
-                            <div 
-                              className="flex items-center gap-2 cursor-pointer hover:bg-blue-100 rounded-lg px-2 py-1 transition"
-                              onClick={(e) => openChangeTechModal(repair, e)}
-                            >
-                              <div className="w-6 h-6 rounded-full bg-blue-100 flex items-center justify-center text-blue-600 text-xs font-bold">
-                                {repair.technician.charAt(0)}
-                              </div>
-                              <span className="text-xs font-medium text-gray-700 group-hover/tech:text-blue-600">
-                                {repair.technician.length > 10 ? repair.technician.substring(0, 8) + '...' : repair.technician}
-                              </span>
-                              <svg className="w-3 h-3 text-gray-400 group-hover/tech:text-blue-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" />
-                              </svg>
-                            </div>
-                          </div>
-                        ) : (
-                          <span className="text-xs text-amber-600 bg-amber-50 px-2 py-1 rounded-full">
-                            ⚠️ Non assigné
-                          </span>
-                        )}
-                      </div>
-
-                      <div className="col-span-1">
-                        <span className={`inline-block px-2 py-1 rounded-lg text-[10px] font-bold border ${STATUS_STYLE[repair.status]}`}>
-                          {repair.status}
-                        </span>
-                      </div>
-
-                      <div className="col-span-1 text-right">
-                        <span className="text-sm font-bold text-blue-600">
-                          {repair.final_price || repair.estimated_price || 0}€
-                        </span>
-                      </div>
-                    </div>
-                  );
-                })
-              )}
-            </div>
-          </div>
-        </div>
-
-        {/* MODAL CHANGEMENT DE TECHNICIEN */}
-        {showChangeTechModal && changingRepair && (
-          <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50">
-            <div className="bg-white rounded-xl p-5 w-96 border-2 border-blue-200 shadow-2xl">
-              <h3 className="text-lg font-bold text-gray-800 mb-2">👨‍🔧 Changer le technicien</h3>
+        {/* MODAL CHANGEMENT TECHNICIEN (pour gérants uniquement) */}
+        {showChangeTechModal && changingRepair && currentTechnician?.is_gerant && (
+          <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+            <div className="bg-white rounded-xl p-5 w-96">
+              <h3 className="text-lg font-bold mb-2">👨‍🔧 Changer le technicien</h3>
               <p className="text-sm text-gray-500 mb-3">Réparation #{changingRepair.id}</p>
-              <select
-                value={selectedNewTech}
-                onChange={(e) => setSelectedNewTech(e.target.value)}
-                className="w-full px-3 py-2 bg-white border-2 border-blue-200 rounded-xl text-sm font-medium outline-none focus:ring-2 focus:ring-blue-500 mb-3"
-              >
+              <select value={selectedNewTech} onChange={(e) => setSelectedNewTech(e.target.value)} className="w-full p-2 border rounded-lg mb-3">
                 <option value="">-- Sélectionner --</option>
-                {technicians.map((tech) => (
-                  <option key={tech.id} value={tech.name}>{tech.name}</option>
-                ))}
+                {technicians.map((tech) => (<option key={tech.id} value={tech.name}>{tech.name}</option>))}
               </select>
               <div className="flex gap-2">
-                <button onClick={changeTechnician} disabled={!selectedNewTech} className="flex-1 bg-blue-600 text-white py-2 rounded-lg hover:bg-blue-700 transition disabled:opacity-50">Confirmer</button>
-                <button onClick={() => { setShowChangeTechModal(false); setChangingRepair(null); setSelectedNewTech(""); }} className="flex-1 bg-gray-200 py-2 rounded-lg hover:bg-gray-300 transition">Annuler</button>
+                <button onClick={changeTechnician} className="flex-1 bg-blue-600 text-white py-2 rounded-lg">Confirmer</button>
+                <button onClick={() => setShowChangeTechModal(false)} className="flex-1 bg-gray-200 py-2 rounded-lg">Annuler</button>
               </div>
             </div>
           </div>
         )}
-
-        {/* MODAL CONFIRMATION SUPPRESSION TECHNICIEN */}
-        {showDeleteConfirm && techToDelete && (
-          <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50">
-            <div className="bg-white rounded-xl p-5 w-96 border-2 border-red-200 shadow-2xl">
-              <h3 className="text-lg font-bold text-red-600 mb-2">⚠️ Confirmer la suppression</h3>
-              <p className="text-sm text-gray-600 mb-3">Supprimer <span className="font-bold">{techToDelete.name}</span> ?</p>
-              <div className="flex gap-2">
-                <button onClick={deleteTechnician} className="flex-1 bg-red-600 text-white py-2 rounded-lg hover:bg-red-700 transition">Supprimer</button>
-                <button onClick={() => { setShowDeleteConfirm(false); setTechToDelete(null); }} className="flex-1 bg-gray-200 py-2 rounded-lg hover:bg-gray-300 transition">Annuler</button>
-              </div>
-            </div>
-          </div>
-        )}
-
-        {/* MODAL SÉLECTIONNER TECHNICIEN */}
-        {showTechSelectModal && selectedRepairId && (
-          <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50">
-            <div className="bg-white rounded-xl p-5 w-96 border-2 border-blue-200 shadow-2xl">
-              <h3 className="text-lg font-bold text-gray-800 mb-2">👨‍🔧 Sélectionner un technicien</h3>
-              <p className="text-sm text-gray-500 mb-3">Cette réparation n'est pas encore assignée.</p>
-              <div className="space-y-2 mb-3 max-h-48 overflow-y-auto">
-                {technicians.length === 0 ? (
-                  <p className="text-center text-gray-400 text-sm">Aucun technicien</p>
-                ) : (
-                  technicians.map((tech) => (
-                    <button key={tech.id} onClick={() => assignTechnicianAndOpen(selectedRepairId, tech.name)} className="w-full flex items-center gap-3 p-2 border border-blue-200 rounded-lg hover:bg-blue-50 transition">
-                      <div className="w-7 h-7 rounded-full bg-blue-100 flex items-center justify-center text-blue-600 font-bold text-xs">{tech.name.charAt(0)}</div>
-                      <span className="font-medium text-gray-700 text-sm">{tech.name}</span>
-                    </button>
-                  ))
-                )}
-              </div>
-              <button onClick={() => { setShowTechSelectModal(false); setSelectedRepairId(null); }} className="w-full bg-gray-200 text-gray-700 py-2 rounded-lg hover:bg-gray-300 transition">Annuler</button>
-            </div>
-          </div>
-        )}
-
       </div>
     </Layout>
   );

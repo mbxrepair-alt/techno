@@ -1,4 +1,4 @@
-import { NextResponse } from "next/server";
+﻿import { NextResponse } from "next/server";
 import { cookies } from "next/headers";
 import { createClient } from "@supabase/supabase-js";
 
@@ -11,13 +11,13 @@ export async function POST(req) {
       process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
     );
 
-    const { data: user } = await supabase
+    const { data: user, error } = await supabase
       .from("profiles")
       .select("*")
       .eq("email", email)
       .single();
 
-    if (!user || user.access_code !== access_code) {
+    if (error || !user || user.access_code !== access_code) {
       return NextResponse.json(
         { error: "Invalid credentials" },
         { status: 401 }
@@ -32,7 +32,8 @@ export async function POST(req) {
       expires_at: new Date(Date.now() + 86400000),
     });
 
-    cookies().set("mbx_token", token, {
+    const cookieStore = await cookies();
+    cookieStore.set("mbx_token", token, {
       httpOnly: true,
       path: "/",
       sameSite: "lax",
@@ -45,6 +46,7 @@ export async function POST(req) {
     });
 
   } catch (e) {
+    console.error("API Login error:", e);
     return NextResponse.json(
       { error: "Server error" },
       { status: 500 }

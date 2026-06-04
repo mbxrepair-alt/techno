@@ -1,8 +1,8 @@
-"use client";
+﻿"use client";
 
 import { useState } from "react";
 import SmartTextarea from "../../../components/SmartTextarea";
-import { enregistrerCreationAppareil } from "../../../lib/historique";
+import { supabase } from "../../../lib/supabase";
 
 export default function NewRepairPage() {
   const [clientName, setClientName] = useState("");
@@ -15,11 +15,52 @@ export default function NewRepairPage() {
     e.preventDefault();
     setLoading(true);
     
-    const tempId = Date.now().toString();
-    const newRepair = { id: tempId };
-    
     try {
-      await enregistrerCreationAppareil(newRepair.id, clientName, device, issue, diagnosis);
+      // Récupérer le technicien connecté
+      let userName = "Technicien inconnu";
+      const techPermissions = sessionStorage.getItem("technician_permissions");
+      if (techPermissions) {
+        const tech = JSON.parse(techPermissions);
+        if (tech && tech.name) {
+          userName = tech.name;
+        }
+      }
+      
+      // Créer la réparation
+      const { data: repairData, error: repairError } = await supabase
+        .from('repairs')
+        .insert([{
+          client_name: clientName,
+          device: device,
+          issue: issue,
+          diagnosis: diagnosis,
+          status: '📥 Réceptionné',
+          technician: userName,
+          created_at: new Date().toISOString(),
+          updated_at: new Date().toISOString()
+        }])
+        .select();
+      
+      if (repairError) throw repairError;
+      
+      // Ajouter à l'historique
+      const repairId = repairData?.[0]?.id;
+      if (repairId) {
+        await supabase
+          .from('historique')
+          .insert([{
+            entity_type: 'appareil',
+            entity_id: String(repairId),
+            action: 'creation',
+            description: `📦 Création de la réparation pour ${clientName} - ${device}`,
+            old_value: null,
+            new_value: JSON.stringify({ clientName, device, issue, diagnosis }),
+            user_type: 'technicien',
+            user_name: userName,
+            created_at: new Date().toISOString()
+          }]);
+      }
+      
       alert("✅ Réparation créée avec succès !");
       setClientName("");
       setDevice("");
@@ -82,7 +123,6 @@ export default function NewRepairPage() {
             placeholder="🔬 Décrivez votre diagnostic..."
             className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
             rows={4}
-            suggestionsType="diagnostic"
           />
         </div>
 

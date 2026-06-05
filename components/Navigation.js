@@ -2,111 +2,186 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { useEffect, useState } from "react";
 import { supabase } from "../lib/supabase";
+import { useState, useEffect } from "react";
 
-export default function Navigation({ user, onLogout }) {
+export default function Navigation({ user, permissions }) {
   const pathname = usePathname();
-  const [permissions, setPermissions] = useState(null);
-  const [companyInfo, setCompanyInfo] = useState({
-    name: "MBX Réparations",
-    logo: "🔧",
-    logoUrl: null
-  });
+  const [isGerant, setIsGerant] = useState(false);
+  const [hoveredItem, setHoveredItem] = useState(null);
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const [technicianName, setTechnicianName] = useState("");
 
   useEffect(() => {
-    const perms = sessionStorage.getItem("technician_permissions");
-    if (perms) {
-      setPermissions(JSON.parse(perms));
+    setIsGerant(permissions?.is_gerant === true);
+    
+    // Récupérer le nom du technicien connecté depuis sessionStorage
+    const techName = sessionStorage.getItem("technician_name");
+    if (techName) {
+      setTechnicianName(techName);
+    } else if (user?.email) {
+      // Fallback : utiliser l'email si pas de nom
+      setTechnicianName(user.email.split("@")[0]);
     }
-    loadCompanyInfo();
-  }, []);
+  }, [permissions, user]);
 
-  const loadCompanyInfo = async () => {
-    try {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (user) {
-        const { data, error } = await supabase
-          .from("profiles")
-          .select("company_name, logo_url")
-          .eq("id", user.id)
-          .single();
-        
-        if (data && !error) {
-          setCompanyInfo({
-            name: data.company_name || "MBX Réparations",
-            logo: data.logo_url ? "img" : "🔧",
-            logoUrl: data.logo_url || null
-          });
-        }
-      }
-    } catch (err) {
-      console.error("Erreur chargement infos entreprise:", err);
-    }
+  const handleLogout = async () => {
+    await supabase.auth.signOut();
+    sessionStorage.clear();
+    document.cookie = "mbx_auth_token=; path=/; max-age=0";
+    document.cookie = "mbx_company_id=; path=/; max-age=0";
+    window.location.href = "/login";
   };
 
-  const isGerant = permissions?.is_gerant === true;
-
+  // Menu principal (sans Techniciens)
   const navItems = [
-    { href: "/dashboard", label: "🏠 Tableau de bord", require: true },
-    { href: "/repairs", label: "🔧 Réparations", require: permissions?.can_access_repairs || isGerant },
-    { href: "/clients", label: "👥 Clients", require: permissions?.can_access_clients || isGerant },
-    { href: "/historique", label: "📜 Historique", require: permissions?.can_access_historique || isGerant },
-    { href: "/factures", label: "📄 Factures", require: permissions?.can_access_factures || isGerant },
-    { href: "/paiements", label: "💳 Paiements", require: permissions?.can_access_paiements || isGerant },
-    { href: "/statistiques", label: "📊 Statistiques", require: permissions?.can_access_statistiques || isGerant },
-    { href: "/settings", label: "⚙️ Paramètres", require: true },
+    { href: "/dashboard", label: "Tableau de bord", icon: "🏠", visible: true },
+    { href: "/repairs", label: "Réparations", icon: "🔧", visible: permissions?.can_access_repairs || isGerant },
+    { href: "/clients", label: "Clients", icon: "👥", visible: permissions?.can_access_clients || isGerant },
+    { href: "/historique", label: "Historique", icon: "📜", visible: permissions?.can_access_historique || isGerant },
+    { href: "/factures", label: "Factures", icon: "📄", visible: permissions?.can_access_factures || isGerant },
+    { href: "/paiements", label: "Paiements", icon: "💳", visible: permissions?.can_access_paiements || isGerant },
+    { href: "/statistiques", label: "Statistiques", icon: "📊", visible: permissions?.can_access_statistiques || isGerant },
+    { href: "/settings", label: "Paramètres", icon: "⚙️", visible: true },
   ];
 
-  const visibleItems = navItems.filter(item => item.require);
+  const visibleItems = navItems.filter(item => item.visible);
 
   return (
-    <nav className="bg-white shadow-md sticky top-0 z-50">
+    <nav className="bg-gradient-to-r from-gray-900 via-gray-800 to-gray-900 shadow-2xl sticky top-0 z-50 border-b border-orange-500/30">
       <div className="container mx-auto px-4">
         <div className="flex justify-between items-center h-16">
-          {/* Logo et nom de l'entreprise dynamique avec PNG support */}
-          <Link href="/dashboard" className="flex items-center gap-2 text-xl font-bold text-blue-600">
-            {companyInfo.logoUrl ? (
-              <img src={companyInfo.logoUrl} alt="Logo" className="h-8 w-auto object-contain" />
-            ) : (
-              <span className="text-2xl">{companyInfo.logo}</span>
-            )}
-            <span>{companyInfo.name}</span>
+          
+          {/* Logo */}
+          <Link 
+            href="/dashboard" 
+            className="group relative flex items-center gap-2 text-xl font-black transition-all duration-300 hover:scale-105"
+          >
+            <div className="relative">
+              <div className="absolute -inset-1 bg-orange-500 rounded-full blur-md opacity-0 group-hover:opacity-100 transition duration-300"></div>
+              <span className="relative text-2xl drop-shadow-[0_0_10px_rgba(249,115,22,0.5)] group-hover:drop-shadow-[0_0_20px_rgba(249,115,22,0.8)] transition-all duration-300">
+                🔧
+              </span>
+            </div>
+            <span className="bg-gradient-to-r from-white to-orange-400 bg-clip-text text-transparent drop-shadow-[0_0_10px_rgba(255,255,255,0.3)] hidden sm:inline">
+              MBX Réparations
+            </span>
           </Link>
           
-          <div className="hidden md:flex space-x-6">
+          {/* Navigation Desktop - Menu principal */}
+          <div className="hidden lg:flex items-center gap-2">
+            {visibleItems.map((item) => {
+              const isActive = pathname === item.href;
+              const isHovered = hoveredItem === item.href;
+              
+              return (
+                <Link
+                  key={item.href}
+                  href={item.href}
+                  onMouseEnter={() => setHoveredItem(item.href)}
+                  onMouseLeave={() => setHoveredItem(null)}
+                  className={`group relative px-4 py-2 rounded-xl font-medium transition-all duration-300 ${
+                    isActive 
+                      ? "bg-gradient-to-r from-orange-500 to-orange-600 text-white shadow-lg shadow-orange-500/30" 
+                      : "text-gray-300 hover:text-white"
+                  }`}
+                  style={{
+                    transform: isHovered ? "translateY(-2px) scale(1.05)" : "translateY(0) scale(1)",
+                  }}
+                >
+                  <div className={`absolute inset-0 rounded-xl bg-gradient-to-r from-orange-500 to-orange-600 opacity-0 transition-opacity duration-300 ${isHovered && !isActive ? "opacity-20" : ""}`}></div>
+                  
+                  <div className="relative flex items-center gap-2">
+                    <span 
+                      className="text-lg transition-all duration-300 inline-block"
+                      style={{
+                        transform: isHovered ? "scale(1.2) translateX(-2px)" : "scale(1) translateX(0)",
+                      }}
+                    >
+                      {item.icon}
+                    </span>
+                    <span 
+                      className="text-sm transition-all duration-300"
+                      style={{
+                        transform: isHovered ? "translateX(2px)" : "translateX(0)"
+                      }}
+                    >
+                      {item.label}
+                    </span>
+                  </div>
+                  
+                  <div 
+                    className={`absolute -bottom-1 left-1/2 transform -translate-x-1/2 h-0.5 bg-gradient-to-r from-orange-400 to-orange-600 rounded-full transition-all duration-300 ${
+                      isHovered ? "w-1/2 opacity-100" : "w-0 opacity-0"
+                    }`}
+                  ></div>
+                </Link>
+              );
+            })}
+          </div>
+
+          {/* Zone droite : Profil + Déconnexion */}
+          <div className="flex items-center gap-3">
+            {/* Profil utilisateur - Affiche le NOM du technicien */}
+            <div className="relative group">
+              <div className="absolute -inset-1 bg-gradient-to-r from-orange-500 to-orange-600 rounded-full blur-md opacity-0 group-hover:opacity-100 transition duration-300"></div>
+              <div className="relative flex items-center gap-2 bg-gray-800/50 backdrop-blur-sm rounded-full px-3 py-1.5 border border-orange-500/30">
+                <div className="w-8 h-8 rounded-full bg-gradient-to-br from-orange-500 to-orange-600 flex items-center justify-center text-white font-bold shadow-lg">
+                  {technicianName?.charAt(0).toUpperCase() || "?"}
+                </div>
+                <div className="hidden md:block">
+                  <p className="text-sm font-medium text-white">
+                    {technicianName || user?.email?.split("@")[0]}
+                  </p>
+                  {isGerant && (
+                    <p className="text-xs text-orange-400">⭐ Gérant</p>
+                  )}
+                </div>
+              </div>
+            </div>
+            
+            {/* Bouton Déconnexion */}
+            <button
+              onClick={handleLogout}
+              className="group relative flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-red-500 to-red-600 text-white rounded-xl font-medium transition-all duration-300 hover:scale-105 hover:shadow-lg hover:shadow-red-500/30 overflow-hidden"
+            >
+              <span className="absolute inset-0 bg-gradient-to-r from-red-600 to-red-700 opacity-0 group-hover:opacity-100 transition duration-300"></span>
+              <span className="relative z-10 flex items-center gap-2">
+                <span className="text-lg group-hover:scale-110 transition-transform duration-300">🚪</span>
+                <span className="hidden sm:inline">Déconnexion</span>
+              </span>
+            </button>
+
+            {/* Bouton menu mobile */}
+            <button
+              onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
+              className="lg:hidden text-white text-2xl"
+            >
+              ☰
+            </button>
+          </div>
+        </div>
+
+        {/* Menu Mobile */}
+        {mobileMenuOpen && (
+          <div className="lg:hidden py-4 border-t border-orange-500/30">
             {visibleItems.map((item) => (
               <Link
                 key={item.href}
                 href={item.href}
-                className={`px-3 py-2 rounded-md text-sm font-medium transition ${
+                onClick={() => setMobileMenuOpen(false)}
+                className={`flex items-center gap-3 px-4 py-3 rounded-lg transition ${
                   pathname === item.href
-                    ? "bg-blue-100 text-blue-700"
-                    : "text-gray-700 hover:bg-gray-100"
+                    ? "bg-orange-500/20 text-orange-400"
+                    : "text-gray-300 hover:bg-gray-800"
                 }`}
               >
-                {item.label}
+                <span className="text-xl">{item.icon}</span>
+                <span>{item.label}</span>
               </Link>
             ))}
           </div>
-          
-          <div className="flex items-center space-x-4">
-            <span className="text-sm text-gray-600">
-              👤 {user?.email?.split("@")[0]}
-            </span>
-            {permissions?.is_gerant && (
-              <span className="text-xs bg-green-100 text-green-700 px-2 py-1 rounded-full">
-                Gérant
-              </span>
-            )}
-            <button
-              onClick={onLogout}
-              className="bg-red-500 text-white px-4 py-2 rounded-md text-sm hover:bg-red-600 transition"
-            >
-              Déconnexion
-            </button>
-          </div>
-        </div>
+        )}
       </div>
     </nav>
   );

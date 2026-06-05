@@ -1,20 +1,17 @@
 ﻿import { NextResponse } from "next/server";
 
 export function middleware(request) {
-  // Vérifier si l'utilisateur est authentifié via sessionStorage
-  // Note: Le middleware ne peut pas accéder directement à sessionStorage
-  // On utilise un token dans les cookies ou un header
-  
   const url = request.nextUrl.pathname;
   
-  // Pages publiques (sans authentification)
-  const publicPages = ["/login", "/register", "/reset-password"];
+  // 📌 PAGES PUBLIQUES (accessibles sans authentification)
+  const publicPages = ["/", "/login", "/register", "/reset-password"];
   
+  // ✅ Si c'est une page publique, on laisse passer
   if (publicPages.includes(url)) {
     return NextResponse.next();
   }
   
-  // Vérifier la présence du token dans les cookies
+  // 🔒 Pour les autres pages, vérifier le cookie d'authentification
   const authToken = request.cookies.get("mbx_auth_token")?.value;
   
   if (!authToken) {
@@ -28,13 +25,6 @@ export function middleware(request) {
 
 export const config = {
   matcher: [
-    /*
-     * Match all request paths except:
-     * - _next/static (static files)
-     * - _next/image (image optimization files)
-     * - favicon.ico (favicon file)
-     * - public folder
-     */
     "/((?!_next/static|_next/image|favicon.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)",
   ],
 };

@@ -4,6 +4,7 @@ import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { supabase } from "../../lib/supabase";
 import { addLog } from "../../lib/logs";
+import Link from "next/link";
 
 export default function LoginPage() {
   const router = useRouter();
@@ -20,7 +21,6 @@ export default function LoginPage() {
     const checkUser = async () => {
       const { data: { user } } = await supabase.auth.getUser();
       if (user) {
-        // Vérifier si les cookies existent
         const hasCookie = document.cookie.includes("mbx_auth_token");
         if (hasCookie) {
           router.push("/dashboard");
@@ -30,7 +30,6 @@ export default function LoginPage() {
     checkUser();
   }, [router]);
 
-  // Supprimer les cookies
   const clearCookies = () => {
     document.cookie = "mbx_auth_token=; path=/; max-age=0";
     document.cookie = "mbx_company_id=; path=/; max-age=0";
@@ -38,7 +37,6 @@ export default function LoginPage() {
     document.cookie = "mbx_technician_id=; path=/; max-age=0";
   };
 
-  // Étape 1 : Connexion email/mot de passe
   const handleEmailLogin = async (e) => {
     e.preventDefault();
     setLoading(true);
@@ -58,7 +56,6 @@ export default function LoginPage() {
       }
 
       if (data?.user) {
-        // Récupérer le nom de l'entreprise depuis la table profiles
         const { data: profile } = await supabase
           .from("profiles")
           .select("company_name")
@@ -76,7 +73,6 @@ export default function LoginPage() {
     }
   };
 
-  // Étape 2 : Vérifier le code du technicien
   const handleCodeVerification = async (e) => {
     e.preventDefault();
     if (code.length !== 4) {
@@ -88,7 +84,6 @@ export default function LoginPage() {
     setError("");
 
     try {
-      // Chercher le technicien par son code
       const { data: tech, error: techError } = await supabase
         .from("technicians")
         .select("*")
@@ -103,7 +98,6 @@ export default function LoginPage() {
         return;
       }
 
-      // Stocker les permissions dans sessionStorage
       sessionStorage.setItem("technician_permissions", JSON.stringify({
         id: tech.id,
         name: tech.name,
@@ -119,13 +113,11 @@ export default function LoginPage() {
       sessionStorage.setItem("technician_name", tech.name);
       sessionStorage.setItem("company_id", tempUser.id);
 
-      // Créer les cookies pour le middleware
       document.cookie = `mbx_auth_token=${tech.id}; path=/; max-age=86400`;
       document.cookie = `mbx_company_id=${tempUser.id}; path=/; max-age=86400`;
       document.cookie = `mbx_technician_name=${encodeURIComponent(tech.name)}; path=/; max-age=86400`;
       document.cookie = `mbx_technician_id=${tech.id}; path=/; max-age=86400`;
 
-      // Enregistrer la connexion dans les logs
       await addLog({
         action: "login",
         technicienId: tech.id,
@@ -146,7 +138,6 @@ export default function LoginPage() {
     }
   };
 
-  // Revenir à l'étape 1
   const handleBack = () => {
     clearCookies();
     sessionStorage.removeItem("technician_permissions");
@@ -159,101 +150,148 @@ export default function LoginPage() {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-500 to-purple-600">
-      <div className="bg-white p-8 rounded-xl shadow-2xl w-96">
-        <div className="text-center mb-8">
-          <div className="w-20 h-20 bg-blue-100 rounded-full flex items-center justify-center mx-auto mb-4">
-            <span className="text-3xl">🔧</span>
-          </div>
-          <h1 className="text-2xl font-bold text-gray-800">MBX Réparations</h1>
-          <p className="text-gray-500 mt-2">
-            {step === 1 ? "Connexion entreprise" : `Bienvenue ${companyName}`}
-          </p>
-        </div>
-        
-        {error && (
-          <div className="bg-red-50 border border-red-200 text-red-700 p-3 rounded-lg mb-4 text-sm">
-            ❌ {error}
-          </div>
-        )}
-
-        {step === 1 ? (
-          <form onSubmit={handleEmailLogin}>
-            <div className="mb-4">
-              <label className="block text-gray-700 mb-2 text-sm font-medium">📧 Email entreprise</label>
-              <input
-                type="email"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-                placeholder="entreprise@email.com"
-                required
-              />
-            </div>
-
-            <div className="mb-6">
-              <label className="block text-gray-700 mb-2 text-sm font-medium">🔒 Mot de passe</label>
-              <input
-                type="password"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-                placeholder="••••••••"
-                required
-              />
-            </div>
-
-            <button
-              type="submit"
-              disabled={loading}
-              className="w-full bg-blue-600 text-white py-2 rounded-lg hover:bg-blue-700 transition font-medium"
-            >
-              {loading ? "Connexion..." : "Continuer"}
-            </button>
-          </form>
-        ) : (
-          <form onSubmit={handleCodeVerification}>
-            <div className="mb-4 text-center">
-              <div className="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-3">
-                <span className="text-2xl">✅</span>
+    <div className="min-h-screen bg-black">
+      
+      {/* HEADER NEON */}
+      <header className="sticky top-0 z-50 bg-black/95 backdrop-blur-2xl border-b border-orange-500/40 shadow-[0_0_50px_rgba(249,115,22,0.2)]">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="flex items-center justify-between py-2">
+            <div className="flex items-center gap-3 cursor-pointer group" onClick={() => router.push("/")}>
+              <div className="relative">
+                <div className="absolute -inset-2 rounded-xl bg-gradient-to-r from-orange-500 via-orange-400 to-orange-600 opacity-75 group-hover:opacity-100 blur-md"></div>
+                <div className="relative w-12 h-12 bg-gradient-to-br from-orange-500 to-orange-600 rounded-xl flex items-center justify-center shadow-2xl overflow-hidden">
+                  <img src="/logo.png" alt="MBX Logo" className="w-full h-full object-cover rounded-xl scale-105" />
+                </div>
               </div>
-              <p className="text-gray-600 text-sm">
-                Connecté en tant que <strong>{tempUser?.email}</strong>
-              </p>
+              <div className="leading-tight">
+                <span className="text-white font-black text-2xl tracking-tight drop-shadow-[0_0_15px_rgba(255,255,255,0.3)]">MBX</span>
+                <span className="text-orange-400 text-[10px] block -mt-1 font-bold tracking-[0.2em] drop-shadow-[0_0_4px_rgba(249,115,22,0.8)]">RÉPARATIONS</span>
+              </div>
             </div>
 
-            <div className="mb-6">
-              <label className="block text-gray-700 mb-2 text-sm font-medium">🔑 Code technicien (4 chiffres)</label>
-              <input
-                type="text"
-                value={code}
-                onChange={(e) => setCode(e.target.value.replace(/[^0-9]/g, "").slice(0, 4))}
-                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-center text-2xl tracking-widest"
-                placeholder="0000"
-                maxLength="4"
-                required
-                autoFocus
-              />
-              <p className="text-xs text-gray-400 mt-2">Entrez votre code personnel à 4 chiffres</p>
-            </div>
-
-            <button
-              type="submit"
-              disabled={loading}
-              className="w-full bg-blue-600 text-white py-2 rounded-lg hover:bg-blue-700 transition font-medium mb-2"
+            <Link
+              href="/"
+              className="relative group/btn flex items-center gap-2 px-5 py-2 bg-gradient-to-r from-orange-500 to-orange-600 text-white rounded-full text-sm font-bold tracking-wider transition-all duration-300 shadow-[0_0_25px_rgba(249,115,22,0.4)] hover:shadow-[0_0_40px_rgba(249,115,22,0.7)] hover:scale-105 overflow-hidden"
             >
-              {loading ? "Vérification..." : "Valider mon code"}
-            </button>
+              <span className="relative z-10 flex items-center gap-2">
+                <span className="text-lg">🏠</span>
+                <span>ACCUEIL</span>
+              </span>
+            </Link>
+          </div>
+        </div>
+      </header>
+
+      {/* FORMULAIRE DE CONNEXION NEON */}
+      <div className="min-h-[calc(100vh-80px)] flex items-center justify-center py-12 px-4 relative overflow-hidden">
+        {/* Effets de fond néon */}
+        <div className="absolute inset-0 bg-gradient-to-br from-black via-gray-950 to-black"></div>
+        <div className="absolute inset-0 bg-[linear-gradient(rgba(249,115,22,0.03)_1px,transparent_1px),linear-gradient(90deg,rgba(249,115,22,0.03)_1px,transparent_1px)] bg-[size:50px_50px]"></div>
+        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[500px] h-[500px] bg-orange-500/10 rounded-full blur-[100px] animate-pulse"></div>
+        
+        <div className="relative z-10 w-full max-w-md">
+          <div className="relative">
+            {/* Cadre néon extérieur */}
+            <div className="absolute -inset-1 bg-gradient-to-r from-orange-500 via-orange-400 to-orange-500 rounded-2xl blur-xl opacity-70"></div>
             
-            <button
-              type="button"
-              onClick={handleBack}
-              className="w-full text-gray-500 text-sm py-2 hover:text-gray-700"
-            >
-              ← Se déconnecter
-            </button>
-          </form>
-        )}
+            <div className="relative bg-black/80 backdrop-blur-xl rounded-2xl p-8 border border-orange-500/30 shadow-2xl">
+              <div className="text-center mb-8">
+                <div className="relative w-20 h-20 bg-gradient-to-br from-orange-500 to-orange-600 rounded-full flex items-center justify-center mx-auto mb-4 shadow-lg">
+                  <div className="absolute -inset-1 bg-orange-500 rounded-full blur-md opacity-50"></div>
+                  <span className="relative text-3xl">🔧</span>
+                </div>
+                <h1 className="text-2xl font-black text-white drop-shadow-[0_0_10px_rgba(255,255,255,0.3)]">ESPACE PRO</h1>
+                <p className="text-orange-400 text-sm mt-2">
+                  {step === 1 ? "Connexion à l'atelier" : `Bienvenue ${companyName}`}
+                </p>
+              </div>
+              
+              {error && (
+                <div className="bg-red-500/20 border border-red-500/50 text-red-300 p-3 rounded-lg mb-4 text-sm">
+                  ❌ {error}
+                </div>
+              )}
+
+              {step === 1 ? (
+                <form onSubmit={handleEmailLogin} className="space-y-5">
+                  <div>
+                    <label className="block text-orange-400 mb-2 text-sm font-medium drop-shadow-[0_0_4px_rgba(249,115,22,0.5)]">📧 Email entreprise</label>
+                    <input
+                      type="email"
+                      value={email}
+                      onChange={(e) => setEmail(e.target.value)}
+                      className="w-full px-4 py-3 bg-gray-900/50 border border-orange-500/30 rounded-xl text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-transparent transition"
+                      placeholder="entreprise@email.com"
+                      required
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-orange-400 mb-2 text-sm font-medium drop-shadow-[0_0_4px_rgba(249,115,22,0.5)]">🔒 Mot de passe</label>
+                    <input
+                      type="password"
+                      value={password}
+                      onChange={(e) => setPassword(e.target.value)}
+                      className="w-full px-4 py-3 bg-gray-900/50 border border-orange-500/30 rounded-xl text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-transparent transition"
+                      placeholder="••••••••"
+                      required
+                    />
+                  </div>
+
+                  <button
+                    type="submit"
+                    disabled={loading}
+                    className="w-full bg-gradient-to-r from-orange-500 to-orange-600 text-white py-3 rounded-xl font-bold tracking-wider transition-all duration-300 shadow-[0_0_20px_rgba(249,115,22,0.4)] hover:shadow-[0_0_35px_rgba(249,115,22,0.6)] hover:scale-[1.02] disabled:opacity-50"
+                  >
+                    {loading ? "⏳ Connexion..." : "🚀 CONTINUER"}
+                  </button>
+                </form>
+              ) : (
+                <form onSubmit={handleCodeVerification} className="space-y-5">
+                  <div className="text-center mb-4">
+                    <div className="w-16 h-16 bg-green-500/20 rounded-full flex items-center justify-center mx-auto mb-3 border border-green-500/50">
+                      <span className="text-2xl">✅</span>
+                    </div>
+                    <p className="text-gray-300 text-sm">
+                      Connecté en tant que <strong className="text-orange-400">{tempUser?.email}</strong>
+                    </p>
+                  </div>
+
+                  <div>
+                    <label className="block text-orange-400 mb-2 text-sm font-medium text-center drop-shadow-[0_0_4px_rgba(249,115,22,0.5)]">🔑 Code technicien (4 chiffres)</label>
+                    <input
+                      type="text"
+                      value={code}
+                      onChange={(e) => setCode(e.target.value.replace(/[^0-9]/g, "").slice(0, 4))}
+                      className="w-full px-4 py-3 text-center text-2xl tracking-[0.5em] bg-gray-900/50 border border-orange-500/30 rounded-xl text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-transparent font-mono"
+                      placeholder="0000"
+                      maxLength="4"
+                      required
+                      autoFocus
+                    />
+                    <p className="text-xs text-gray-500 text-center mt-2">Entrez votre code personnel à 4 chiffres</p>
+                  </div>
+
+                  <button
+                    type="submit"
+                    disabled={loading}
+                    className="w-full bg-gradient-to-r from-orange-500 to-orange-600 text-white py-3 rounded-xl font-bold tracking-wider transition-all duration-300 shadow-[0_0_20px_rgba(249,115,22,0.4)] hover:shadow-[0_0_35px_rgba(249,115,22,0.6)] hover:scale-[1.02] disabled:opacity-50"
+                  >
+                    {loading ? "⏳ Vérification..." : "🔓 VALIDER"}
+                  </button>
+                  
+                  <button
+                    type="button"
+                    onClick={handleBack}
+                    className="w-full text-gray-400 text-sm py-2 hover:text-orange-400 transition"
+                  >
+                    ← Se déconnecter
+                  </button>
+                </form>
+              )}
+            </div>
+          </div>
+        </div>
       </div>
     </div>
   );

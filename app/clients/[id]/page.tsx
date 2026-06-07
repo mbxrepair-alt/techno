@@ -5,7 +5,7 @@ import { supabase } from "../../../lib/supabase";
 import { useParams, useRouter } from "next/navigation";
 import Layout from "../../../components/Layout";
 
-export default function ClientDetailPage(): JSX.Element {
+export default function ClientDetailPage() {
   const { id } = useParams();
   const router = useRouter();
 

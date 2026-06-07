@@ -5,7 +5,7 @@ import { useState, useEffect, use } from "react";
 import { supabase } from "../../../../lib/supabase";
 import { useRouter } from "next/navigation";
 
-export default function ClientCodePage({ params }: { params: Promise<{ code: string }> }): JSX.Element {
+export default function ClientCodePage({ params }: { params: Promise<{ code: string }> }) {
   const router = useRouter();
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");

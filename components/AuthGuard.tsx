@@ -10,7 +10,7 @@ interface AuthGuardProps {
 
 const PUBLIC_PAGES = ["/login", "/register", "/reset-password"];
 
-export default function AuthGuard({ children }: AuthGuardProps): JSX.Element | null {
+export default function AuthGuard({ children }: AuthGuardProps) {
   const router = useRouter();
   const pathname = usePathname();
   const [isAuthenticated, setIsAuthenticated] = useState(false);

@@ -5,7 +5,7 @@ import { supabase, getCurrentUser } from "../../lib/supabase";
 import { useRouter } from "next/navigation";
 import Layout from "../../components/Layout";
 
-export default function PaiementsPage(): JSX.Element {
+export default function PaiementsPage() {
   const router = useRouter();
 
   const [payments, setPayments] = useState([]);
@@ -62,11 +62,11 @@ export default function PaiementsPage(): JSX.Element {
           method: r.payment_method || "Inconnu",
           date: r.payment_date ? new Date(r.payment_date) : null,
           client: {
-            id: r.clients?.id,
-            name: r.clients?.name ?? "Client inconnu",
-            email: r.clients?.email ?? "",
-            phone: r.clients?.phone ?? "",
-            code: r.clients?.client_code ?? ""
+            id: (r.clients as any)?.id,
+            name: (r.clients as any)?.name ?? "Client inconnu",
+            email: (r.clients as any)?.email ?? "",
+            phone: (r.clients as any)?.phone ?? "",
+            code: (r.clients as any)?.client_code ?? ""
           }
         };
       });
@@ -237,7 +237,7 @@ export default function PaiementsPage(): JSX.Element {
               <tbody className="divide-y divide-gray-100">
                 {filteredPayments.length === 0 ? (
                   <tr>
-                    <td colSpan="8" className="px-4 py-8 text-center text-gray-400">
+                    <td colSpan={8} className="px-4 py-8 text-center text-gray-400">
                       Aucun paiement trouvé
                     </td>
                   </tr>
@@ -301,7 +301,7 @@ export default function PaiementsPage(): JSX.Element {
             {Object.entries(totalByMethod).map(([method, sum]) => (
               <div key={method} className="bg-gray-50 rounded-lg px-4 py-2">
                 <span className="text-sm text-gray-500">{method}</span>
-                <span className="ml-2 font-bold text-gray-800">{sum.toFixed(2)} €</span>
+                <span className="ml-2 font-bold text-gray-800">{(sum as number).toFixed(2)} €</span>
               </div>
             ))}
           </div>

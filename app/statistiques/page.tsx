@@ -9,7 +9,7 @@ import {
   XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer
 } from "recharts";
 
-export default function StatistiquesPage(): JSX.Element {
+export default function StatistiquesPage() {
   const router = useRouter();
   const [loading, setLoading] = useState(true);
   const [stats, setStats] = useState({
@@ -101,7 +101,7 @@ export default function StatistiquesPage(): JSX.Element {
       const repairsByMonth = last6Months.map(m => ({ name: m.month, réparations: m.count }));
       const revenueByMonth = last6Months.map(m => ({ name: m.month, revenu: m.revenue }));
 
-      const techRepairCount = {};
+      const techRepairCount: Record<string, number> = {};
       repairs?.forEach(r => {
         if (r.technician) {
           techRepairCount[r.technician] = (techRepairCount[r.technician] || 0) + 1;
@@ -112,7 +112,7 @@ export default function StatistiquesPage(): JSX.Element {
         .sort((a, b) => b.count - a.count)
         .slice(0, 5);
 
-      const deviceCounts = {};
+      const deviceCounts: Record<string, number> = {};
       repairs?.forEach(r => {
         const device = r.device || "Autre";
         const deviceKey = device.split(" ")[0];
@@ -129,7 +129,7 @@ export default function StatistiquesPage(): JSX.Element {
         if (r.end_time && r.created_at) {
           const start = new Date(r.created_at);
           const end = new Date(r.end_time);
-          const days = Math.ceil((end - start) / (1000 * 60 * 60 * 24));
+          const days = Math.ceil((end.getTime() - start.getTime()) / (1000 * 60 * 60 * 24));
           totalRepairDays += days;
           completedWithDates++;
         }

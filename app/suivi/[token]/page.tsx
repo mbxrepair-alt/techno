@@ -5,7 +5,7 @@ import { supabase } from "../../../lib/supabase";
 import { useParams, useRouter } from "next/navigation";
 import Layout from "../../../components/Layout";
 
-export default function SuiviPage(): JSX.Element {
+export default function SuiviPage() {
   const params = useParams();
   const router = useRouter();
   const token = params.token;
@@ -89,13 +89,19 @@ export default function SuiviPage(): JSX.Element {
     setValidationAction(action);
     
     try {
-      const updates = {
+      const updates: {
+        client_validated: boolean;
+        client_rejected: boolean;
+        client_comment: string;
+        client_response_date: string;
+        status?: string;
+      } = {
         client_validated: action === "accept",
         client_rejected: action === "reject",
         client_comment: clientComment,
         client_response_date: new Date().toISOString()
       };
-      
+
       if (action === "accept") {
         updates.status = "✅ Validé client";
       }
@@ -299,7 +305,7 @@ export default function SuiviPage(): JSX.Element {
                     value={clientComment}
                     onChange={(e) => setClientComment(e.target.value)}
                     placeholder="Ajoutez un commentaire ou une question pour le réparateur..."
-                    rows="3"
+                    rows={3}
                     className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                   />
                 </div>

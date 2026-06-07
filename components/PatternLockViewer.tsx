@@ -13,7 +13,7 @@ const POINTS: Point[] = [
   { id: 7, x: 8, y: 92 }, { id: 8, x: 50, y: 92 }, { id: 9, x: 92, y: 92 },
 ];
 
-export default function PatternLockViewer({ pattern }: PatternLockViewerProps): JSX.Element | null {
+export default function PatternLockViewer({ pattern }: PatternLockViewerProps) {
   if (!pattern) return null;
 
   const pointsIds = pattern.split("-").map(Number);

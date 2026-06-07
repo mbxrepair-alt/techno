@@ -3,9 +3,9 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { supabase, getCurrentUser } from "../../../lib/supabase";
-import PatternLock from "../../components/PatternLock";
+import PatternLock from "../../../components/PatternLock";
 
-export default function SoumettreAppareilPage(): JSX.Element {
+export default function SoumettreAppareilPage() {
   const router = useRouter();
   const [clientName, setClientName] = useState("");
   const [clientCode, setClientCode] = useState("");
@@ -461,7 +461,7 @@ ${formData.description || "Aucune description"}
                 <label className="block text-sm font-semibold text-gray-700 mb-1">📝 Description complète</label>
                 <textarea
                   name="description"
-                  rows="4"
+                  rows={4}
                   placeholder="Décrivez précisément les problèmes constatés, l'état général..."
                   value={formData.description}
                   onChange={handleInputChange}

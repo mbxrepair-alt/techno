@@ -32,7 +32,7 @@ interface NavItem {
   visible: boolean;
 }
 
-export default function Navigation({ user, permissions }: NavigationProps): JSX.Element {
+export default function Navigation({ user, permissions }: NavigationProps) {
   const pathname = usePathname();
   const [isGerant, setIsGerant] = useState(false);
   const [hoveredItem, setHoveredItem] = useState<string | null>(null);

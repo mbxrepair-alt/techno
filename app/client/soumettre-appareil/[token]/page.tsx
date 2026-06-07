@@ -5,7 +5,7 @@ import { useParams, useRouter } from "next/navigation";
 import { supabase } from "../../../../lib/supabase";
 import PatternLock from "../../../../components/PatternLock";
 
-export default function SoumettreAppareilDirectPage(): JSX.Element {
+export default function SoumettreAppareilDirectPage() {
   const params = useParams();
   const router = useRouter();
   const token = params.token;
@@ -370,7 +370,7 @@ ${formData.description || "Aucune description"}
               <label className="block text-sm font-semibold text-gray-700 mb-1">📝 Description complète</label>
               <textarea
                 name="description"
-                rows="4"
+                rows={4}
                 placeholder="Décrivez précisément les problèmes constatés, l'état général..."
                 value={formData.description}
                 onChange={handleInputChange}

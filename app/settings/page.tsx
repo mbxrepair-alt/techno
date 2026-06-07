@@ -6,7 +6,7 @@ import Link from "next/link";
 import { supabase, getCurrentUser } from "../../lib/supabase";
 import Layout from "../../components/Layout";
 
-export default function SettingsPage(): JSX.Element {
+export default function SettingsPage() {
   const router = useRouter();
   const [activeTab, setActiveTab] = useState("general");
   const [permissions, setPermissions] = useState(null);
@@ -388,7 +388,7 @@ export default function SettingsPage(): JSX.Element {
                     value={settings.contact_address}
                     onChange={(e) => setSettings({...settings, contact_address: e.target.value})}
                     className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-orange-500"
-                    rows="3"
+                    rows={3}
                     placeholder="Adresse complète"
                   />
                 </div>

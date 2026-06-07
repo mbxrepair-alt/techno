@@ -12,7 +12,7 @@ interface LayoutProps {
 
 const PUBLIC_PAGES = ["/", "/login", "/register", "/reset-password"];
 
-export default function Layout({ children }: LayoutProps): JSX.Element {
+export default function Layout({ children }: LayoutProps) {
   const router = useRouter();
   const pathname = usePathname();
   const [user, setUser] = useState<object | null>(null);

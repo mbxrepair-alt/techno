@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import { supabase, getCurrentUser } from "../../lib/supabase";
 import Layout from "../../components/Layout";
 
-export default function ReceiptsHistory(): JSX.Element {
+export default function ReceiptsHistory() {
   const router = useRouter();
   const [receipts, setReceipts] = useState([]);
   const [loading, setLoading] = useState(true);

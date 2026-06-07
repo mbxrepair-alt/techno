@@ -29,7 +29,7 @@ const DEFAULT_FORM: Required<TechnicianData> = {
   is_gerant: false,
 };
 
-export default function TechnicianModal({ isOpen, onClose, onSave, technician }: TechnicianModalProps): JSX.Element | null {
+export default function TechnicianModal({ isOpen, onClose, onSave, technician }: TechnicianModalProps) {
   const [formData, setFormData] = useState<Required<TechnicianData>>(DEFAULT_FORM);
 
   useEffect(() => {

@@ -15,7 +15,7 @@ const PUBLIC_PREFIXES = [
   "/client/code",
 ];
 
-export default function ClientLayout({ children }: ClientLayoutProps): JSX.Element {
+export default function ClientLayout({ children }: ClientLayoutProps) {
   const router = useRouter();
   const pathname = usePathname();
 

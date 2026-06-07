@@ -45,7 +45,7 @@ const DEFAULTS: Record<TextareaType, string[]> = {
 export default function SmartTextarea({
   value, onChange, placeholder, className, rows = 4,
   type = "diagnostic", repairData = null, onAIGenerated = null,
-}: SmartTextareaProps): JSX.Element {
+}: SmartTextareaProps) {
   const [show, setShow] = useState(false);
   const [suggestions, setSuggestions] = useState<string[]>([]);
   const [custom, setCustom] = useState<string[]>([]);

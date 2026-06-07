@@ -5,7 +5,7 @@ import { supabase, getCurrentUser } from "../../../lib/supabase";
 import { useRouter } from "next/navigation";
 import Layout from "../../../components/Layout";
 
-export default function AdminLicencesPage(): JSX.Element {
+export default function AdminLicencesPage() {
   const router = useRouter();
   const [loading, setLoading] = useState(true);
   const [isAdmin, setIsAdmin] = useState(false);

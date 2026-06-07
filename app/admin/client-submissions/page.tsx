@@ -4,7 +4,7 @@ import { useState, useEffect } from "react";
 import { supabase, getCurrentUser } from "../../../lib/supabase";
 import Link from "next/link";
 
-export default function ClientSubmissionsPage(): JSX.Element {
+export default function ClientSubmissionsPage() {
   const [submissions, setSubmissions] = useState([]);
   const [loading, setLoading] = useState(true);
   const [currentUserEmail, setCurrentUserEmail] = useState("");
@@ -21,7 +21,7 @@ export default function ClientSubmissionsPage(): JSX.Element {
         return;
       }
 
-      setCurrentUserEmail(user.email || user.user?.email || "Email inconnu");
+      setCurrentUserEmail(user.email || "Email inconnu");
 
       // Récupérer le vrai ID du profil depuis la table profiles
       const { data: profile, error: profileError } = await supabase

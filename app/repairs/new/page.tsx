@@ -4,7 +4,7 @@ import { useState } from "react";
 import SmartTextarea from "../../../components/SmartTextarea";
 import { supabase } from "../../../lib/supabase";
 
-export default function NewRepairPage(): JSX.Element {
+export default function NewRepairPage() {
   const [clientName, setClientName] = useState("");
   const [device, setDevice] = useState("");
   const [issue, setIssue] = useState("");

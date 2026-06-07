@@ -24,7 +24,7 @@ const REASONS = [
   "❌ Autre problème",
 ];
 
-export default function ReturnModal({ repair, onClose, onSuccess }: ReturnModalProps): JSX.Element {
+export default function ReturnModal({ repair, onClose, onSuccess }: ReturnModalProps) {
   const [reason, setReason] = useState("");
   const [description, setDescription] = useState("");
   const [loading, setLoading] = useState(false);

@@ -7,7 +7,7 @@ import Layout from "../../../components/Layout";
 import emailjs from '@emailjs/browser';
 import SmartTextarea from "../../../components/SmartTextarea";
 
-export default function RepairDetailPage(): JSX.Element {
+export default function RepairDetailPage() {
   const router = useRouter();
   const params = useParams();
   const id = params.id;
@@ -203,7 +203,7 @@ export default function RepairDetailPage(): JSX.Element {
       diagnostic_technicien: diagnosticTechnicien,
       risks, 
       repair_description: repairDescription,
-      final_price: parseFloat(finalPrice || 0), 
+      final_price: parseFloat(String(finalPrice || 0)), 
       tests_passed: testsPassed,
       parts_used: JSON.stringify(parts), 
       photos: photos
@@ -232,7 +232,7 @@ export default function RepairDetailPage(): JSX.Element {
       lastSavedRef.current.testsPassed = testsPassed;
     }
     
-    const newPrice = parseFloat(finalPrice || 0);
+    const newPrice = parseFloat(String(finalPrice || 0));
     if (newPrice !== lastSavedRef.current.finalPrice && finalPrice !== "") {
       await ajouterHistorique('modification', `💰 Prix modifié`, `${lastSavedRef.current.finalPrice}€`, `${newPrice}€`);
       lastSavedRef.current.finalPrice = newPrice;

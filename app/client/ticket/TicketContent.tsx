@@ -5,7 +5,7 @@ import { useSearchParams, useRouter } from "next/navigation";
 import { supabase } from "../../../lib/supabase";
 import Layout from "../../../components/Layout";
 
-export default function TicketContent(): JSX.Element {
+export default function TicketContent() {
   const searchParams = useSearchParams();
   const router = useRouter();
   const ticketId = searchParams.get("id");

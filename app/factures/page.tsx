@@ -25,7 +25,7 @@ const FROM_EMAIL = process.env.NEXT_PUBLIC_FROM_EMAIL || "no-reply@mbx-reparatio
    ------------------------------------------------------------- */
 const TVA_RATES = [0, 20];
 
-export default function FacturesPage(): JSX.Element {
+export default function FacturesPage() {
   const router = useRouter();
 
   /* ----------------------- State ----------------------- */
@@ -210,7 +210,7 @@ export default function FacturesPage(): JSX.Element {
     setIsSending(true);
     try {
       let remaining = amount;
-      const toPay = [...selectedGroup.repairs].sort((a, b) => new Date(a.created_at) - new Date(b.created_at));
+      const toPay = [...selectedGroup.repairs].sort((a, b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime());
 
       for (const rep of toPay) {
         if (remaining <= 0) break;

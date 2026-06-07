@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 import { useParams } from "next/navigation";
 import { supabase } from "../../../../lib/supabase";
 
-export default function RepairDetails(): JSX.Element {
+export default function RepairDetails() {
   const { id } = useParams();
   const [repair, setRepair] = useState(null);
 

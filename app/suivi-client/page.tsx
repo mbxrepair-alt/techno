@@ -483,7 +483,7 @@ function SuiviClientContent() {
                       <h3 className="font-semibold text-orange-800 mb-3">📝 Votre réponse</h3>
                       <textarea
                         className="w-full p-3 border rounded-lg focus:ring-2 focus:ring-orange-500 resize-none"
-                        rows="4"
+                        rows={4}
                         placeholder="Écrivez votre message ici... (acceptation, refus, questions, etc.)"
                         value={clientResponse}
                         onChange={(e) => setClientResponse(e.target.value)}
@@ -552,7 +552,7 @@ function SuiviClientContent() {
 }
 
 // Page principale avec Suspense - C'EST LE PLUS IMPORTANT !
-export default function SuiviClientPage(): JSX.Element {
+export default function SuiviClientPage() {
   return (
     <Suspense fallback={
       <div className="min-h-screen bg-gradient-to-br from-amber-50 via-white to-orange-50 flex items-center justify-center">

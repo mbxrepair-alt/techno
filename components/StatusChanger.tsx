@@ -23,7 +23,7 @@ interface StatusChangerProps {
   onStatusChange: (repairId: number | string, newStatus: string) => Promise<void> | void;
 }
 
-export default function StatusChanger({ repairId, currentStatus, onStatusChange }: StatusChangerProps): JSX.Element {
+export default function StatusChanger({ repairId, currentStatus, onStatusChange }: StatusChangerProps) {
   const [loading, setLoading] = useState(false);
   const [selectedStatus, setSelectedStatus] = useState(currentStatus);
 

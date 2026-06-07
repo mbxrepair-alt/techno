@@ -4,7 +4,7 @@
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 
-export default function ClientDashboard(): JSX.Element {
+export default function ClientDashboard() {
   const router = useRouter();
   const [client, setClient] = useState(null);
   const [tickets, setTickets] = useState([]);

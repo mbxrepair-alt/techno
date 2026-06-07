@@ -5,7 +5,7 @@ import { supabase, getCurrentUser } from "../../../lib/supabase";
 import { useRouter } from "next/navigation";
 import Layout from "../../../components/Layout";
 
-export default function AdminUsersPage(): JSX.Element {
+export default function AdminUsersPage() {
   const router = useRouter();
   const [loading, setLoading] = useState(true);
   const [isAdmin, setIsAdmin] = useState(false);
@@ -89,7 +89,7 @@ export default function AdminUsersPage(): JSX.Element {
     if (licence.status !== "active") return { text: "⏸ Suspendue", color: "bg-yellow-100 text-yellow-800" };
     if (licence.is_unlimited) return { text: "♾️ Illimitée", color: "bg-purple-100 text-purple-800" };
     if (licence.is_trial) {
-      const daysLeft = Math.ceil((new Date(licence.trial_end_date) - new Date()) / (1000 * 60 * 60 * 24));
+      const daysLeft = Math.ceil((new Date(licence.trial_end_date).getTime() - Date.now()) / (1000 * 60 * 60 * 24));
       if (daysLeft <= 0) return { text: "📅 Expirée", color: "bg-red-100 text-red-800" };
       return { text: `🎁 Essai (${daysLeft}j)`, color: "bg-green-100 text-green-800" };
     }

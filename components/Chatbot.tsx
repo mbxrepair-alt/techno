@@ -14,7 +14,7 @@ interface ChatbotProps {
   onClose: () => void;
 }
 
-export default function Chatbot({ isOpen, onClose }: ChatbotProps): JSX.Element | null {
+export default function Chatbot({ isOpen, onClose }: ChatbotProps) {
   const [messages, setMessages] = useState<Message[]>([
     { role: "assistant", content: "🔧 Bonjour ! Je suis l'assistant technique MBX. Je peux vous aider avec :\n\n📱 Diagnostic de pannes\n🔧 Suggestions de réparation\n💰 Estimations de prix\n🛠️ Solutions techniques\n\nComment puis-je vous aider aujourd'hui ?" }
   ]);

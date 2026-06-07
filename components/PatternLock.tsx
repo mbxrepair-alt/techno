@@ -30,7 +30,7 @@ function getClosestPoint(x: number, y: number): Point | null {
   return closest;
 }
 
-export default function PatternLock({ onComplete, onClear }: PatternLockProps): JSX.Element {
+export default function PatternLock({ onComplete, onClear }: PatternLockProps) {
   const [pattern, setPattern] = useState<number[]>([]);
   const [isDrawing, setIsDrawing] = useState(false);
   const [mousePos, setMousePos] = useState({ x: 0, y: 0 });

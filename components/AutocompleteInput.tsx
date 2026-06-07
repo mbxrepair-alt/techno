@@ -30,7 +30,7 @@ export default function AutocompleteInput({
   error = "",
   maxSuggestions = 8,
   emptyMessage = "Aucun résultat",
-}: AutocompleteInputProps): JSX.Element {
+}: AutocompleteInputProps) {
   const [inputValue, setInputValue] = useState(value);
   const [showSuggestions, setShowSuggestions] = useState(false);
   const [selectedIndex, setSelectedIndex] = useState(-1);

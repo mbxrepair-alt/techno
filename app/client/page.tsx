@@ -4,7 +4,7 @@ import { useState } from "react";
 import { supabase } from "../../lib/supabase";
 import { useRouter } from "next/navigation";
 
-export default function ClientSpace(): JSX.Element {
+export default function ClientSpace() {
   const router = useRouter();
   const [searchType, setSearchType] = useState("code"); // Changé: "code" par défaut
   const [searchValue, setSearchValue] = useState("");

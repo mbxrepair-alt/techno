@@ -7,7 +7,7 @@ import Layout from "../../components/Layout";
 import TechnicianModal from "./TechnicianModal";
 import { addLog } from "../../lib/logs";
 
-export default function TechniciansPage(): JSX.Element {
+export default function TechniciansPage() {
   const router = useRouter();
   const [technicians, setTechnicians] = useState([]);
   const [loading, setLoading] = useState(true);

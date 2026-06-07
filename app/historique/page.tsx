@@ -44,7 +44,7 @@ const formatDateTime = (dateString) => {
   });
 };
 
-export default function HistoriquePage(): JSX.Element {
+export default function HistoriquePage() {
   const router = useRouter();
   
   const [repairs, setRepairs] = useState([]);
@@ -222,10 +222,10 @@ export default function HistoriquePage(): JSX.Element {
 
     switch (sortBy) {
       case "date_desc":
-        filtered.sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
+        filtered.sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
         break;
       case "date_asc":
-        filtered.sort((a, b) => new Date(a.created_at) - new Date(b.created_at));
+        filtered.sort((a, b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime());
         break;
       case "client_asc":
         filtered.sort((a, b) => (a.client?.name || "").localeCompare(b.client?.name || ""));

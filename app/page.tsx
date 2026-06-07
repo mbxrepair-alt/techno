@@ -6,7 +6,7 @@ import { supabase } from "../lib/supabase";
 import Link from "next/link";
 import Layout from "../components/Layout";
 
-export default function HomePage(): JSX.Element {
+export default function HomePage() {
   const router = useRouter();
   const [clientCode, setClientCode] = useState("");
   const [loading, setLoading] = useState(false);
@@ -352,7 +352,7 @@ export default function HomePage(): JSX.Element {
               <div className="bg-gray-900/50 backdrop-blur-sm rounded-2xl shadow-2xl p-8 border border-gray-800">
                 <h3 className="text-2xl font-bold text-white mb-4">Une question ?</h3>
                 <p className="text-gray-400 mb-6">Notre équipe vous répond sous 24h</p>
-                <form><input type="text" placeholder="Votre nom" className="w-full px-5 py-3 rounded-xl bg-gray-800/50 border border-gray-700 text-white placeholder-gray-500 mb-4 focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-transparent" /><input type="email" placeholder="Votre email" className="w-full px-5 py-3 rounded-xl bg-gray-800/50 border border-gray-700 text-white placeholder-gray-500 mb-4 focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-transparent" /><textarea rows="4" placeholder="Votre message" className="w-full px-5 py-3 rounded-xl bg-gray-800/50 border border-gray-700 text-white placeholder-gray-500 mb-4 focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-transparent"></textarea><button className="w-full bg-gradient-to-r from-orange-500 to-orange-600 text-white py-3 rounded-xl font-semibold hover:from-orange-600 hover:to-orange-700 transition shadow-md">Envoyer le message</button></form>
+                <form><input type="text" placeholder="Votre nom" className="w-full px-5 py-3 rounded-xl bg-gray-800/50 border border-gray-700 text-white placeholder-gray-500 mb-4 focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-transparent" /><input type="email" placeholder="Votre email" className="w-full px-5 py-3 rounded-xl bg-gray-800/50 border border-gray-700 text-white placeholder-gray-500 mb-4 focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-transparent" /><textarea rows={4} placeholder="Votre message" className="w-full px-5 py-3 rounded-xl bg-gray-800/50 border border-gray-700 text-white placeholder-gray-500 mb-4 focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-transparent"></textarea><button className="w-full bg-gradient-to-r from-orange-500 to-orange-600 text-white py-3 rounded-xl font-semibold hover:from-orange-600 hover:to-orange-700 transition shadow-md">Envoyer le message</button></form>
               </div>
             </div>
           </div>

@@ -6,7 +6,7 @@ import { supabase } from "../../lib/supabase";
 import { addLog } from "../../lib/logs";
 import Link from "next/link";
 
-export default function LoginPage(): JSX.Element {
+export default function LoginPage() {
   const router = useRouter();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -272,7 +272,7 @@ export default function LoginPage(): JSX.Element {
                       onChange={(e) => setCode(e.target.value.replace(/[^0-9]/g, "").slice(0, 4))}
                       className="w-full px-4 py-3 text-center text-2xl tracking-[0.5em] bg-gray-900/50 border border-orange-500/30 rounded-xl text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-transparent font-mono"
                       placeholder="0000"
-                      maxLength="4"
+                      maxLength={4}
                       required
                       autoFocus
                     />

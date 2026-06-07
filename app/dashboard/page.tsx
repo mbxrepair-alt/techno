@@ -10,7 +10,7 @@ import ReturnModal from "../../components/ReturnModal";
 import PatternLock from "../../components/PatternLock";
 import SmartChatbot from "../../components/SmartChatbot";
 
-export default function Dashboard(): JSX.Element {
+export default function Dashboard() {
   const router = useRouter();
   const clientInputRef = useRef(null);
   const phoneInputRef = useRef(null);
@@ -183,7 +183,7 @@ export default function Dashboard(): JSX.Element {
       if (user) {
         const { data: profile } = await supabase
           .from("profiles")
-          .select("company_name, contact_phone, contact_address, email")
+          .select("company_name, contact_phone, contact_address, email, siret")
           .eq("id", user.id)
           .single();
         
@@ -412,7 +412,7 @@ export default function Dashboard(): JSX.Element {
   const handleEmailKeyDown = (e) => {
     if (e.key === "Enter") {
       e.preventDefault();
-      const numberInput = document.querySelector('input[type="number"]');
+      const numberInput = document.querySelector('input[type="number"]') as HTMLInputElement | null;
       if (numberInput) numberInput.focus();
     }
   };
@@ -481,7 +481,7 @@ export default function Dashboard(): JSX.Element {
   };
 
   const generateRepairSlots = () => {
-    let count = Math.max(1, parseInt(desiredRepairCount) || 1);
+    let count = Math.max(1, Number(desiredRepairCount) || 1);
     if (count > 20) {
       showMessage("Maximum 20 appareils par client", "error");
       count = 20;
@@ -1301,7 +1301,7 @@ export default function Dashboard(): JSX.Element {
                 <div className="flex gap-2 items-end">
                   <div>
                     <label className="block text-xs text-gray-500 mb-1">Nombre d'appareils</label>
-                    <input type="number" min="1" max="20" value={desiredRepairCount} onChange={(e) => setDesiredRepairCount(e.target.value)} className="border border-gray-200 p-2 rounded-lg w-24 text-center focus:border-blue-400 focus:outline-none" onKeyDown={handleNumberKeyDown} />
+                    <input type="number" min={1} max={20} value={desiredRepairCount} onChange={(e) => setDesiredRepairCount(Number(e.target.value))} className="border border-gray-200 p-2 rounded-lg w-24 text-center focus:border-blue-400 focus:outline-none" onKeyDown={handleNumberKeyDown} />
                   </div>
                   <button type="button" onClick={generateRepairSlots} className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition text-sm">Générer</button>
                 </div>
@@ -1346,10 +1346,10 @@ export default function Dashboard(): JSX.Element {
                           </div>
                         )}
                       </div>
-                      <textarea rows="2" className="border border-gray-200 p-2 rounded-lg text-sm focus:border-blue-400 focus:outline-none" placeholder="📝 Description (optionnel)" value={repair.description || ""} onChange={(e) => updateRepairField(repair.id, "description", e.target.value)} />
+                      <textarea rows={2} className="border border-gray-200 p-2 rounded-lg text-sm focus:border-blue-400 focus:outline-none" placeholder="📝 Description (optionnel)" value={repair.description || ""} onChange={(e) => updateRepairField(repair.id, "description", e.target.value)} />
                       <input className="border border-gray-200 p-2 rounded-lg focus:border-blue-400 focus:outline-none" placeholder="💰 Prix estimé (€)" type="number" value={repair.estimatedPrice} onChange={(e) => updateRepairField(repair.id, "estimatedPrice", e.target.value)} />
                       <div className="flex gap-2">
-                        <input className="border border-gray-200 p-2 rounded-lg flex-1 focus:border-blue-400 focus:outline-none" placeholder="🔢 IMEI" value={repair.imei} onChange={(e) => updateRepairField(repair.id, "imei", e.target.value)} maxLength="15" />
+                        <input className="border border-gray-200 p-2 rounded-lg flex-1 focus:border-blue-400 focus:outline-none" placeholder="🔢 IMEI" value={repair.imei} onChange={(e) => updateRepairField(repair.id, "imei", e.target.value)} maxLength={15} />
                         <div className="relative flex-1">
                           <input className="border border-gray-200 p-2 rounded-lg w-full focus:border-blue-400 focus:outline-none" placeholder="🔑 Code" value={repair.code} onChange={(e) => { updateRepairField(repair.id, "code", e.target.value); searchCodeSuggestions(e.target.value, repair.id); }} />
                           {showCodeSuggestionsMap[repair.id] && codeSuggestionsMap[repair.id]?.length > 0 && (

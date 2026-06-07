@@ -4,7 +4,7 @@ import { useState, useEffect } from "react";
 import { supabase } from "../../lib/supabase";
 import { getLogs } from "../../lib/logs";
 
-export default function LogsPage(): JSX.Element {
+export default function LogsPage() {
   const [logs, setLogs] = useState([]);
   const [loading, setLoading] = useState(true);
   const [companyId, setCompanyId] = useState(null);

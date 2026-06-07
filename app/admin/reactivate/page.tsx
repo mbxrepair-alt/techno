@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { supabase } from "../../../lib/supabase";
 
-export default function ReactivateLicence(): JSX.Element {
+export default function ReactivateLicence() {
   const [email, setEmail] = useState("");
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState("");

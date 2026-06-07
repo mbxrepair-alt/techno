@@ -6,7 +6,7 @@ import { supabase } from "../../../../lib/supabase";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 
-export default function ClientRepairsPage({ params }: { params: Promise<{ id: string }> }): JSX.Element {
+export default function ClientRepairsPage({ params }: { params: Promise<{ id: string }> }) {
   const router = useRouter();
   const { id } = use(params);
   const [client, setClient] = useState(null);
@@ -411,7 +411,7 @@ export default function ClientRepairsPage({ params }: { params: Promise<{ id: st
                   <h3 className="font-semibold text-blue-800 mb-3">📝 Votre réponse</h3>
                   <textarea
                     className="w-full p-3 border rounded-lg focus:ring-2 focus:ring-blue-500 resize-none"
-                    rows="4"
+                    rows={4}
                     placeholder="Écrivez votre message ici... (acceptation, refus, questions, etc.)"
                     value={clientResponse}
                     onChange={(e) => setClientResponse(e.target.value)}

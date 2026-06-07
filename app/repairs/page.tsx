@@ -85,7 +85,7 @@ const PERIOD_OPTIONS = [
   { value: "month", label: "📅 Ce mois", days: 30 },
 ];
 
-export default function RepairsPage(): JSX.Element {
+export default function RepairsPage() {
   const router = useRouter();
   const [repairs, setRepairs] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -310,7 +310,7 @@ export default function RepairsPage(): JSX.Element {
       const orderA = STATUS_ORDER[a.status] || 99;
       const orderB = STATUS_ORDER[b.status] || 99;
       if (orderA !== orderB) return orderA - orderB;
-      return new Date(b.created_at) - new Date(a.created_at);
+      return new Date(b.created_at).getTime() - new Date(a.created_at).getTime();
     });
   }, [repairs, searchTerm, filterStatus, filterPeriod]);
 

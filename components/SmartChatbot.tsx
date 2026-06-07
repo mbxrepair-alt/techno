@@ -29,7 +29,7 @@ interface SmartChatbotProps {
   onPreFillMultiRepairs?: (repairs: RepairDetection[]) => void;
 }
 
-export default function SmartChatbot({ isOpen, onClose, onPreFillForm, onPreFillMultiRepairs }: SmartChatbotProps): JSX.Element | null {
+export default function SmartChatbot({ isOpen, onClose, onPreFillForm, onPreFillMultiRepairs }: SmartChatbotProps) {
   const [messages, setMessages] = useState<Message[]>([
     { role: "assistant", content: "🔧 **Assistant MBX - Mode Remplissage Auto**\n\nJe peux vous aider à créer rapidement des réparations !\n\n📱 **Exemples :**\n- \"iPhone 14 écran cassé\"\n- \"Samsung S22 batterie faible\"\n\n💡 **Dites-moi simplement l'appareil et la panne !**" }
   ]);

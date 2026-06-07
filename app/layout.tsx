@@ -1,6 +1,7 @@
 import type { Metadata, Viewport } from "next";
 import { Inter } from "next/font/google";
 import { Analytics } from "@vercel/analytics/next";
+import Script from "next/script";
 import "./globals.css";
 
 const inter = Inter({ subsets: ["latin"] });
@@ -10,6 +11,7 @@ export const metadata: Metadata = {
   description:
     "Application professionnelle de gestion d'atelier de réparation de téléphones et appareils électroniques",
   generator: "Next.js",
+  manifest: "/manifest.json",
   icons: {
     icon: [
       {
@@ -30,7 +32,7 @@ export const viewport: Viewport = {
   initialScale: 1,
   maximumScale: 1,
   userScalable: false,
-  themeColor: "#4f46e5",
+  themeColor: "#f97316",
 };
 
 export default function RootLayout({
@@ -40,9 +42,19 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="fr" className="bg-background">
+      <head>
+        <link rel="manifest" href="/manifest.json" />
+      </head>
       <body className={`${inter.className} antialiased`}>
         {children}
         {process.env.NODE_ENV === "production" && <Analytics />}
+        <Script id="sw-register" strategy="afterInteractive">{`
+          if ('serviceWorker' in navigator) {
+            window.addEventListener('load', function () {
+              navigator.serviceWorker.register('/sw.js');
+            });
+          }
+        `}</Script>
       </body>
     </html>
   );

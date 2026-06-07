@@ -8,7 +8,21 @@ interface AuthGuardProps {
   children: React.ReactNode;
 }
 
-const PUBLIC_PAGES = ["/login", "/register", "/reset-password"];
+const PUBLIC_PATHS = [
+  "/",
+  "/login",
+  "/suivi",
+  "/client/repairs",
+  "/client/code",
+  "/client/soumettre-appareil",
+];
+
+function isPublic(pathname: string): boolean {
+  return PUBLIC_PATHS.some((path) => {
+    if (path === "/") return pathname === "/";
+    return pathname === path || pathname.startsWith(path + "/");
+  });
+}
 
 export default function AuthGuard({ children }: AuthGuardProps) {
   const router = useRouter();
@@ -18,7 +32,7 @@ export default function AuthGuard({ children }: AuthGuardProps) {
 
   useEffect(() => {
     const checkAuth = async (): Promise<void> => {
-      if (PUBLIC_PAGES.includes(pathname)) {
+      if (isPublic(pathname)) {
         setIsAuthenticated(true);
         setLoading(false);
         return;

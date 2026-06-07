@@ -5,12 +5,27 @@ import { useRouter, usePathname } from "next/navigation";
 import { supabase } from "../lib/supabase";
 import Navigation from "./Navigation";
 import Chatbot from "./Chatbot";
+import InstallPWA from "./InstallPWA";
 
 interface LayoutProps {
   children: React.ReactNode;
 }
 
-const PUBLIC_PAGES = ["/", "/login", "/register", "/reset-password"];
+const PUBLIC_PATHS = [
+  "/",
+  "/login",
+  "/suivi",
+  "/client/repairs",
+  "/client/code",
+  "/client/soumettre-appareil",
+];
+
+function isPublic(pathname: string): boolean {
+  return PUBLIC_PATHS.some((path) => {
+    if (path === "/") return pathname === "/";
+    return pathname === path || pathname.startsWith(path + "/");
+  });
+}
 
 export default function Layout({ children }: LayoutProps) {
   const router = useRouter();
@@ -36,31 +51,14 @@ export default function Layout({ children }: LayoutProps) {
   }, []);
 
   useEffect(() => {
-    if (!loading && !user && !PUBLIC_PAGES.includes(pathname)) {
+    if (!loading && !user && !isPublic(pathname)) {
       router.push("/login");
     }
   }, [loading, user, pathname, router]);
 
-  const chatbotButton = (
-    <button
-      onClick={() => setShowChatbot(!showChatbot)}
-      className="fixed bottom-6 right-6 z-50 bg-gradient-to-r from-purple-600 to-pink-600 text-white p-4 rounded-full shadow-2xl hover:scale-110 transition-all duration-300 group animate-bounce-slow"
-    >
-      <div className="relative">
-        <span className="text-2xl group-hover:animate-pulse">🤖</span>
-        <span className="absolute -top-1 -right-1 w-3 h-3 bg-green-500 rounded-full animate-pulse"></span>
-      </div>
-    </button>
-  );
-
-  if (PUBLIC_PAGES.includes(pathname)) {
-    return (
-      <>
-        {children}
-        {chatbotButton}
-        <Chatbot isOpen={showChatbot} onClose={() => setShowChatbot(false)} />
-      </>
-    );
+  // Public routes: bare children, no pro chrome
+  if (isPublic(pathname)) {
+    return <>{children}</>;
   }
 
   if (loading) {
@@ -80,7 +78,16 @@ export default function Layout({ children }: LayoutProps) {
     <div className="min-h-screen bg-gray-100">
       <Navigation user={user} permissions={permissions} />
       <main className="container mx-auto px-4 py-8">{children}</main>
-      {chatbotButton}
+      <button
+        onClick={() => setShowChatbot(!showChatbot)}
+        className="fixed bottom-6 right-6 z-50 bg-gradient-to-r from-purple-600 to-pink-600 text-white p-4 rounded-full shadow-2xl hover:scale-110 transition-all duration-300 group animate-bounce-slow"
+      >
+        <div className="relative">
+          <span className="text-2xl group-hover:animate-pulse">🤖</span>
+          <span className="absolute -top-1 -right-1 w-3 h-3 bg-green-500 rounded-full animate-pulse"></span>
+        </div>
+      </button>
+      <InstallPWA />
       <Chatbot isOpen={showChatbot} onClose={() => setShowChatbot(false)} />
     </div>
   );

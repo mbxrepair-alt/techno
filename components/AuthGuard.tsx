@@ -41,7 +41,7 @@ export default function AuthGuard({ children }: AuthGuardProps) {
       try {
         const techPermissions = sessionStorage.getItem("technician_permissions");
         const companyId = sessionStorage.getItem("company_id");
-        const hasCookie = document.cookie.includes("mbx_auth_token");
+        const hasCookie = document.cookie.includes("mbx_token");
         const {
           data: { user },
         } = await supabase.auth.getUser();
@@ -52,6 +52,7 @@ export default function AuthGuard({ children }: AuthGuardProps) {
           sessionStorage.removeItem("technician_permissions");
           sessionStorage.removeItem("technician_name");
           sessionStorage.removeItem("company_id");
+          document.cookie = "mbx_token=; path=/; max-age=0";
           document.cookie = "mbx_auth_token=; path=/; max-age=0";
           document.cookie = "mbx_company_id=; path=/; max-age=0";
           document.cookie = "mbx_technician_name=; path=/; max-age=0";

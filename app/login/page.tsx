@@ -23,7 +23,7 @@ export default function LoginPage() {
         data: { user },
       } = await supabase.auth.getUser();
       if (user) {
-        const hasCookie = document.cookie.includes("mbx_auth_token");
+        const hasCookie = document.cookie.includes("mbx_token");
         if (hasCookie) {
           router.push("/dashboard");
         }
@@ -33,6 +33,7 @@ export default function LoginPage() {
   }, [router]);
 
   const clearCookies = () => {
+    document.cookie = "mbx_token=; path=/; max-age=0";
     document.cookie = "mbx_auth_token=; path=/; max-age=0";
     document.cookie = "mbx_company_id=; path=/; max-age=0";
     document.cookie = "mbx_technician_name=; path=/; max-age=0";
@@ -118,6 +119,7 @@ export default function LoginPage() {
       sessionStorage.setItem("technician_name", tech.name);
       sessionStorage.setItem("company_id", tempUser.id);
 
+      document.cookie = `mbx_token=${tech.id}; path=/; max-age=86400`;
       document.cookie = `mbx_auth_token=${tech.id}; path=/; max-age=86400`;
       document.cookie = `mbx_company_id=${tempUser.id}; path=/; max-age=86400`;
       document.cookie = `mbx_technician_name=${encodeURIComponent(tech.name)}; path=/; max-age=86400`;
@@ -136,7 +138,6 @@ export default function LoginPage() {
       });
 
       router.push("/dashboard");
-      router.refresh();
     } catch (err) {
       setError("Erreur: " + err.message);
       setLoading(false);

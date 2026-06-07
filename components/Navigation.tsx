@@ -79,6 +79,7 @@ export default function Navigation({ user, permissions }: NavigationProps) {
   const handleLogout = async (): Promise<void> => {
     await supabase.auth.signOut();
     sessionStorage.clear();
+    document.cookie = "mbx_token=; path=/; max-age=0";
     document.cookie = "mbx_auth_token=; path=/; max-age=0";
     document.cookie = "mbx_company_id=; path=/; max-age=0";
     window.location.href = "/login";

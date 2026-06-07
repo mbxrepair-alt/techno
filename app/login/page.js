@@ -159,8 +159,8 @@ export default function LoginPage() {
             <div className="flex items-center gap-3 cursor-pointer group" onClick={() => router.push("/")}>
               <div className="relative">
                 <div className="absolute -inset-2 rounded-xl bg-gradient-to-r from-orange-500 via-orange-400 to-orange-600 opacity-75 group-hover:opacity-100 blur-md"></div>
-                <div className="relative w-12 h-12 bg-gradient-to-br from-orange-500 to-orange-600 rounded-xl flex items-center justify-center shadow-2xl overflow-hidden">
-                  <img src="/logo.png" alt="MBX Logo" className="w-full h-full object-cover rounded-xl scale-105" />
+                <div className="relative w-10 h-10 rounded-xl flex items-center justify-center overflow-hidden">
+                  <img src="/logo.png" alt="MBX Logo" className="w-full h-full object-contain drop-shadow-[0_0_15px_rgba(249,115,22,0.5)]" />
                 </div>
               </div>
               <div className="leading-tight">
@@ -196,11 +196,18 @@ export default function LoginPage() {
             
             <div className="relative bg-black/80 backdrop-blur-xl rounded-2xl p-8 border border-orange-500/30 shadow-2xl">
               <div className="text-center mb-8">
-                <div className="relative w-20 h-20 bg-gradient-to-br from-orange-500 to-orange-600 rounded-full flex items-center justify-center mx-auto mb-4 shadow-lg">
-                  <div className="absolute -inset-1 bg-orange-500 rounded-full blur-md opacity-50"></div>
-                  <span className="relative text-3xl">🔧</span>
+                {/* LOGO SANS FOND ORANGE - COMME SUR LA PAGE D'ACCUEIL */}
+                <div className="relative w-28 h-28 mx-auto mb-4">
+                  <div className="absolute -inset-4 bg-orange-500 rounded-full blur-2xl opacity-30 animate-pulse"></div>
+                  <div className="relative w-full h-full flex items-center justify-center">
+                    <img 
+                      src="/logo.png" 
+                      alt="MBX Logo" 
+                      className="w-full h-full object-contain drop-shadow-[0_0_25px_rgba(249,115,22,0.6)] animate-pulse-scale" 
+                    />
+                  </div>
                 </div>
-                <h1 className="text-2xl font-black text-white drop-shadow-[0_0_10px_rgba(255,255,255,0.3)]">ESPACE PRO</h1>
+                <h1 className="text-2xl font-black text-white drop-shadow-[0_0_10px_rgba(255,255,255,0.3)] mt-2">ESPACE PRO</h1>
                 <p className="text-orange-400 text-sm mt-2">
                   {step === 1 ? "Connexion à l'atelier" : `Bienvenue ${companyName}`}
                 </p>
@@ -293,6 +300,22 @@ export default function LoginPage() {
           </div>
         </div>
       </div>
+
+      <style jsx>{`
+        @keyframes pulse-scale {
+          0%, 100% {
+            transform: scale(1);
+            filter: drop-shadow(0 0 10px rgba(249, 115, 22, 0.4));
+          }
+          50% {
+            transform: scale(1.05);
+            filter: drop-shadow(0 0 30px rgba(249, 115, 22, 0.8));
+          }
+        }
+        .animate-pulse-scale {
+          animation: pulse-scale 2s ease-in-out infinite;
+        }
+      `}</style>
     </div>
   );
 }

@@ -8,6 +8,7 @@ import emailjs from '@emailjs/browser';
 import QRCode from 'qrcode';
 import ReturnModal from "../../components/ReturnModal";
 import PatternLock from "../../components/PatternLock";
+import SmartChatbot from "../../components/SmartChatbot";
 
 export default function Dashboard() {
   const router = useRouter();
@@ -37,6 +38,9 @@ export default function Dashboard() {
   // RETOUR SAV
   const [showReturnModal, setShowReturnModal] = useState(false);
   const [selectedRepair, setSelectedRepair] = useState(null);
+
+  // SMART CHATBOT
+  const [showSmartChatbot, setShowSmartChatbot] = useState(false);
 
   // INFOS ATELIER
   const [companyInfo, setCompanyInfo] = useState({
@@ -440,6 +444,40 @@ export default function Dashboard() {
     setShowPhoneSuggestions(false);
     setShowClientSuggestions(false);
     setSelectedPhoneIndex(-1);
+  };
+
+  // ========== SMART CHATBOT - PRÉ-REMPLISSAGE ==========
+  const handlePreFillForm = (repairData) => {
+    setDesiredRepairCount(1);
+    setRepairsList([{
+      device: repairData.device,
+      issue: repairData.issue,
+      imei: "",
+      code: "",
+      estimatedPrice: repairData.estimatedPrice?.toString() || "",
+      unlockPattern: "",
+      description: "",
+      id: Date.now()
+    }]);
+    showMessage(`Formulaire pré-rempli : ${repairData.device} - ${repairData.issue}`, "success");
+  };
+
+  const handlePreFillMultiRepairs = (repairs) => {
+    const count = Math.min(repairs.length, 20);
+    setDesiredRepairCount(count);
+    const now = Date.now();
+    const newList = repairs.slice(0, count).map((repair, idx) => ({
+      device: repair.device,
+      issue: repair.issue,
+      imei: "",
+      code: "",
+      estimatedPrice: repair.estimatedPrice?.toString() || "",
+      unlockPattern: "",
+      description: "",
+      id: now + idx
+    }));
+    setRepairsList(newList);
+    showMessage(`Formulaire pré-rempli avec ${count} appareil(s)`, "success");
   };
 
   const generateRepairSlots = () => {
@@ -1088,37 +1126,46 @@ export default function Dashboard() {
         </div>
       )}
 
-      {/* ========== HEADER DASHBOARD AVEC BARRE DE RECHERCHE BLEUE NEON ========== */}
+      {/* ========== HEADER DASHBOARD AVEC BARRE DE RECHERCHE ========== */}
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-8">
         <h1 className="text-3xl font-black text-white drop-shadow-[0_0_15px_rgba(59,130,246,0.5)]">
           📊 Dashboard
         </h1>
         
-        {/* BARRE DE RECHERCHE BLEUE NEON */}
-        <div ref={searchContainerRef} className="relative w-full sm:w-96">
-          <div className="relative group">
-            <div className="absolute -inset-0.5 bg-gradient-to-r from-blue-500 to-cyan-500 rounded-xl blur opacity-0 group-focus-within:opacity-100 transition duration-300"></div>
-            <input 
-              ref={searchInputRef}
-              className="relative w-full p-3 pl-12 bg-white border border-blue-200 rounded-xl focus:outline-none focus:border-blue-500 text-gray-800 placeholder-gray-400 shadow-[0_0_10px_rgba(59,130,246,0.1)] focus:shadow-[0_0_20px_rgba(59,130,246,0.3)] transition-all duration-300" 
-              placeholder="🔍 Rechercher par ticket, nom, modèle ou panne..." 
-              value={searchQuery} 
-              onChange={(e) => setSearchQuery(e.target.value)} 
-            />
-            <div className="absolute left-4 top-1/2 -translate-y-1/2 text-blue-500 text-lg">🔍</div>
-            {searchQuery && (
-              <button 
-                className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-400 hover:text-blue-500 transition"
-                onClick={() => setSearchQuery("")}
-              >
-                ✕
-              </button>
-            )}
+        <div className="flex gap-3 w-full sm:w-auto">
+          <div ref={searchContainerRef} className="relative flex-1 sm:w-96">
+            <div className="relative group">
+              <div className="absolute -inset-0.5 bg-gradient-to-r from-blue-500 to-cyan-500 rounded-xl blur opacity-0 group-focus-within:opacity-100 transition duration-300"></div>
+              <input 
+                ref={searchInputRef}
+                className="relative w-full p-3 pl-12 bg-white border border-blue-200 rounded-xl focus:outline-none focus:border-blue-500 text-gray-800 placeholder-gray-400 shadow-[0_0_10px_rgba(59,130,246,0.1)] focus:shadow-[0_0_20px_rgba(59,130,246,0.3)] transition-all duration-300" 
+                placeholder="🔍 Rechercher par ticket, nom, modèle ou panne..." 
+                value={searchQuery} 
+                onChange={(e) => setSearchQuery(e.target.value)} 
+              />
+              <div className="absolute left-4 top-1/2 -translate-y-1/2 text-blue-500 text-lg">🔍</div>
+              {searchQuery && (
+                <button 
+                  className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-400 hover:text-blue-500 transition"
+                  onClick={() => setSearchQuery("")}
+                >
+                  ✕
+                </button>
+              )}
+            </div>
           </div>
+          
+          <button
+            onClick={() => setShowSmartChatbot(true)}
+            className="bg-gradient-to-r from-purple-500 to-pink-500 text-white px-4 py-3 rounded-xl font-medium hover:from-purple-600 hover:to-pink-600 transition shadow-md flex items-center gap-2 whitespace-nowrap"
+          >
+            <span className="text-xl">🤖</span>
+            Assistant
+          </button>
         </div>
       </div>
 
-      {/* ========== STATS CARTES BLEUES NEON ========== */}
+      {/* ========== STATS CARTES ========== */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-5 mb-8">
         <div className="relative group">
           <div className="absolute -inset-0.5 bg-gradient-to-r from-blue-500 to-cyan-500 rounded-2xl blur opacity-0 group-hover:opacity-75 transition duration-500"></div>
@@ -1157,7 +1204,7 @@ export default function Dashboard() {
         </div>
       </div>
 
-      {/* ========== RÉSULTATS RECHERCHE BLEUS NEON ========== */}
+      {/* ========== RÉSULTATS RECHERCHE ========== */}
       {showResults && searchResults.length > 0 && (
         <div className="space-y-3 mb-6">
           <h2 className="text-lg font-semibold text-blue-600">📋 Résultats de recherche</h2>
@@ -1185,7 +1232,7 @@ export default function Dashboard() {
         </div>
       )}
 
-      {/* ========== FORMULAIRE NOUVELLE RÉPARATION BLEU ========== */}
+      {/* ========== FORMULAIRE NOUVELLE RÉPARATION ========== */}
       <div className="bg-white rounded-2xl border border-blue-200 overflow-hidden shadow-lg">
         <div className="bg-gradient-to-r from-blue-600 to-cyan-600 px-6 py-4">
           <h2 className="text-white font-semibold text-lg">➕ Nouvelle réparation</h2>
@@ -1362,7 +1409,7 @@ export default function Dashboard() {
         </div>
       )}
 
-      {/* ========== MODAL DÉTAIL BLEU NEON ========== */}
+      {/* ========== MODAL DÉTAIL ========== */}
       {showDetailModal && selectedRepairDetail && selectedRepairClient && (
         <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center p-4 z-50" onClick={() => setShowDetailModal(false)}>
           <div className="bg-white rounded-xl w-full max-w-2xl max-h-[90vh] overflow-auto border border-blue-200 shadow-2xl" onClick={(e) => e.stopPropagation()}>
@@ -1400,6 +1447,14 @@ export default function Dashboard() {
           </div>
         </div>
       )}
+
+      {/* SMART CHATBOT */}
+      <SmartChatbot 
+        isOpen={showSmartChatbot}
+        onClose={() => setShowSmartChatbot(false)}
+        onPreFillForm={handlePreFillForm}
+        onPreFillMultiRepairs={handlePreFillMultiRepairs}
+      />
     </Layout>
   );
 }

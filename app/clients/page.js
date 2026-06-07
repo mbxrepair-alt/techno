@@ -1,228 +1,10 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { createClient } from "@supabase/supabase-js";
+import { supabase, getCurrentUser } from "../../lib/supabase";
 import { useRouter } from "next/navigation";
-import Link from "next/link";
-import Image from "next/image";
+import Layout from "../../components/Layout";
 
-// Initialisation Supabase
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || "https://ton-projet.supabase.co";
-const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || "ta-clé-anon";
-const supabase = createClient(supabaseUrl, supabaseAnonKey);
-
-const getCurrentUser = async () => {
-  const { data: { user } } = await supabase.auth.getUser();
-  return user;
-};
-
-// ========== LAYOUT COMPLET AVEC MENU ==========
-const Layout = ({ children }) => {
-  const router = useRouter();
-  const [userEmail, setUserEmail] = useState("");
-  const [companyName, setCompanyName] = useState("");
-  const [logoUrl, setLogoUrl] = useState("");
-  const [isAdmin, setIsAdmin] = useState(false);
-  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
-  const [clientSubmissions, setClientSubmissions] = useState(0);
-
-  useEffect(() => {
-    const getUser = async () => {
-      const user = await getCurrentUser();
-      if (user) {
-        setUserEmail(user.email);
-        if (user.email === "mbxrepair@gmail.com") {
-          setIsAdmin(true);
-        }
-        
-        const { data: profile } = await supabase
-          .from("profiles")
-          .select("is_admin, company_name, logo_url")
-          .eq("id", user.id)
-          .single();
-        
-        if (profile?.company_name) {
-          setCompanyName(profile.company_name);
-        }
-        if (profile?.logo_url) {
-          setLogoUrl(profile.logo_url);
-        }
-        
-        const { count, error } = await supabase
-          .from("repairs")
-          .select("*", { count: 'exact', head: true })
-          .eq("user_id", user.id)
-          .eq("is_client_submitted", true);
-        
-        if (!error && count !== null) {
-          setClientSubmissions(count);
-        }
-      }
-    };
-    getUser();
-  }, []);
-
-  const handleLogout = async () => {
-    await supabase.auth.signOut();
-    router.push("/login");
-  };
-
-  const NavLink = ({ href, children, isAdmin }) => (
-    <Link
-      href={href}
-      className={`px-3 py-2 rounded-lg text-sm font-medium transition-all duration-200 hover:bg-gray-100 flex items-center ${
-        isAdmin ? "text-red-600 hover:bg-red-50" : "text-gray-700 hover:text-gray-900"
-      }`}
-    >
-      {children}
-    </Link>
-  );
-
-  const MobileNavLink = ({ href, children, onClick }) => (
-    <Link
-      href={href}
-      onClick={onClick}
-      className="block px-3 py-2 rounded-lg text-gray-700 hover:bg-gray-100 transition"
-    >
-      {children}
-    </Link>
-  );
-
-  return (
-    <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100">
-      <nav className="bg-white/80 backdrop-blur-md shadow-lg sticky top-0 z-50 border-b border-gray-100">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex justify-between items-center h-16">
-            
-            {/* Logo et nom de l'atelier */}
-            <div className="flex items-center space-x-3 cursor-pointer" onClick={() => router.push("/dashboard")}>
-              <div className="relative w-10 h-10">
-                {logoUrl ? (
-                  <Image
-                    src={logoUrl}
-                    alt="Logo MBXrepair"
-                    width={40}
-                    height={40}
-                    className="object-contain rounded-lg"
-                    priority
-                    onError={() => setLogoUrl("")}
-                  />
-                ) : (
-                  <div className="w-10 h-10 bg-gradient-to-r from-orange-500 to-orange-600 rounded-xl flex items-center justify-center">
-                    <span className="text-white text-xl">🔧</span>
-                  </div>
-                )}
-              </div>
-              <div>
-                <h1 className="text-xl font-bold bg-gradient-to-r from-gray-800 to-gray-600 bg-clip-text text-transparent">
-                  {companyName || "Mon Atelier"}
-                </h1>
-              </div>
-            </div>
-
-            {/* Menu desktop */}
-            <div className="hidden md:flex items-center space-x-1">
-              <NavLink href="/dashboard">📊 Dashboard</NavLink>
-              <NavLink href="/repairs">🔧 Réparations</NavLink>
-              <NavLink href="/clients">👥 Clients</NavLink>
-              <NavLink href="/historique">📜 Historique</NavLink>
-              <NavLink href="/factures">💰 Factures</NavLink>
-              <NavLink href="/paiements">💰 Paiements</NavLink>
-              <NavLink href="/admin/client-submissions">
-                📱 Appareils saisis
-                {clientSubmissions > 0 && (
-                  <span className="ml-1 bg-orange-500 text-white text-xs px-1.5 py-0.5 rounded-full">
-                    {clientSubmissions}
-                  </span>
-                )}
-              </NavLink>
-              <NavLink href="/client">🌍 Espace client</NavLink>
-              {isAdmin && (
-                <>
-                  <NavLink href="/admin/licence" isAdmin>🔐 Licence</NavLink>
-                  <NavLink href="/admin/users" isAdmin>👥 Utilisateurs</NavLink>
-                </>
-              )}
-            </div>
-
-            {/* Profil + Paramètres + Déconnexion */}
-            <div className="hidden md:flex items-center space-x-2">
-              <Link href="/settings" className="flex items-center space-x-1 px-3 py-1 rounded-lg text-gray-600 hover:bg-gray-100 transition">
-                <span>⚙️</span>
-                <span className="text-sm">Paramètres</span>
-              </Link>
-              <div className="flex flex-col items-end">
-                <button onClick={handleLogout} className="flex items-center space-x-1 px-3 py-1 rounded-lg text-red-600 hover:bg-red-50 transition">
-                  <span>🚪</span>
-                  <span className="text-sm font-medium">Déconnexion</span>
-                </button>
-                <span className="text-xs text-gray-400 mt-0.5">{userEmail || ""}</span>
-              </div>
-            </div>
-
-            {/* Bouton menu mobile */}
-            <button
-              onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-              className="md:hidden p-2 rounded-lg hover:bg-gray-100 transition"
-            >
-              <svg className="w-6 h-6 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                {mobileMenuOpen ? (
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                ) : (
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
-                )}
-              </svg>
-            </button>
-          </div>
-
-          {/* Menu mobile */}
-          {mobileMenuOpen && (
-            <div className="md:hidden pb-4 space-y-1">
-              <MobileNavLink href="/dashboard" onClick={() => setMobileMenuOpen(false)}>📊 Dashboard</MobileNavLink>
-              <MobileNavLink href="/repairs" onClick={() => setMobileMenuOpen(false)}>🔧 Réparations</MobileNavLink>
-              <MobileNavLink href="/clients" onClick={() => setMobileMenuOpen(false)}>👥 Clients</MobileNavLink>
-              <MobileNavLink href="/historique" onClick={() => setMobileMenuOpen(false)}>📜 Historique</MobileNavLink>
-              <MobileNavLink href="/factures" onClick={() => setMobileMenuOpen(false)}>💰 Factures</MobileNavLink>
-              <MobileNavLink href="/paiements" onClick={() => setMobileMenuOpen(false)}>💰 Paiements</MobileNavLink>
-              <MobileNavLink href="/admin/client-submissions" onClick={() => setMobileMenuOpen(false)}>
-                📱 Appareils saisis
-                {clientSubmissions > 0 && (
-                  <span className="ml-1 bg-orange-500 text-white text-xs px-1.5 py-0.5 rounded-full">
-                    {clientSubmissions}
-                  </span>
-                )}
-              </MobileNavLink>
-              <MobileNavLink href="/client" onClick={() => setMobileMenuOpen(false)}>🌍 Espace client</MobileNavLink>
-              {isAdmin && (
-                <>
-                  <MobileNavLink href="/admin/licence" onClick={() => setMobileMenuOpen(false)}>🔐 Licence</MobileNavLink>
-                  <MobileNavLink href="/admin/users" onClick={() => setMobileMenuOpen(false)}>👥 Utilisateurs</MobileNavLink>
-                </>
-              )}
-              <MobileNavLink href="/settings" onClick={() => setMobileMenuOpen(false)}>⚙️ Paramètres</MobileNavLink>
-              <div className="pt-4 border-t mt-2">
-                <div className="flex items-center justify-between">
-                  <div className="flex flex-col">
-                    <button onClick={handleLogout} className="px-3 py-1.5 rounded-lg text-red-600 hover:bg-red-50 transition text-left">
-                      🚪 Déconnexion
-                    </button>
-                    <span className="text-xs text-gray-400 mt-0.5 px-1">{userEmail || ""}</span>
-                  </div>
-                </div>
-              </div>
-            </div>
-          )}
-        </div>
-      </nav>
-      
-      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 animate-fade-in">
-        {children}
-      </main>
-    </div>
-  );
-};
-
-// ========== PAGE CLIENTS ==========
 export default function ClientsPage() {
   const router = useRouter();
   const [clients, setClients] = useState([]);
@@ -238,7 +20,6 @@ export default function ClientsPage() {
   const [siretInfo, setSiretInfo] = useState(null);
   const [loadingSiret, setLoadingSiret] = useState(false);
   
-  // États pour la suppression avec mot de passe
   const [showPasswordModal, setShowPasswordModal] = useState(false);
   const [passwordToDelete, setPasswordToDelete] = useState("");
   const [clientToDelete, setClientToDelete] = useState(null);
@@ -294,7 +75,6 @@ export default function ClientsPage() {
     }
   };
 
-  // Fonction pour vérifier le mot de passe et supprimer
   const verifyPasswordAndDelete = async () => {
     if (!passwordToDelete) {
       alert("Veuillez entrer votre mot de passe");
@@ -701,7 +481,7 @@ export default function ClientsPage() {
     return (
       <Layout>
         <div className="flex justify-center items-center h-64">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-orange-500"></div>
         </div>
       </Layout>
     );
@@ -726,14 +506,14 @@ export default function ClientsPage() {
               resetForm();
               setShowAddModal(true);
             }}
-            className="bg-blue-600 text-white px-5 py-2.5 rounded-xl font-medium hover:bg-blue-700 transition"
+            className="bg-orange-500 text-white px-5 py-2.5 rounded-xl font-medium hover:bg-orange-600 transition"
           >
             + Nouveau client
           </button>
         </div>
 
         <div className="grid grid-cols-3 gap-4 mb-6">
-          <div className="bg-blue-500 rounded-xl p-4 text-white">
+          <div className="bg-orange-500 rounded-xl p-4 text-white">
             <div className="text-sm">Total</div>
             <div className="text-2xl font-bold">{stats.total}</div>
           </div>
@@ -754,12 +534,12 @@ export default function ClientsPage() {
               placeholder="🔍 Rechercher par nom ou code..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
-              className="flex-1 p-2 border rounded-lg"
+              className="flex-1 p-2 border rounded-lg focus:ring-2 focus:ring-orange-500"
             />
             <select
               value={filterType}
               onChange={(e) => setFilterType(e.target.value)}
-              className="p-2 border rounded-lg"
+              className="p-2 border rounded-lg focus:ring-2 focus:ring-orange-500"
             >
               <option value="all">Tous</option>
               <option value="pro">Professionnels</option>
@@ -768,7 +548,6 @@ export default function ClientsPage() {
           </div>
         </div>
 
-        {/* TABLEAU */}
         <div className="bg-white rounded-xl shadow-sm border overflow-hidden">
           <div className="overflow-x-auto">
             <table className="w-full">
@@ -791,13 +570,13 @@ export default function ClientsPage() {
                   </tr>
                 ) : (
                   filteredClients.map((client) => (
-                    <tr key={client.id} className="hover:bg-gray-50 transition">
+                    <tr key={client.id} className="hover:bg-gray-50 transition cursor-pointer" onClick={() => router.push(`/clients/${client.id}`)}>
                       <td className="px-4 py-3">
                         <div className="flex items-center gap-2">
                           <code className="bg-gray-100 px-2 py-1 rounded text-xs font-mono">{client.client_code}</code>
-                          <button onClick={() => copyClientCode(client.client_code)} className="text-green-600 hover:text-green-800 transition" title="Copier le code">📋</button>
+                          <button onClick={(e) => { e.stopPropagation(); copyClientCode(client.client_code); }} className="text-green-600 hover:text-green-800 transition" title="Copier le code">📋</button>
                         </div>
-                      </td>
+                       </td>
                       <td className="px-4 py-3 font-medium">{client.name}</td>
                       <td className="px-4 py-3 text-sm text-gray-600">{client.email !== "NC" ? client.email : "-"}</td>
                       <td className="px-4 py-3 text-sm">{client.phone !== "NC" ? client.phone : "-"}</td>
@@ -809,8 +588,8 @@ export default function ClientsPage() {
                         )}
                       </td>
                       <td className="px-4 py-3 text-center">
-                        <button onClick={() => openEditModal(client)} className="text-blue-600 hover:text-blue-800 transition mx-1 text-lg" title="Modifier">✏️</button>
-                        <button onClick={() => openDeleteModal(client)} className="text-red-600 hover:text-red-800 transition mx-1 text-lg" title="Supprimer">🗑️</button>
+                        <button onClick={(e) => { e.stopPropagation(); openEditModal(client); }} className="text-blue-600 hover:text-blue-800 transition mx-1 text-lg" title="Modifier">✏️</button>
+                        <button onClick={(e) => { e.stopPropagation(); openDeleteModal(client); }} className="text-red-600 hover:text-red-800 transition mx-1 text-lg" title="Supprimer">🗑️</button>
                       </td>
                     </tr>
                   ))
@@ -821,7 +600,7 @@ export default function ClientsPage() {
         </div>
       </div>
 
-      {/* MODAL AJOUT CLIENT */}
+      {/* MODAL AJOUT CLIENT - Gardé identique */}
       {showAddModal && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4" onClick={() => setShowAddModal(false)}>
           <div className="bg-white rounded-xl max-w-2xl w-full p-6 max-h-[90vh] overflow-y-auto" onClick={(e) => e.stopPropagation()}>
@@ -870,30 +649,31 @@ export default function ClientsPage() {
                 {showAddressSuggestions && addressSuggestions.length > 0 && (<div className="absolute z-10 w-full mt-1 bg-white border rounded-lg shadow-lg max-h-48 overflow-y-auto">{addressSuggestions.map((suggestion) => (<button key={suggestion.id} type="button" className="w-full text-left px-4 py-2 hover:bg-gray-100 text-sm" onClick={() => selectAddress(suggestion)}>{suggestion.label}</button>))}</div>)}</div>
               </div>
 
-              <div className="flex gap-3 pt-4"><button type="submit" className="flex-1 bg-blue-600 text-white py-2 rounded-lg hover:bg-blue-700">Ajouter le client</button><button type="button" onClick={() => setShowAddModal(false)} className="flex-1 bg-gray-200 py-2 rounded-lg hover:bg-gray-300">Annuler</button></div>
+              <div className="flex gap-3 pt-4"><button type="submit" className="flex-1 bg-orange-500 text-white py-2 rounded-lg hover:bg-orange-600">Ajouter le client</button><button type="button" onClick={() => setShowAddModal(false)} className="flex-1 bg-gray-200 py-2 rounded-lg hover:bg-gray-300">Annuler</button></div>
             </form>
           </div>
         </div>
       )}
 
-      {/* MODAL MODIFICATION CLIENT */}
+      {/* MODAL MODIFICATION CLIENT - Gardé identique */}
       {showEditModal && selectedClient && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4" onClick={() => setShowEditModal(false)}>
           <div className="bg-white rounded-xl max-w-2xl w-full p-6 max-h-[90vh] overflow-y-auto" onClick={(e) => e.stopPropagation()}>
             <div className="flex justify-between items-center mb-4"><h2 className="text-xl font-bold">✏️ Modifier {selectedClient.name}</h2><button onClick={() => setShowEditModal(false)} className="text-gray-400 hover:text-gray-600 text-2xl">✕</button></div>
             <form onSubmit={handleEditClient} className="space-y-6">
+              {/* Même contenu que le modal d'ajout mais pour modification */}
               <div><label className="block text-sm font-medium text-gray-700 mb-2">Type de client</label><div className="flex gap-4"><label className="flex items-center gap-2 cursor-pointer"><input type="radio" value="particulier" checked={formData.type === "particulier"} onChange={(e) => setFormData({ ...formData, type: e.target.value })} className="w-4 h-4" /><span>👤 Particulier</span></label><label className="flex items-center gap-2 cursor-pointer"><input type="radio" value="pro" checked={formData.type === "pro"} onChange={(e) => setFormData({ ...formData, type: e.target.value })} className="w-4 h-4" /><span>🏢 Professionnel</span></label></div></div>
               {formData.type === "particulier" && (<div className="space-y-4 border-t pt-4"><div className="grid grid-cols-2 gap-4"><div><label className="block text-sm font-medium text-gray-700 mb-1">Civilité</label><select value={formData.civility} onChange={(e) => setFormData({ ...formData, civility: e.target.value })} className="w-full p-2 border rounded-lg"><option value="mr">M.</option><option value="mme">Mme</option><option value="mlle">Mlle</option></select></div><div><label className="block text-sm font-medium text-gray-700 mb-1">Prénom *</label><input type="text" required className="w-full p-2 border rounded-lg" value={formData.firstName} onChange={(e) => setFormData({ ...formData, firstName: e.target.value })} /></div></div><div><label className="block text-sm font-medium text-gray-700 mb-1">Nom *</label><input type="text" required className="w-full p-2 border rounded-lg" value={formData.lastName} onChange={(e) => setFormData({ ...formData, lastName: e.target.value })} /></div></div>)}
               {formData.type === "pro" && (<div className="space-y-4 border-t pt-4"><div><label className="block text-sm font-medium text-gray-700 mb-1">Société *</label><input type="text" required className="w-full p-2 border rounded-lg" value={formData.companyName} onChange={(e) => setFormData({ ...formData, companyName: e.target.value })} /></div><div><label className="block text-sm font-medium text-gray-700 mb-1">Numéro Siret</label><input type="text" className="w-full p-2 border rounded-lg" value={formData.siret} onChange={(e) => setFormData({ ...formData, siret: e.target.value })} maxLength="14" /></div><div><label className="block text-sm font-medium text-gray-700 mb-1">Code APE</label><input type="text" className="w-full p-2 border rounded-lg bg-gray-50" value={formData.apeCode} onChange={(e) => setFormData({ ...formData, apeCode: e.target.value })} /></div></div>)}
               <div className="space-y-4 border-t pt-4"><div className="grid grid-cols-2 gap-4"><div><label className="block text-sm font-medium text-gray-700 mb-1">Email *</label><input type="email" required className="w-full p-2 border rounded-lg" value={formData.email} onChange={(e) => setFormData({ ...formData, email: e.target.value })} /></div><div><label className="block text-sm font-medium text-gray-700 mb-1">Téléphone fixe</label><input type="tel" className="w-full p-2 border rounded-lg" value={formData.phone} onChange={(e) => setFormData({ ...formData, phone: e.target.value })} /></div></div><div><label className="block text-sm font-medium text-gray-700 mb-1">Téléphone portable</label><input type="tel" className="w-full p-2 border rounded-lg" value={formData.mobile} onChange={(e) => setFormData({ ...formData, mobile: e.target.value })} /></div><div className="relative"><label className="block text-sm font-medium text-gray-700 mb-1">Adresse</label><input type="text" className="w-full p-2 border rounded-lg" value={formData.address} onChange={(e) => { setFormData({ ...formData, address: e.target.value }); searchAddress(e.target.value); }} />
               {showAddressSuggestions && addressSuggestions.length > 0 && (<div className="absolute z-10 w-full mt-1 bg-white border rounded-lg shadow-lg max-h-48 overflow-y-auto">{addressSuggestions.map((suggestion) => (<button key={suggestion.id} type="button" className="w-full text-left px-4 py-2 hover:bg-gray-100 text-sm" onClick={() => selectAddress(suggestion)}>{suggestion.label}</button>))}</div>)}</div></div>
-              <div className="flex gap-3 pt-4"><button type="submit" className="flex-1 bg-blue-600 text-white py-2 rounded-lg hover:bg-blue-700">Enregistrer</button><button type="button" onClick={() => setShowEditModal(false)} className="flex-1 bg-gray-200 py-2 rounded-lg hover:bg-gray-300">Annuler</button></div>
+              <div className="flex gap-3 pt-4"><button type="submit" className="flex-1 bg-orange-500 text-white py-2 rounded-lg hover:bg-orange-600">Enregistrer</button><button type="button" onClick={() => setShowEditModal(false)} className="flex-1 bg-gray-200 py-2 rounded-lg hover:bg-gray-300">Annuler</button></div>
             </form>
           </div>
         </div>
       )}
 
-      {/* MODAL CONFIRMATION MOT DE PASSE POUR SUPPRESSION */}
+      {/* MODAL CONFIRMATION MOT DE PASSE */}
       {showPasswordModal && clientToDelete && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
           <div className="bg-white rounded-xl max-w-md w-full p-6">

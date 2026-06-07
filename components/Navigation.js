@@ -11,19 +11,42 @@ export default function Navigation({ user, permissions }) {
   const [hoveredItem, setHoveredItem] = useState(null);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [technicianName, setTechnicianName] = useState("");
+  const [companyName, setCompanyName] = useState("MBX Réparations");
+  const [logoUrl, setLogoUrl] = useState("");
 
   useEffect(() => {
     setIsGerant(permissions?.is_gerant === true);
     
-    // Récupérer le nom du technicien connecté depuis sessionStorage
     const techName = sessionStorage.getItem("technician_name");
     if (techName) {
       setTechnicianName(techName);
     } else if (user?.email) {
-      // Fallback : utiliser l'email si pas de nom
       setTechnicianName(user.email.split("@")[0]);
     }
+
+    // Charger le nom de l'entreprise et le logo depuis la base
+    loadCompanyInfo();
   }, [permissions, user]);
+
+  const loadCompanyInfo = async () => {
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (user) {
+        const { data, error } = await supabase
+          .from("profiles")
+          .select("company_name, logo_url")
+          .eq("id", user.id)
+          .single();
+        
+        if (data && !error) {
+          if (data.company_name) setCompanyName(data.company_name);
+          if (data.logo_url) setLogoUrl(data.logo_url);
+        }
+      }
+    } catch (err) {
+      console.error("Erreur chargement infos entreprise:", err);
+    }
+  };
 
   const handleLogout = async () => {
     await supabase.auth.signOut();
@@ -33,7 +56,7 @@ export default function Navigation({ user, permissions }) {
     window.location.href = "/login";
   };
 
-  // Menu principal (sans Techniciens)
+  // Menu principal
   const navItems = [
     { href: "/dashboard", label: "Tableau de bord", icon: "🏠", visible: true },
     { href: "/repairs", label: "Réparations", icon: "🔧", visible: permissions?.can_access_repairs || isGerant },
@@ -52,23 +75,31 @@ export default function Navigation({ user, permissions }) {
       <div className="container mx-auto px-4">
         <div className="flex justify-between items-center h-16">
           
-          {/* Logo */}
+          {/* Logo + Nom de l'atelier dynamique */}
           <Link 
             href="/dashboard" 
-            className="group relative flex items-center gap-2 text-xl font-black transition-all duration-300 hover:scale-105"
+            className="group relative flex items-center gap-2 transition-all duration-300 hover:scale-105"
           >
             <div className="relative">
               <div className="absolute -inset-1 bg-orange-500 rounded-full blur-md opacity-0 group-hover:opacity-100 transition duration-300"></div>
-              <span className="relative text-2xl drop-shadow-[0_0_10px_rgba(249,115,22,0.5)] group-hover:drop-shadow-[0_0_20px_rgba(249,115,22,0.8)] transition-all duration-300">
-                🔧
-              </span>
+              {logoUrl ? (
+                <img 
+                  src={logoUrl} 
+                  alt="Logo" 
+                  className="relative w-8 h-8 object-contain rounded-lg"
+                />
+              ) : (
+                <span className="relative text-2xl drop-shadow-[0_0_10px_rgba(249,115,22,0.5)] group-hover:drop-shadow-[0_0_20px_rgba(249,115,22,0.8)] transition-all duration-300">
+                  🔧
+                </span>
+              )}
             </div>
-            <span className="bg-gradient-to-r from-white to-orange-400 bg-clip-text text-transparent drop-shadow-[0_0_10px_rgba(255,255,255,0.3)] hidden sm:inline">
-              MBX Réparations
+            <span className="bg-gradient-to-r from-white to-orange-400 bg-clip-text text-transparent drop-shadow-[0_0_10px_rgba(255,255,255,0.3)] font-black text-lg hidden sm:inline">
+              {companyName}
             </span>
           </Link>
           
-          {/* Navigation Desktop - Menu principal */}
+          {/* Navigation Desktop */}
           <div className="hidden lg:flex items-center gap-2">
             {visibleItems.map((item) => {
               const isActive = pathname === item.href;
@@ -120,9 +151,8 @@ export default function Navigation({ user, permissions }) {
             })}
           </div>
 
-          {/* Zone droite : Profil + Déconnexion */}
+          {/* Profil + Déconnexion */}
           <div className="flex items-center gap-3">
-            {/* Profil utilisateur - Affiche le NOM du technicien */}
             <div className="relative group">
               <div className="absolute -inset-1 bg-gradient-to-r from-orange-500 to-orange-600 rounded-full blur-md opacity-0 group-hover:opacity-100 transition duration-300"></div>
               <div className="relative flex items-center gap-2 bg-gray-800/50 backdrop-blur-sm rounded-full px-3 py-1.5 border border-orange-500/30">
@@ -131,7 +161,7 @@ export default function Navigation({ user, permissions }) {
                 </div>
                 <div className="hidden md:block">
                   <p className="text-sm font-medium text-white">
-                    {technicianName || user?.email?.split("@")[0]}
+                    {technicianName || "Technicien"}
                   </p>
                   {isGerant && (
                     <p className="text-xs text-orange-400">⭐ Gérant</p>
@@ -140,7 +170,6 @@ export default function Navigation({ user, permissions }) {
               </div>
             </div>
             
-            {/* Bouton Déconnexion */}
             <button
               onClick={handleLogout}
               className="group relative flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-red-500 to-red-600 text-white rounded-xl font-medium transition-all duration-300 hover:scale-105 hover:shadow-lg hover:shadow-red-500/30 overflow-hidden"
@@ -152,7 +181,6 @@ export default function Navigation({ user, permissions }) {
               </span>
             </button>
 
-            {/* Bouton menu mobile */}
             <button
               onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
               className="lg:hidden text-white text-2xl"

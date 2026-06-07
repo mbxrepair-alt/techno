@@ -1,14 +1,27 @@
-﻿// lib/ai.js - Version avec diagnostic différencié
+// lib/ai.ts - Version avec diagnostic différencié
 
-/**
- * Chatbot pour l'atelier
- */
-export async function chatWithAssistant(message, history = []) {
+interface ChatMessage {
+  role: string;
+  content: string;
+}
+
+interface RepairData {
+  device?: string;
+  issue?: string;
+  diagnosis?: string;
+  partsUsed?: string;
+}
+
+interface ClientData {
+  name?: string;
+}
+
+export async function chatWithAssistant(message: string, history: ChatMessage[] = []): Promise<string> {
   const msg = message.toLowerCase();
-  
+
   // ========== DIAGNOSTIC PAR TYPE D'APPAREIL ==========
   if (msg.includes("diagnostic") || msg.includes("panne") || msg.includes("problème")) {
-    
+
     // Diagnostic Console (PS5, Xbox, Switch, Nintendo)
     if (msg.includes("ps5") || msg.includes("playstation") || msg.includes("xbox") || msg.includes("switch") || msg.includes("nintendo") || msg.includes("console")) {
       return `🎮 **DIAGNOSTIC CONSOLE - 40€**
@@ -25,7 +38,7 @@ export async function chatWithAssistant(message, history = []) {
 
 📞 **Prenez RDV : 04 72 60 16 13**`;
     }
-    
+
     // Diagnostic Tablette
     if (msg.includes("tablette") || msg.includes("ipad") || msg.includes("galaxy tab") || msg.includes("lenovo")) {
       return `📟 **DIAGNOSTIC TABLETTE - 25€**
@@ -42,7 +55,7 @@ export async function chatWithAssistant(message, history = []) {
 
 📞 **Prenez RDV : 04 72 60 16 13**`;
     }
-    
+
     // Diagnostic Smartphone complexe (iPhone haut de gamme, Samsung haut de gamme)
     if ((msg.includes("iphone") && (msg.includes("pro") || msg.includes("pro max") || msg.includes("14") || msg.includes("15"))) ||
         (msg.includes("samsung") && (msg.includes("s23") || msg.includes("s24") || msg.includes("ultra")))) {
@@ -60,7 +73,7 @@ export async function chatWithAssistant(message, history = []) {
 
 📞 **Prenez RDV : 04 72 60 16 13**`;
     }
-    
+
     // Diagnostic Smartphone simple (par défaut)
     return `📱 **DIAGNOSTIC SMARTPHONE - 15€**
 
@@ -401,49 +414,43 @@ export async function chatWithAssistant(message, history = []) {
 **Posez votre question !** 🔧`;
 }
 
-/**
- * Suggestions de pannes
- */
-export async function suggestIssues(deviceType) {
+export async function suggestIssues(deviceType: string): Promise<string[]> {
   const type = deviceType?.toLowerCase() || "";
-  
+
   if (type.includes("console") || type.includes("ps5") || type.includes("xbox")) {
     return [
       "🎮 Diagnostic console - 40€",
       "🎮 PS5 ne s'allume pas - 89€",
       "🎮 Xbox surchauffe - 59€",
-      "🎮 Switch écran cassé - 89€"
+      "🎮 Switch écran cassé - 89€",
     ];
   }
-  
+
   if (type.includes("tablette") || type.includes("ipad")) {
     return [
       "📟 Diagnostic tablette - 25€",
       "📟 iPad écran cassé - 89-189€",
-      "📟 Tablette batterie faible - 59-89€"
+      "📟 Tablette batterie faible - 59-89€",
     ];
   }
-  
+
   if (type.includes("iphone") && (type.includes("pro") || type.includes("14") || type.includes("15"))) {
     return [
       "🔧 Diagnostic iPhone Pro - 40€",
       "📱 Écran iPhone 14 - 229€",
-      "🔋 Batterie iPhone 14 - 89€"
+      "🔋 Batterie iPhone 14 - 89€",
     ];
   }
-  
+
   return [
     "📱 Diagnostic smartphone - 15€",
     "📱 Écran cassé - 79-229€",
     "🔋 Batterie - 49-89€",
-    "🔌 Port charge - 45-59€"
+    "🔌 Port charge - 45-59€",
   ];
 }
 
-/**
- * Génération de diagnostic
- */
-export async function generateDiagnostic(device, issue, symptoms) {
+export async function generateDiagnostic(device: string, issue: string, symptoms?: string): Promise<string> {
   return `🔍 **DIAGNOSTIC TECHNIQUE**
 
 📱 Appareil : ${device}
@@ -462,10 +469,7 @@ export async function generateDiagnostic(device, issue, symptoms) {
 📍 8 Rue de l'Épée, 69003 Lyon`;
 }
 
-/**
- * Génération de résumé
- */
-export async function generateRepairSummary(device, issue, diagnosis, partsUsed) {
+export async function generateRepairSummary(device: string, issue: string, diagnosis: string, partsUsed: string): Promise<string> {
   return `✅ **RÉSUMÉ DES TRAVAUX**
 
 📱 Appareil : ${device}
@@ -482,10 +486,7 @@ export async function generateRepairSummary(device, issue, diagnosis, partsUsed)
 🔧 Garantie : 3 mois (6 mois batterie)`;
 }
 
-/**
- * Génération de facture
- */
-export async function generateInvoice(repairData, clientData, partsList) {
+export async function generateInvoice(repairData: RepairData, clientData: ClientData, partsList: unknown): Promise<string> {
   return `🧾 **FACTURE MBX RÉPARATIONS**
 
 N° : F-${Date.now()}

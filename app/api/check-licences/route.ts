@@ -1,14 +1,13 @@
 import { createClient } from '@supabase/supabase-js';
 
-export async function GET() {
-  // Utiliser la clé service_role (pas anon) pour pouvoir modifier les profils
+export async function GET(): Promise<Response> {
   const supabase = createClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL,
-    process.env.SUPABASE_SERVICE_ROLE_KEY
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.SUPABASE_SERVICE_ROLE_KEY!
   );
 
   try {
-    const { error, count } = await supabase
+    const { error } = await supabase
       .from('profiles')
       .update({ licence_active: false })
       .lt('licence_expiry_date', new Date().toISOString())
@@ -22,9 +21,7 @@ export async function GET() {
     );
   } catch (error) {
     console.error('Erreur:', error);
-    return new Response(
-      JSON.stringify({ error: error.message }),
-      { status: 500 }
-    );
+    const message = error instanceof Error ? error.message : 'Erreur inconnue';
+    return new Response(JSON.stringify({ error: message }), { status: 500 });
   }
 }

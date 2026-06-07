@@ -1,16 +1,20 @@
-// app/api/send-ticket-email/route.js
-import { NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 import { supabase } from "../../../lib/supabase";
-import nodemailer from "nodemailer"; // ou utilise un service tiers
+import nodemailer from "nodemailer";
 
-export async function POST(request) {
+interface EmailBody {
+  ticketId: string;
+  email: string;
+}
+
+export async function POST(request: NextRequest): Promise<NextResponse> {
   try {
-    const { ticketId, email } = await request.json();
+    const { ticketId, email } = await request.json() as EmailBody;
+
     if (!ticketId || !email) {
       return NextResponse.json({ error: "Paramètres manquants" }, { status: 400 });
     }
 
-    // Récupère les infos du ticket
     const { data: ticket, error } = await supabase
       .from("repairs")
       .select("*, clients(*)")
@@ -21,7 +25,6 @@ export async function POST(request) {
       return NextResponse.json({ error: "Ticket introuvable" }, { status: 404 });
     }
 
-    // Configuration de l'envoi (ici avec Nodemailer + Gmail en exemple)
     const transporter = nodemailer.createTransport({
       service: "gmail",
       auth: {
@@ -30,7 +33,7 @@ export async function POST(request) {
       },
     });
 
-const trackingLink = `${process.env.NEXT_PUBLIC_APP_URL || 'https://technophone.vercel.app'}/suivi/${ticket.tracking_code}`;
+    const trackingLink = `${process.env.NEXT_PUBLIC_APP_URL || 'https://technophone.vercel.app'}/suivi/${ticket.tracking_code}`;
 
     await transporter.sendMail({
       from: `"MBX Réparations" <${process.env.EMAIL_USER}>`,

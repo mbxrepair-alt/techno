@@ -1,14 +1,19 @@
-﻿import { NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 import { cookies } from "next/headers";
 import { createClient } from "@supabase/supabase-js";
 
-export async function POST(req) {
+interface LoginBody {
+  email: string;
+  access_code: string;
+}
+
+export async function POST(request: NextRequest): Promise<NextResponse> {
   try {
-    const { email, access_code } = await req.json();
+    const { email, access_code } = await request.json() as LoginBody;
 
     const supabase = createClient(
-      process.env.NEXT_PUBLIC_SUPABASE_URL,
-      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
+      process.env.NEXT_PUBLIC_SUPABASE_URL!,
+      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
     );
 
     const { data: user, error } = await supabase
@@ -40,16 +45,10 @@ export async function POST(req) {
       secure: false,
     });
 
-    return NextResponse.json({
-      success: true,
-      user,
-    });
+    return NextResponse.json({ success: true, user });
 
   } catch (e) {
     console.error("API Login error:", e);
-    return NextResponse.json(
-      { error: "Server error" },
-      { status: 500 }
-    );
+    return NextResponse.json({ error: "Server error" }, { status: 500 });
   }
 }

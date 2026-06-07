@@ -20,14 +20,14 @@ export default function TechniciansPage() {
   useEffect(() => {
     const storedCompanyId = sessionStorage.getItem("company_id");
     const storedTech = sessionStorage.getItem("technician_permissions");
-    
+
     console.log("company_id récupéré:", storedCompanyId);
     console.log("technician_permissions:", storedTech);
-    
+
     if (storedTech) {
       setCurrentTech(JSON.parse(storedTech));
     }
-    
+
     if (storedCompanyId) {
       setCompanyId(storedCompanyId);
       fetchTechnicians(storedCompanyId);
@@ -41,7 +41,7 @@ export default function TechniciansPage() {
     try {
       setLoading(true);
       console.log("Fetch techniciens pour company_id:", cid);
-      
+
       const { data, error } = await supabase
         .from("technicians")
         .select("*")
@@ -49,7 +49,7 @@ export default function TechniciansPage() {
         .order("name");
 
       if (error) throw error;
-      
+
       console.log("Techniciens trouvés:", data);
       setTechnicians(data || []);
     } catch (err) {
@@ -73,7 +73,7 @@ export default function TechniciansPage() {
         can_access_paiements: tech.can_access_paiements || false,
         can_access_statistiques: tech.can_access_statistiques || false,
         can_access_settings: tech.can_access_settings || false,
-        company_id: companyId
+        company_id: companyId,
       };
 
       if (editingTech) {
@@ -82,7 +82,7 @@ export default function TechniciansPage() {
           .update(dataToSave)
           .eq("id", editingTech.id);
         if (error) throw error;
-        
+
         if (currentTech) {
           await addLog({
             action: "update_technician",
@@ -92,16 +92,14 @@ export default function TechniciansPage() {
             details: {
               target_technician: tech.name,
               target_code: tech.access_code,
-              action_type: "updated"
-            }
+              action_type: "updated",
+            },
           });
         }
       } else {
-        const { error } = await supabase
-          .from("technicians")
-          .insert([dataToSave]);
+        const { error } = await supabase.from("technicians").insert([dataToSave]);
         if (error) throw error;
-        
+
         if (currentTech) {
           await addLog({
             action: "create_technician",
@@ -111,12 +109,12 @@ export default function TechniciansPage() {
             details: {
               new_technician: tech.name,
               new_code: tech.access_code,
-              action_type: "created"
-            }
+              action_type: "created",
+            },
           });
         }
       }
-      
+
       fetchTechnicians(companyId);
       setModalOpen(false);
       setEditingTech(null);
@@ -127,7 +125,7 @@ export default function TechniciansPage() {
 
   const handleDelete = async (tech) => {
     if (!confirm("Supprimer ce technicien ?")) return;
-    
+
     try {
       if (currentTech) {
         await addLog({
@@ -137,15 +135,12 @@ export default function TechniciansPage() {
           companyId: companyId,
           details: {
             deleted_technician: tech.name,
-            deleted_code: tech.access_code
-          }
+            deleted_code: tech.access_code,
+          },
         });
       }
-      
-      const { error } = await supabase
-        .from("technicians")
-        .delete()
-        .eq("id", tech.id);
+
+      const { error } = await supabase.from("technicians").delete().eq("id", tech.id);
       if (error) throw error;
       fetchTechnicians(companyId);
     } catch (err) {
@@ -158,10 +153,10 @@ export default function TechniciansPage() {
       alert("Un gérant ne peut pas être désactivé");
       return;
     }
-    
+
     try {
       const newStatus = !tech.is_active;
-      
+
       if (currentTech) {
         await addLog({
           action: newStatus ? "activate_technician" : "deactivate_technician",
@@ -170,11 +165,11 @@ export default function TechniciansPage() {
           companyId: companyId,
           details: {
             target_technician: tech.name,
-            new_status: newStatus ? "active" : "inactive"
-          }
+            new_status: newStatus ? "active" : "inactive",
+          },
         });
       }
-      
+
       const { error } = await supabase
         .from("technicians")
         .update({ is_active: newStatus })
@@ -216,11 +211,7 @@ export default function TechniciansPage() {
           </button>
         </div>
 
-        {error && (
-          <div className="bg-red-100 text-red-700 p-3 rounded-lg mb-4">
-            ❌ {error}
-          </div>
-        )}
+        {error && <div className="bg-red-100 text-red-700 p-3 rounded-lg mb-4">❌ {error}</div>}
 
         {technicians.length === 0 ? (
           <div className="bg-white rounded-xl shadow-sm p-8 text-center text-gray-400 border">
@@ -229,7 +220,10 @@ export default function TechniciansPage() {
         ) : (
           <div className="grid gap-4">
             {technicians.map((tech) => (
-              <div key={tech.id} className="bg-white rounded-xl shadow-sm border hover:shadow-md transition p-4">
+              <div
+                key={tech.id}
+                className="bg-white rounded-xl shadow-sm border hover:shadow-md transition p-4"
+              >
                 <div className="flex justify-between items-start">
                   <div className="flex-1">
                     <div className="flex items-center gap-3">
@@ -244,11 +238,13 @@ export default function TechniciansPage() {
                       </div>
                     </div>
                     <div className="flex gap-4 mt-3 ml-13">
-                      <span className={`px-2 py-1 rounded-full text-xs ${
-                        tech.is_active 
-                          ? "bg-green-100 text-green-700" 
-                          : "bg-gray-100 text-gray-500"
-                      }`}>
+                      <span
+                        className={`px-2 py-1 rounded-full text-xs ${
+                          tech.is_active
+                            ? "bg-green-100 text-green-700"
+                            : "bg-gray-100 text-gray-500"
+                        }`}
+                      >
                         {tech.is_active ? "Actif" : "Inactif"}
                       </span>
                       {tech.is_gerant && (
@@ -258,7 +254,7 @@ export default function TechniciansPage() {
                       )}
                     </div>
                   </div>
-                  
+
                   <div className="flex gap-2">
                     {!tech.is_gerant && (
                       <button
@@ -272,7 +268,7 @@ export default function TechniciansPage() {
                         {tech.is_active ? "Désactiver" : "Activer"}
                       </button>
                     )}
-                    
+
                     <button
                       onClick={() => {
                         setEditingTech(tech);
@@ -282,7 +278,7 @@ export default function TechniciansPage() {
                     >
                       ✏️ Modifier
                     </button>
-                    
+
                     <button
                       onClick={() => handleDelete(tech)}
                       className="px-3 py-1 bg-red-100 text-red-700 hover:bg-red-200 rounded-md text-sm"

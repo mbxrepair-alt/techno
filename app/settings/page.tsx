@@ -54,13 +54,13 @@ export default function SettingsPage() {
       const user = await getCurrentUser();
       if (user) {
         setCompanyEmail(user.email || "");
-        
+
         const { data, error } = await supabase
           .from("profiles")
           .select("*")
           .eq("id", user.id)
           .single();
-        
+
         if (data && !error) {
           setCompanyName(data.company_name || "");
           setCompanyPhone(data.contact_phone || "");
@@ -77,7 +77,7 @@ export default function SettingsPage() {
             low_stock_alert: true,
             auto_backup: false,
           });
-          
+
           if (data.logo_url) {
             setLogoPreview(data.logo_url);
           }
@@ -106,7 +106,7 @@ export default function SettingsPage() {
   const saveSettings = async () => {
     setLoading(true);
     setMessage("");
-    
+
     try {
       const user = await getCurrentUser();
       if (user) {
@@ -119,11 +119,11 @@ export default function SettingsPage() {
             logo_url: settings.logo_url,
           })
           .eq("id", user.id);
-        
+
         if (error) throw error;
         setMessage("✅ Paramètres enregistrés avec succès");
         setTimeout(() => setMessage(""), 3000);
-        
+
         // Recharger la page pour mettre à jour le logo dans la navigation
         router.refresh();
       }
@@ -136,38 +136,42 @@ export default function SettingsPage() {
 
   const uploadLogo = async (file) => {
     if (!file) return;
-    
-    if (!file.type.includes("image/png") && !file.type.includes("image/jpeg") && !file.type.includes("image/jpg")) {
+
+    if (
+      !file.type.includes("image/png") &&
+      !file.type.includes("image/jpeg") &&
+      !file.type.includes("image/jpg")
+    ) {
       setMessage("❌ Seuls les fichiers PNG, JPG ou JPEG sont acceptés");
       return;
     }
-    
+
     if (file.size > 2 * 1024 * 1024) {
       setMessage("❌ Le fichier ne doit pas dépasser 2MB");
       return;
     }
-    
+
     setUploading(true);
     setMessage("");
-    
+
     try {
       const user = await getCurrentUser();
       if (!user) throw new Error("Non authentifié");
-      
+
       const fileExt = file.name.split(".").pop();
       const fileName = `logo_${user.id}_${Date.now()}.${fileExt}`;
       const filePath = `logos/${fileName}`;
-      
+
       const { error: uploadError } = await supabase.storage
         .from("company-logos")
         .upload(filePath, file);
-      
+
       if (uploadError) {
         if (uploadError.message.includes("bucket")) {
-          const { data: { publicUrl } } = supabase.storage
-            .from("company-logos")
-            .getPublicUrl(filePath);
-          
+          const {
+            data: { publicUrl },
+          } = supabase.storage.from("company-logos").getPublicUrl(filePath);
+
           setSettings({ ...settings, logo_url: publicUrl });
           setLogoPreview(publicUrl);
           setMessage("✅ Logo téléchargé");
@@ -175,17 +179,16 @@ export default function SettingsPage() {
           throw uploadError;
         }
       } else {
-        const { data: { publicUrl } } = supabase.storage
-          .from("company-logos")
-          .getPublicUrl(filePath);
-        
+        const {
+          data: { publicUrl },
+        } = supabase.storage.from("company-logos").getPublicUrl(filePath);
+
         setSettings({ ...settings, logo_url: publicUrl });
         setLogoPreview(publicUrl);
         setMessage("✅ Logo téléchargé avec succès");
       }
-      
+
       setTimeout(() => saveSettings(), 500);
-      
     } catch (err) {
       console.error("Erreur upload:", err);
       setMessage("❌ Erreur lors du téléchargement: " + err.message);
@@ -217,7 +220,7 @@ export default function SettingsPage() {
     { id: "logs", label: "📋 Logs", visible: isGerant },
   ];
 
-  const visibleTabs = tabs.filter(tab => tab.visible);
+  const visibleTabs = tabs.filter((tab) => tab.visible);
 
   return (
     <Layout>
@@ -225,7 +228,9 @@ export default function SettingsPage() {
         <h1 className="text-2xl font-bold mb-6">⚙️ Paramètres</h1>
 
         {message && (
-          <div className={`p-3 rounded-lg mb-4 ${message.includes("✅") ? "bg-green-100 text-green-700" : "bg-red-100 text-red-700"}`}>
+          <div
+            className={`p-3 rounded-lg mb-4 ${message.includes("✅") ? "bg-green-100 text-green-700" : "bg-red-100 text-red-700"}`}
+          >
             {message}
           </div>
         )}
@@ -279,9 +284,7 @@ export default function SettingsPage() {
                   />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Version
-                  </label>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Version</label>
                   <input
                     type="text"
                     value="MBX Réparations v2.0"
@@ -297,7 +300,7 @@ export default function SettingsPage() {
           {activeTab === "company" && (
             <div>
               <h2 className="text-lg font-semibold mb-4">Informations de l'entreprise</h2>
-              
+
               {/* Upload Logo */}
               <div className="mb-6 p-4 bg-gray-50 rounded-lg">
                 <label className="block text-sm font-medium text-gray-700 mb-2">
@@ -306,9 +309,9 @@ export default function SettingsPage() {
                 <div className="flex items-center gap-4">
                   {logoPreview ? (
                     <div className="relative">
-                      <img 
-                        src={logoPreview} 
-                        alt="Logo" 
+                      <img
+                        src={logoPreview}
+                        alt="Logo"
                         className="w-16 h-16 object-contain border rounded-lg bg-white p-1"
                       />
                       <button
@@ -331,18 +334,14 @@ export default function SettingsPage() {
                       disabled={uploading}
                       className="block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-semibold file:bg-orange-50 file:text-orange-700 hover:file:bg-orange-100"
                     />
-                    <p className="text-xs text-gray-400 mt-1">
-                      PNG, JPG ou JPEG. Max 2MB.
-                    </p>
+                    <p className="text-xs text-gray-400 mt-1">PNG, JPG ou JPEG. Max 2MB.</p>
                   </div>
                 </div>
                 {uploading && (
-                  <div className="mt-2 text-sm text-orange-600">
-                    ⏳ Téléchargement en cours...
-                  </div>
+                  <div className="mt-2 text-sm text-orange-600">⏳ Téléchargement en cours...</div>
                 )}
               </div>
-              
+
               <div className="space-y-4">
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">
@@ -351,19 +350,17 @@ export default function SettingsPage() {
                   <input
                     type="text"
                     value={settings.company_name}
-                    onChange={(e) => setSettings({...settings, company_name: e.target.value})}
+                    onChange={(e) => setSettings({ ...settings, company_name: e.target.value })}
                     className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-orange-500"
                     placeholder="Votre entreprise"
                   />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Téléphone
-                  </label>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Téléphone</label>
                   <input
                     type="tel"
                     value={settings.contact_phone}
-                    onChange={(e) => setSettings({...settings, contact_phone: e.target.value})}
+                    onChange={(e) => setSettings({ ...settings, contact_phone: e.target.value })}
                     className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-orange-500"
                     placeholder="0612345678"
                   />
@@ -375,18 +372,16 @@ export default function SettingsPage() {
                   <input
                     type="email"
                     value={settings.contact_email}
-                    onChange={(e) => setSettings({...settings, contact_email: e.target.value})}
+                    onChange={(e) => setSettings({ ...settings, contact_email: e.target.value })}
                     className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-orange-500"
                     placeholder="contact@entreprise.com"
                   />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Adresse
-                  </label>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Adresse</label>
                   <textarea
                     value={settings.contact_address}
-                    onChange={(e) => setSettings({...settings, contact_address: e.target.value})}
+                    onChange={(e) => setSettings({ ...settings, contact_address: e.target.value })}
                     className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-orange-500"
                     rows={3}
                     placeholder="Adresse complète"
@@ -416,7 +411,8 @@ export default function SettingsPage() {
                 </Link>
               </div>
               <p className="text-gray-500 mb-4">
-                Gérez les techniciens, leurs codes d'accès et permissions d'accès aux différentes sections.
+                Gérez les techniciens, leurs codes d'accès et permissions d'accès aux différentes
+                sections.
               </p>
               <div className="bg-gray-50 p-4 rounded-lg">
                 <p className="text-sm text-gray-600">
@@ -439,7 +435,8 @@ export default function SettingsPage() {
                 </Link>
               </div>
               <p className="text-gray-500 mb-4">
-                Consultez l'historique complet des connexions et actions effectuées par les techniciens.
+                Consultez l'historique complet des connexions et actions effectuées par les
+                techniciens.
               </p>
             </div>
           )}

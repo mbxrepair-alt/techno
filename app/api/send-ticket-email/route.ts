@@ -9,7 +9,7 @@ interface EmailBody {
 
 export async function POST(request: NextRequest): Promise<NextResponse> {
   try {
-    const { ticketId, email } = await request.json() as EmailBody;
+    const { ticketId, email } = (await request.json()) as EmailBody;
 
     if (!ticketId || !email) {
       return NextResponse.json({ error: "Paramètres manquants" }, { status: 400 });
@@ -33,7 +33,7 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
       },
     });
 
-    const trackingLink = `${process.env.NEXT_PUBLIC_APP_URL || 'https://technophone.vercel.app'}/suivi/${ticket.tracking_code}`;
+    const trackingLink = `${process.env.NEXT_PUBLIC_APP_URL || "https://technophone.vercel.app"}/suivi/${ticket.tracking_code}`;
 
     await transporter.sendMail({
       from: `"MBX Réparations" <${process.env.EMAIL_USER}>`,

@@ -5,7 +5,7 @@ interface SetTokenBody {
 }
 
 export async function POST(request: NextRequest): Promise<NextResponse> {
-  const { token } = await request.json() as SetTokenBody;
+  const { token } = (await request.json()) as SetTokenBody;
 
   const response = NextResponse.json({ success: true });
 

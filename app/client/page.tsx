@@ -23,7 +23,7 @@ export default function ClientSpace() {
     // RECHERCHE PAR CODE CLIENT (4 chiffres)
     if (searchType === "code" || /^\d{4}$/.test(searchValue)) {
       const codeClient = searchValue.trim();
-      
+
       const { data: client, error } = await supabase
         .from("clients")
         .select("email, client_code, name")
@@ -47,14 +47,14 @@ export default function ClientSpace() {
       if (ticketId.toLowerCase().startsWith("mbx-")) {
         ticketId = ticketId.replace(/mbx-/i, "");
       }
-      
+
       const idNumber = parseInt(ticketId);
       if (isNaN(idNumber)) {
         setError("Numéro de ticket invalide");
         setLoading(false);
         return;
       }
-      
+
       const { data: ticket, error } = await supabase
         .from("repairs")
         .select("*, clients(*)")
@@ -107,7 +107,9 @@ export default function ClientSpace() {
           <div className="text-center mb-8">
             <div className="text-5xl mb-4">🔍</div>
             <h2 className="text-2xl font-bold text-gray-800">Suivi de réparation</h2>
-            <p className="text-gray-500 mt-2">Entrez votre code client, numéro de ticket ou votre email</p>
+            <p className="text-gray-500 mt-2">
+              Entrez votre code client, numéro de ticket ou votre email
+            </p>
           </div>
 
           {/* Type de recherche */}
@@ -115,8 +117,8 @@ export default function ClientSpace() {
             <button
               onClick={() => setSearchType("code")}
               className={`flex-1 py-2 rounded-lg font-medium transition ${
-                searchType === "code" 
-                  ? "bg-green-600 text-white shadow" 
+                searchType === "code"
+                  ? "bg-green-600 text-white shadow"
                   : "text-gray-600 hover:bg-gray-200"
               }`}
             >
@@ -125,8 +127,8 @@ export default function ClientSpace() {
             <button
               onClick={() => setSearchType("ticket")}
               className={`flex-1 py-2 rounded-lg font-medium transition ${
-                searchType === "ticket" 
-                  ? "bg-blue-600 text-white shadow" 
+                searchType === "ticket"
+                  ? "bg-blue-600 text-white shadow"
                   : "text-gray-600 hover:bg-gray-200"
               }`}
             >
@@ -135,8 +137,8 @@ export default function ClientSpace() {
             <button
               onClick={() => setSearchType("email")}
               className={`flex-1 py-2 rounded-lg font-medium transition ${
-                searchType === "email" 
-                  ? "bg-blue-600 text-white shadow" 
+                searchType === "email"
+                  ? "bg-blue-600 text-white shadow"
                   : "text-gray-600 hover:bg-gray-200"
               }`}
             >
@@ -149,9 +151,11 @@ export default function ClientSpace() {
             <input
               type={searchType === "email" ? "email" : "text"}
               placeholder={
-                searchType === "code" ? "Ex: 4728" :
-                searchType === "ticket" ? "Ex: MBX-123 ou 123" : 
-                "Votre email"
+                searchType === "code"
+                  ? "Ex: 4728"
+                  : searchType === "ticket"
+                    ? "Ex: MBX-123 ou 123"
+                    : "Votre email"
               }
               className="w-full p-3 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500"
               value={searchValue}
@@ -161,9 +165,7 @@ export default function ClientSpace() {
           </div>
 
           {error && (
-            <div className="mb-6 p-3 bg-red-100 text-red-700 rounded-xl text-center">
-              {error}
-            </div>
+            <div className="mb-6 p-3 bg-red-100 text-red-700 rounded-xl text-center">{error}</div>
           )}
 
           <button

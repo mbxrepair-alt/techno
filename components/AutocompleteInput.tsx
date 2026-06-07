@@ -58,7 +58,7 @@ export default function AutocompleteInput({
     if (!inputValue || inputValue.length < 1) return [];
     const query = inputValue.toLowerCase();
     const filtered = suggestions
-      .filter(item => item?.toLowerCase().includes(query))
+      .filter((item) => item?.toLowerCase().includes(query))
       .sort((a, b) => {
         const aStarts = a.toLowerCase().startsWith(query);
         const bStarts = b.toLowerCase().startsWith(query);
@@ -91,11 +91,11 @@ export default function AutocompleteInput({
     switch (e.key) {
       case "ArrowDown":
         e.preventDefault();
-        setSelectedIndex(prev => prev < filteredSuggestions.length - 1 ? prev + 1 : 0);
+        setSelectedIndex((prev) => (prev < filteredSuggestions.length - 1 ? prev + 1 : 0));
         break;
       case "ArrowUp":
         e.preventDefault();
-        setSelectedIndex(prev => prev > 0 ? prev - 1 : filteredSuggestions.length - 1);
+        setSelectedIndex((prev) => (prev > 0 ? prev - 1 : filteredSuggestions.length - 1));
         break;
       case "Enter":
         e.preventDefault();
@@ -116,7 +116,9 @@ export default function AutocompleteInput({
     const parts = text.split(regex);
     return parts.map((part, index) =>
       part.toLowerCase() === inputValue.toLowerCase() ? (
-        <mark key={index} className="bg-yellow-200 text-black px-0.5 rounded">{part}</mark>
+        <mark key={index} className="bg-yellow-200 text-black px-0.5 rounded">
+          {part}
+        </mark>
       ) : (
         <span key={index}>{part}</span>
       )

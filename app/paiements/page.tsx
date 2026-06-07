@@ -27,7 +27,8 @@ export default function PaiementsPage() {
       // Récupérer toutes les réparations qui ont un paiement
       const { data, error } = await supabase
         .from("repairs")
-        .select(`
+        .select(
+          `
           id,
           device,
           issue,
@@ -39,18 +40,19 @@ export default function PaiementsPage() {
           estimated_price,
           tva_rate,
           clients (id, name, email, phone, client_code)
-        `)
+        `
+        )
         .eq("user_id", user.id)
         .neq("paid_amount", 0)
         .order("payment_date", { ascending: false });
 
       if (error) throw error;
 
-      const rows = (data || []).map(r => {
+      const rows = (data || []).map((r) => {
         const priceHt = r.final_price || r.estimated_price || 0;
         const tvaRate = r.tva_rate || 0;
         const totalTtc = tvaRate === 0 ? priceHt : priceHt * (1 + tvaRate / 100);
-        
+
         return {
           id: r.id,
           ticketLabel: `MBX-${r.id}`,
@@ -66,8 +68,8 @@ export default function PaiementsPage() {
             name: (r.clients as any)?.name ?? "Client inconnu",
             email: (r.clients as any)?.email ?? "",
             phone: (r.clients as any)?.phone ?? "",
-            code: (r.clients as any)?.client_code ?? ""
-          }
+            code: (r.clients as any)?.client_code ?? "",
+          },
         };
       });
 
@@ -85,15 +87,16 @@ export default function PaiementsPage() {
   }, []);
 
   // Filtres
-  const filteredPayments = payments.filter(p => {
-    const matchSearch = searchTerm === "" || 
+  const filteredPayments = payments.filter((p) => {
+    const matchSearch =
+      searchTerm === "" ||
       p.client.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
       p.ticketLabel.toLowerCase().includes(searchTerm.toLowerCase()) ||
       p.device.toLowerCase().includes(searchTerm.toLowerCase());
-    
+
     const matchMethod = filterMethod === "all" || p.method === filterMethod;
     const matchStatus = filterStatus === "all" || p.status === filterStatus;
-    
+
     let matchDate = true;
     if (dateRange.from) {
       const fromDate = new Date(dateRange.from);
@@ -104,7 +107,7 @@ export default function PaiementsPage() {
       toDate.setHours(23, 59, 59);
       matchDate = matchDate && p.date && p.date <= toDate;
     }
-    
+
     return matchSearch && matchMethod && matchStatus && matchDate;
   });
 
@@ -127,10 +130,11 @@ export default function PaiementsPage() {
   return (
     <Layout>
       <div className="max-w-7xl mx-auto px-4 py-8">
-        
         {/* EN-TÊTE */}
         <div className="mb-8">
-          <h1 className="text-4xl font-extrabold text-gray-800 mb-2">💰 Détails des encaissements</h1>
+          <h1 className="text-4xl font-extrabold text-gray-800 mb-2">
+            💰 Détails des encaissements
+          </h1>
           <p className="text-lg text-gray-500">Suivi complet de tous les paiements reçus</p>
         </div>
 
@@ -146,12 +150,17 @@ export default function PaiementsPage() {
           </div>
           <div className="bg-gradient-to-r from-purple-500 to-purple-600 rounded-xl p-5 text-white shadow-md">
             <div className="text-sm opacity-90 font-medium">Clients distincts</div>
-            <div className="text-3xl font-bold mt-1">{new Set(filteredPayments.map(p => p.client.id)).size}</div>
+            <div className="text-3xl font-bold mt-1">
+              {new Set(filteredPayments.map((p) => p.client.id)).size}
+            </div>
           </div>
           <div className="bg-gradient-to-r from-orange-500 to-orange-600 rounded-xl p-5 text-white shadow-md">
             <div className="text-sm opacity-90 font-medium">Montant moyen</div>
             <div className="text-3xl font-bold mt-1">
-              {filteredPayments.length > 0 ? (totalGlobal / filteredPayments.length).toFixed(2) : "0"} €
+              {filteredPayments.length > 0
+                ? (totalGlobal / filteredPayments.length).toFixed(2)
+                : "0"}{" "}
+              €
             </div>
           </div>
         </div>
@@ -164,12 +173,12 @@ export default function PaiementsPage() {
               type="text"
               placeholder="Rechercher (client, ticket...)"
               value={searchTerm}
-              onChange={e => setSearchTerm(e.target.value)}
+              onChange={(e) => setSearchTerm(e.target.value)}
               className="p-2.5 border border-gray-300 rounded-lg text-sm focus:ring-orange-500 focus:border-orange-500"
             />
             <select
               value={filterMethod}
-              onChange={e => setFilterMethod(e.target.value)}
+              onChange={(e) => setFilterMethod(e.target.value)}
               className="p-2.5 border border-gray-300 rounded-lg text-sm focus:ring-orange-500 focus:border-orange-500"
             >
               <option value="all">Toutes méthodes</option>
@@ -180,7 +189,7 @@ export default function PaiementsPage() {
             </select>
             <select
               value={filterStatus}
-              onChange={e => setFilterStatus(e.target.value)}
+              onChange={(e) => setFilterStatus(e.target.value)}
               className="p-2.5 border border-gray-300 rounded-lg text-sm focus:ring-orange-500 focus:border-orange-500"
             >
               <option value="all">Tous statuts</option>
@@ -192,14 +201,14 @@ export default function PaiementsPage() {
               <input
                 type="date"
                 value={dateRange.from}
-                onChange={e => setDateRange(prev => ({ ...prev, from: e.target.value }))}
+                onChange={(e) => setDateRange((prev) => ({ ...prev, from: e.target.value }))}
                 className="flex-1 p-2.5 border border-gray-300 rounded-lg text-sm"
                 placeholder="De"
               />
               <input
                 type="date"
                 value={dateRange.to}
-                onChange={e => setDateRange(prev => ({ ...prev, to: e.target.value }))}
+                onChange={(e) => setDateRange((prev) => ({ ...prev, to: e.target.value }))}
                 className="flex-1 p-2.5 border border-gray-300 rounded-lg text-sm"
                 placeholder="À"
               />
@@ -224,14 +233,30 @@ export default function PaiementsPage() {
             <table className="w-full">
               <thead className="bg-gray-50 border-b">
                 <tr>
-                  <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase">Date</th>
-                  <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase">Client</th>
-                  <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase">Ticket</th>
-                  <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase">Appareil</th>
-                  <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase">Panne</th>
-                  <th className="px-4 py-3 text-right text-xs font-semibold text-gray-600 uppercase">Montant</th>
-                  <th className="px-4 py-3 text-center text-xs font-semibold text-gray-600 uppercase">Méthode</th>
-                  <th className="px-4 py-3 text-center text-xs font-semibold text-gray-600 uppercase">Statut</th>
+                  <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase">
+                    Date
+                  </th>
+                  <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase">
+                    Client
+                  </th>
+                  <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase">
+                    Ticket
+                  </th>
+                  <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase">
+                    Appareil
+                  </th>
+                  <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase">
+                    Panne
+                  </th>
+                  <th className="px-4 py-3 text-right text-xs font-semibold text-gray-600 uppercase">
+                    Montant
+                  </th>
+                  <th className="px-4 py-3 text-center text-xs font-semibold text-gray-600 uppercase">
+                    Méthode
+                  </th>
+                  <th className="px-4 py-3 text-center text-xs font-semibold text-gray-600 uppercase">
+                    Statut
+                  </th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-100">
@@ -246,10 +271,12 @@ export default function PaiementsPage() {
                     <tr key={p.id} className="hover:bg-gray-50 transition-colors">
                       <td className="px-4 py-3 text-sm text-gray-700">
                         {p.date ? p.date.toLocaleDateString("fr-FR") : "—"}
-                       </td>
+                      </td>
                       <td className="px-4 py-3">
                         <div className="font-medium text-gray-900">{p.client.name}</div>
-                        {p.client.code && <div className="text-xs text-gray-400 font-mono">{p.client.code}</div>}
+                        {p.client.code && (
+                          <div className="text-xs text-gray-400 font-mono">{p.client.code}</div>
+                        )}
                       </td>
                       <td className="px-4 py-3 font-mono text-sm font-bold text-orange-600">
                         {p.ticketLabel}
@@ -266,13 +293,19 @@ export default function PaiementsPage() {
                       </td>
                       <td className="px-4 py-3 text-center">
                         {p.status === "payé" && (
-                          <span className="px-2 py-1 bg-green-100 text-green-700 rounded-full text-xs">✅ Payé</span>
+                          <span className="px-2 py-1 bg-green-100 text-green-700 rounded-full text-xs">
+                            ✅ Payé
+                          </span>
                         )}
                         {p.status === "partiel" && (
-                          <span className="px-2 py-1 bg-orange-100 text-orange-700 rounded-full text-xs">⚠️ Partiel</span>
+                          <span className="px-2 py-1 bg-orange-100 text-orange-700 rounded-full text-xs">
+                            ⚠️ Partiel
+                          </span>
                         )}
                         {p.status === "non payé" && (
-                          <span className="px-2 py-1 bg-gray-100 text-gray-500 rounded-full text-xs">❌ Non payé</span>
+                          <span className="px-2 py-1 bg-gray-100 text-gray-500 rounded-full text-xs">
+                            ❌ Non payé
+                          </span>
                         )}
                       </td>
                     </tr>

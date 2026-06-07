@@ -9,7 +9,7 @@ export default function ClientTicketPage() {
   const params = useParams();
   const router = useRouter();
   const id = params.id;
-  
+
   const [loading, setLoading] = useState(true);
   const [repair, setRepair] = useState(null);
   const [client, setClient] = useState(null);
@@ -35,7 +35,6 @@ export default function ClientTicketPage() {
 
       setRepair(repairData);
       setClient(repairData.clients);
-
     } catch (err) {
       console.error("Erreur:", err);
       setError("Ticket non trouvé");
@@ -51,11 +50,11 @@ export default function ClientTicketPage() {
     { status: "✅ Validé client", label: "Validation", icon: "✅", step: 3 },
     { status: "🔧 En réparation", label: "Réparation", icon: "🔧", step: 4 },
     { status: "✅ Terminé", label: "Terminé", icon: "✅", step: 5 },
-    { status: "📦 Rendu", label: "Rendu", icon: "📦", step: 6 }
+    { status: "📦 Rendu", label: "Rendu", icon: "📦", step: 6 },
   ];
 
   const getCurrentStep = () => {
-    const step = steps.find(s => s.status === repair?.status);
+    const step = steps.find((s) => s.status === repair?.status);
     return step ? step.step : 1;
   };
 
@@ -66,7 +65,7 @@ export default function ClientTicketPage() {
       "✅ Validé client": { color: "bg-green-500", text: "Validé" },
       "🔧 En réparation": { color: "bg-orange-500", text: "En réparation" },
       "✅ Terminé": { color: "bg-purple-500", text: "Terminé" },
-      "📦 Rendu": { color: "bg-gray-500", text: "Rendu" }
+      "📦 Rendu": { color: "bg-gray-500", text: "Rendu" },
     };
     return map[status] || { color: "bg-gray-500", text: status };
   };
@@ -90,7 +89,10 @@ export default function ClientTicketPage() {
         <div className="flex justify-center items-center h-64">
           <div className="bg-red-50 border border-red-200 rounded-lg p-6 text-center">
             <p className="text-red-600 font-semibold">Ticket non trouvé</p>
-            <button onClick={() => router.push("/client")} className="mt-4 text-blue-600 hover:underline">
+            <button
+              onClick={() => router.push("/client")}
+              className="mt-4 text-blue-600 hover:underline"
+            >
               ← Retour à mes tickets
             </button>
           </div>
@@ -104,7 +106,10 @@ export default function ClientTicketPage() {
       <div className="max-w-4xl mx-auto p-4">
         {/* En-tête */}
         <div className="mb-6">
-          <button onClick={() => router.push("/client")} className="text-blue-600 hover:underline mb-4 inline-block">
+          <button
+            onClick={() => router.push("/client")}
+            className="text-blue-600 hover:underline mb-4 inline-block"
+          >
             ← Retour à mes tickets
           </button>
           <h1 className="text-2xl font-bold text-gray-800">Suivi de réparation</h1>
@@ -113,7 +118,6 @@ export default function ClientTicketPage() {
 
         {/* Carte principale */}
         <div className="bg-white rounded-2xl shadow-lg border overflow-hidden">
-          
           {/* Bannière statut */}
           <div className={`${statusInfo.color} text-white p-4 text-center`}>
             <span className="text-xl font-semibold">{statusInfo.text}</span>
@@ -121,31 +125,39 @@ export default function ClientTicketPage() {
 
           {/* TIMELINE HORIZONTALE */}
           <div className="p-6 border-b bg-gray-50">
-            <h3 className="font-semibold text-gray-700 mb-6 text-center">📊 Avancement de votre réparation</h3>
-            
+            <h3 className="font-semibold text-gray-700 mb-6 text-center">
+              📊 Avancement de votre réparation
+            </h3>
+
             <div className="relative">
               {/* Barre de progression horizontale */}
               <div className="absolute top-5 left-0 right-0 h-1 bg-gray-200 rounded-full -z-10">
-                <div 
-                  className="h-full bg-blue-600 rounded-full transition-all duration-500" 
+                <div
+                  className="h-full bg-blue-600 rounded-full transition-all duration-500"
                   style={{ width: `${(currentStep / steps.length) * 100}%` }}
                 />
               </div>
-              
+
               {/* Étapes */}
               <div className="flex justify-between">
                 {steps.map((step, idx) => (
                   <div key={idx} className="flex flex-col items-center flex-1">
-                    <div className={`
+                    <div
+                      className={`
                       w-10 h-10 rounded-full flex items-center justify-center text-lg
                       transition-all duration-300 z-10
-                      ${currentStep >= step.step 
-                        ? 'bg-blue-600 text-white shadow-lg scale-110' 
-                        : 'bg-gray-300 text-gray-500'}
-                    `}>
+                      ${
+                        currentStep >= step.step
+                          ? "bg-blue-600 text-white shadow-lg scale-110"
+                          : "bg-gray-300 text-gray-500"
+                      }
+                    `}
+                    >
                       {step.icon}
                     </div>
-                    <span className={`text-xs mt-2 text-center ${currentStep >= step.step ? 'text-blue-600 font-medium' : 'text-gray-400'}`}>
+                    <span
+                      className={`text-xs mt-2 text-center ${currentStep >= step.step ? "text-blue-600 font-medium" : "text-gray-400"}`}
+                    >
                       {step.label}
                     </span>
                   </div>
@@ -159,23 +171,37 @@ export default function ClientTicketPage() {
             {/* Client */}
             <div className="bg-gray-50 rounded-xl p-4">
               <h3 className="font-semibold text-gray-700 mb-2">👤 Informations client</h3>
-              <p><strong>Nom :</strong> {client?.name}</p>
-              <p><strong>Téléphone :</strong> {client?.phone}</p>
-              <p><strong>Email :</strong> {client?.email}</p>
+              <p>
+                <strong>Nom :</strong> {client?.name}
+              </p>
+              <p>
+                <strong>Téléphone :</strong> {client?.phone}
+              </p>
+              <p>
+                <strong>Email :</strong> {client?.email}
+              </p>
             </div>
 
             {/* Appareil */}
             <div className="bg-gray-50 rounded-xl p-4">
               <h3 className="font-semibold text-gray-700 mb-2">📱 Appareil</h3>
-              <p><strong>Modèle :</strong> {repair.device}</p>
-              <p><strong>Panne :</strong> {repair.issue}</p>
+              <p>
+                <strong>Modèle :</strong> {repair.device}
+              </p>
+              <p>
+                <strong>Panne :</strong> {repair.issue}
+              </p>
               {repair.imei && repair.imei !== "NC" && (
-                <p><strong>IMEI :</strong> {repair.imei}</p>
+                <p>
+                  <strong>IMEI :</strong> {repair.imei}
+                </p>
               )}
-              
+
               {/* Code - Message si non fourni */}
               {repair.unlock_code && repair.unlock_code !== "NC" && repair.unlock_code !== "" ? (
-                <p className="mt-2"><strong>🔑 Code :</strong> {repair.unlock_code}</p>
+                <p className="mt-2">
+                  <strong>🔑 Code :</strong> {repair.unlock_code}
+                </p>
               ) : (
                 <div className="mt-3 p-3 bg-red-50 border-l-4 border-red-500 rounded-lg">
                   <p className="text-sm font-semibold text-red-700">⚠️ Code NON FOURNI</p>
@@ -189,9 +215,7 @@ export default function ClientTicketPage() {
               <div className="bg-blue-50 rounded-xl p-4">
                 <h3 className="font-semibold text-blue-800 mb-2">🔍 Diagnostic</h3>
                 <p className="text-gray-700 whitespace-pre-wrap">{repair.diagnosis}</p>
-                {repair.risks && (
-                  <p className="text-sm mt-2 text-orange-600">⚠️ {repair.risks}</p>
-                )}
+                {repair.risks && <p className="text-sm mt-2 text-orange-600">⚠️ {repair.risks}</p>}
               </div>
             )}
 
@@ -214,11 +238,18 @@ export default function ClientTicketPage() {
             {/* Dates */}
             <div className="bg-gray-50 rounded-xl p-4">
               <h3 className="font-semibold text-gray-700 mb-2">📅 Dates importantes</h3>
-              <p><strong>Dépôt :</strong> {new Date(repair.created_at).toLocaleDateString('fr-FR')}</p>
+              <p>
+                <strong>Dépôt :</strong> {new Date(repair.created_at).toLocaleDateString("fr-FR")}
+              </p>
               {repair.completion_date && (
-                <p><strong>Terminé le :</strong> {new Date(repair.completion_date).toLocaleDateString('fr-FR')}</p>
+                <p>
+                  <strong>Terminé le :</strong>{" "}
+                  {new Date(repair.completion_date).toLocaleDateString("fr-FR")}
+                </p>
               )}
-              <p className="text-sm text-gray-400 mt-2">Dernière mise à jour : {new Date(repair.updated_at).toLocaleDateString('fr-FR')}</p>
+              <p className="text-sm text-gray-400 mt-2">
+                Dernière mise à jour : {new Date(repair.updated_at).toLocaleDateString("fr-FR")}
+              </p>
             </div>
           </div>
 

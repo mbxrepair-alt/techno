@@ -59,9 +59,7 @@ export default function ClientDashboard() {
     };
     const s = statusMap[status] || { label: status, color: "bg-gray-500" };
     return (
-      <span className={`px-2 py-1 text-xs rounded-full text-white ${s.color}`}>
-        {s.label}
-      </span>
+      <span className={`px-2 py-1 text-xs rounded-full text-white ${s.color}`}>{s.label}</span>
     );
   };
 
@@ -102,11 +100,7 @@ export default function ClientDashboard() {
       </header>
 
       <main className="max-w-7xl mx-auto px-4 py-8">
-        {error && (
-          <div className="bg-red-100 text-red-700 p-4 rounded-lg mb-6">
-            {error}
-          </div>
-        )}
+        {error && <div className="bg-red-100 text-red-700 p-4 rounded-lg mb-6">{error}</div>}
 
         {/* Infos client */}
         {client && (
@@ -142,19 +136,19 @@ export default function ClientDashboard() {
           </div>
           <div className="bg-white rounded-lg shadow p-4 text-center">
             <div className="text-2xl font-bold text-yellow-600">
-              {tickets.filter(t => t.status === "en_attente").length}
+              {tickets.filter((t) => t.status === "en_attente").length}
             </div>
             <div className="text-sm text-gray-500">En attente</div>
           </div>
           <div className="bg-white rounded-lg shadow p-4 text-center">
             <div className="text-2xl font-bold text-blue-600">
-              {tickets.filter(t => t.status === "en_cours").length}
+              {tickets.filter((t) => t.status === "en_cours").length}
             </div>
             <div className="text-sm text-gray-500">En cours</div>
           </div>
           <div className="bg-white rounded-lg shadow p-4 text-center">
             <div className="text-2xl font-bold text-green-600">
-              {tickets.filter(t => t.status === "termine" || t.status === "livre").length}
+              {tickets.filter((t) => t.status === "termine" || t.status === "livre").length}
             </div>
             <div className="text-sm text-gray-500">Terminées</div>
           </div>
@@ -177,18 +171,14 @@ export default function ClientDashboard() {
                   <div className="flex justify-between items-start flex-wrap gap-4">
                     <div>
                       <div className="flex items-center gap-3 mb-2">
-                        <span className="font-mono text-lg font-bold">
-                          🎫 {ticket.code}
-                        </span>
+                        <span className="font-mono text-lg font-bold">🎫 {ticket.code}</span>
                         {getStatusBadge(ticket.status)}
                       </div>
                       <p className="text-gray-600">
                         <span className="font-medium">Problème:</span> {ticket.problem}
                       </p>
                       {ticket.description && (
-                        <p className="text-gray-500 text-sm mt-1">
-                          {ticket.description}
-                        </p>
+                        <p className="text-gray-500 text-sm mt-1">{ticket.description}</p>
                       )}
                       <p className="text-gray-400 text-xs mt-2">
                         Déposé le {new Date(ticket.created_at).toLocaleDateString("fr-FR")}
@@ -197,7 +187,9 @@ export default function ClientDashboard() {
                     <div className="text-right">
                       <p className="text-xl font-bold text-gray-900">{ticket.amount}€</p>
                       {ticket.status === "termine" && (
-                        <p className="text-green-600 text-sm font-medium mt-1">✅ Prêt à récupérer</p>
+                        <p className="text-green-600 text-sm font-medium mt-1">
+                          ✅ Prêt à récupérer
+                        </p>
                       )}
                     </div>
                   </div>

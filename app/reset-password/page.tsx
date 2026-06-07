@@ -17,7 +17,9 @@ export default function ResetPasswordPage() {
 
   useEffect(() => {
     const checkSession = async () => {
-      const { data: { session } } = await supabase.auth.getSession();
+      const {
+        data: { session },
+      } = await supabase.auth.getSession();
       if (!session) {
         setValidToken(false);
       }
@@ -53,7 +55,7 @@ export default function ResetPasswordPage() {
 
     try {
       const { error } = await supabase.auth.updateUser({
-        password: password
+        password: password,
       });
 
       if (error) throw error;
@@ -106,11 +108,7 @@ export default function ResetPasswordPage() {
           </div>
         ) : (
           <form onSubmit={handleResetPassword} className="space-y-4">
-            {error && (
-              <div className="bg-red-100 text-red-700 p-3 rounded-lg text-sm">
-                {error}
-              </div>
-            )}
+            {error && <div className="bg-red-100 text-red-700 p-3 rounded-lg text-sm">{error}</div>}
 
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">

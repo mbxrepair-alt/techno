@@ -28,7 +28,9 @@ export default function AuthGuard({ children }: AuthGuardProps) {
         const techPermissions = sessionStorage.getItem("technician_permissions");
         const companyId = sessionStorage.getItem("company_id");
         const hasCookie = document.cookie.includes("mbx_auth_token");
-        const { data: { user } } = await supabase.auth.getUser();
+        const {
+          data: { user },
+        } = await supabase.auth.getUser();
 
         if (techPermissions && companyId && hasCookie && user) {
           setIsAuthenticated(true);

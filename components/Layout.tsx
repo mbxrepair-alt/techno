@@ -26,7 +26,9 @@ export default function Layout({ children }: LayoutProps) {
       if (techPermissions) {
         setPermissions(JSON.parse(techPermissions));
       }
-      const { data: { user } } = await supabase.auth.getUser();
+      const {
+        data: { user },
+      } = await supabase.auth.getUser();
       setUser(user);
       setLoading(false);
     };
@@ -77,9 +79,7 @@ export default function Layout({ children }: LayoutProps) {
   return (
     <div className="min-h-screen bg-gray-100">
       <Navigation user={user} permissions={permissions} />
-      <main className="container mx-auto px-4 py-8">
-        {children}
-      </main>
+      <main className="container mx-auto px-4 py-8">{children}</main>
       {chatbotButton}
       <Chatbot isOpen={showChatbot} onClose={() => setShowChatbot(false)} />
     </div>

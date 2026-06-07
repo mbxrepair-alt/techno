@@ -9,7 +9,7 @@ export default function SuiviPage() {
   const params = useParams();
   const router = useRouter();
   const token = params.token;
-  
+
   const [loading, setLoading] = useState(true);
   const [repair, setRepair] = useState(null);
   const [client, setClient] = useState(null);
@@ -51,9 +51,9 @@ export default function SuiviPage() {
       // Mettre à jour le compteur de vues
       await supabase
         .from("tracking_links")
-        .update({ 
+        .update({
           view_count: (tracking.view_count || 0) + 1,
-          last_view: new Date().toISOString()
+          last_view: new Date().toISOString(),
         })
         .eq("id", tracking.id);
 
@@ -68,12 +68,11 @@ export default function SuiviPage() {
 
       setRepair(repairData);
       setClient(repairData.clients);
-      
+
       // Charger le commentaire client existant
       if (repairData.client_comment) {
         setClientComment(repairData.client_comment);
       }
-
     } catch (err) {
       console.error("Erreur:", err);
       setError("Erreur lors du chargement");
@@ -84,10 +83,10 @@ export default function SuiviPage() {
 
   const submitClientValidation = async (action) => {
     if (!repair) return;
-    
+
     setIsSubmitting(true);
     setValidationAction(action);
-    
+
     try {
       const updates: {
         client_validated: boolean;
@@ -99,28 +98,27 @@ export default function SuiviPage() {
         client_validated: action === "accept",
         client_rejected: action === "reject",
         client_comment: clientComment,
-        client_response_date: new Date().toISOString()
+        client_response_date: new Date().toISOString(),
       };
 
       if (action === "accept") {
         updates.status = "✅ Validé client";
       }
-      
+
       const { error: updateError } = await supabase
         .from("repairs")
         .update(updates)
         .eq("id", repair.id);
-      
+
       if (updateError) throw updateError;
-      
-      setRepair(prev => ({ ...prev, ...updates }));
+
+      setRepair((prev) => ({ ...prev, ...updates }));
       setShowSuccess(true);
-      
+
       setTimeout(() => {
         setShowSuccess(false);
         loadTrackingInfo();
       }, 2000);
-      
     } catch (err) {
       console.error("Erreur:", err);
       alert("Erreur lors de l'envoi de votre réponse");
@@ -132,16 +130,53 @@ export default function SuiviPage() {
 
   const getStatusInfo = (status) => {
     const statusMap = {
-      "🟡 Réceptionné": { label: "Réceptionné", color: "bg-yellow-100 text-yellow-800", icon: "📥", step: 1 },
-      "🔬 Diagnostic": { label: "Diagnostic", color: "bg-blue-100 text-blue-800", icon: "🔬", step: 2 },
-      "✅ Validé client": { label: "Validé client", color: "bg-green-100 text-green-800", icon: "✅", step: 3 },
-      "🔧 En réparation": { label: "En réparation", color: "bg-orange-100 text-orange-800", icon: "🔧", step: 4 },
-      "✅ Terminé": { label: "Terminé", color: "bg-purple-100 text-purple-800", icon: "✅", step: 5 },
+      "🟡 Réceptionné": {
+        label: "Réceptionné",
+        color: "bg-yellow-100 text-yellow-800",
+        icon: "📥",
+        step: 1,
+      },
+      "🔬 Diagnostic": {
+        label: "Diagnostic",
+        color: "bg-blue-100 text-blue-800",
+        icon: "🔬",
+        step: 2,
+      },
+      "✅ Validé client": {
+        label: "Validé client",
+        color: "bg-green-100 text-green-800",
+        icon: "✅",
+        step: 3,
+      },
+      "🔧 En réparation": {
+        label: "En réparation",
+        color: "bg-orange-100 text-orange-800",
+        icon: "🔧",
+        step: 4,
+      },
+      "✅ Terminé": {
+        label: "Terminé",
+        color: "bg-purple-100 text-purple-800",
+        icon: "✅",
+        step: 5,
+      },
       "📦 Rendu": { label: "Rendu", color: "bg-gray-100 text-gray-800", icon: "📦", step: 6 },
       "❌ KO": { label: "Non réparable", color: "bg-red-100 text-red-800", icon: "❌", step: 99 },
-      "🚫 Refus client": { label: "Refus client", color: "bg-pink-100 text-pink-800", icon: "🚫", step: 98 }
+      "🚫 Refus client": {
+        label: "Refus client",
+        color: "bg-pink-100 text-pink-800",
+        icon: "🚫",
+        step: 98,
+      },
     };
-    return statusMap[status] || { label: status || "En cours", color: "bg-gray-100", icon: "📋", step: 0 };
+    return (
+      statusMap[status] || {
+        label: status || "En cours",
+        color: "bg-gray-100",
+        icon: "📋",
+        step: 0,
+      }
+    );
   };
 
   const formatDate = (date) => {
@@ -154,7 +189,7 @@ export default function SuiviPage() {
         month: "2-digit",
         year: "numeric",
         hour: "2-digit",
-        minute: "2-digit"
+        minute: "2-digit",
       });
     } catch (e) {
       return "Date inconnue";
@@ -182,7 +217,9 @@ export default function SuiviPage() {
             <div className="text-6xl mb-4">🔒</div>
             <h1 className="text-2xl font-bold text-gray-800 mb-2">Lien invalide</h1>
             <p className="text-gray-600">{error}</p>
-            <p className="text-sm text-gray-400 mt-4">Contactez votre réparateur pour obtenir un nouveau lien</p>
+            <p className="text-sm text-gray-400 mt-4">
+              Contactez votre réparateur pour obtenir un nouveau lien
+            </p>
             <button
               onClick={() => router.push("/")}
               className="mt-6 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
@@ -196,7 +233,8 @@ export default function SuiviPage() {
   }
 
   const statusInfo = getStatusInfo(repair?.status);
-  const canValidate = repair?.status === "🔬 Diagnostic" && !repair?.client_validated && !repair?.client_rejected;
+  const canValidate =
+    repair?.status === "🔬 Diagnostic" && !repair?.client_validated && !repair?.client_rejected;
   const isAlreadyValidated = repair?.client_validated === true;
   const isRejected = repair?.client_rejected === true;
 
@@ -210,7 +248,7 @@ export default function SuiviPage() {
               ✅ Votre réponse a bien été enregistrée. Merci !
             </div>
           )}
-          
+
           {/* En-tête */}
           <div className="text-center mb-8">
             <div className="text-5xl mb-3">🔧</div>
@@ -244,24 +282,33 @@ export default function SuiviPage() {
                     { label: "Validation", icon: "✅", step: 3 },
                     { label: "Réparation", icon: "🔧", step: 4 },
                     { label: "Terminé", icon: "✅", step: 5 },
-                    { label: "Rendu", icon: "📦", step: 6 }
+                    { label: "Rendu", icon: "📦", step: 6 },
                   ].map((step, idx) => (
                     <div key={idx} className="flex flex-col items-center flex-1">
-                      <div className={`w-10 h-10 rounded-full flex items-center justify-center text-lg ${
-                        statusInfo.step >= step.step ? 'bg-blue-600 text-white' : 'bg-gray-200 text-gray-400'
-                      }`}>
+                      <div
+                        className={`w-10 h-10 rounded-full flex items-center justify-center text-lg ${
+                          statusInfo.step >= step.step
+                            ? "bg-blue-600 text-white"
+                            : "bg-gray-200 text-gray-400"
+                        }`}
+                      >
                         {step.icon}
                       </div>
-                      <span className={`text-xs mt-2 text-center hidden sm:block ${
-                        statusInfo.step >= step.step ? 'text-blue-600' : 'text-gray-400'
-                      }`}>
+                      <span
+                        className={`text-xs mt-2 text-center hidden sm:block ${
+                          statusInfo.step >= step.step ? "text-blue-600" : "text-gray-400"
+                        }`}
+                      >
                         {step.label}
                       </span>
                     </div>
                   ))}
                 </div>
                 <div className="absolute top-5 left-0 right-0 h-0.5 bg-gray-200 -z-10">
-                  <div className="h-full bg-blue-600 transition-all duration-500" style={{ width: `${(statusInfo.step / 6) * 100}%` }} />
+                  <div
+                    className="h-full bg-blue-600 transition-all duration-500"
+                    style={{ width: `${(statusInfo.step / 6) * 100}%` }}
+                  />
                 </div>
               </div>
             </div>
@@ -296,7 +343,7 @@ export default function SuiviPage() {
                 <p className="text-sm text-gray-600 mb-4">
                   Le diagnostic a été réalisé. Veuillez valider ou refuser la réparation.
                 </p>
-                
+
                 <div className="mb-4">
                   <label className="block text-sm font-medium text-gray-700 mb-2">
                     💬 Commentaire (optionnel)
@@ -309,21 +356,25 @@ export default function SuiviPage() {
                     className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                   />
                 </div>
-                
+
                 <div className="flex gap-3">
                   <button
                     onClick={() => submitClientValidation("accept")}
                     disabled={isSubmitting}
                     className="flex-1 bg-green-600 text-white py-2 rounded-lg font-medium hover:bg-green-700 transition disabled:opacity-50"
                   >
-                    {isSubmitting && validationAction === "accept" ? "⏳ Envoi..." : "✅ Valider la réparation"}
+                    {isSubmitting && validationAction === "accept"
+                      ? "⏳ Envoi..."
+                      : "✅ Valider la réparation"}
                   </button>
                   <button
                     onClick={() => submitClientValidation("reject")}
                     disabled={isSubmitting}
                     className="flex-1 bg-red-600 text-white py-2 rounded-lg font-medium hover:bg-red-700 transition disabled:opacity-50"
                   >
-                    {isSubmitting && validationAction === "reject" ? "⏳ Envoi..." : "❌ Refuser la réparation"}
+                    {isSubmitting && validationAction === "reject"
+                      ? "⏳ Envoi..."
+                      : "❌ Refuser la réparation"}
                   </button>
                 </div>
               </div>
@@ -333,12 +384,18 @@ export default function SuiviPage() {
             {isAlreadyValidated && repair?.status !== "🔬 Diagnostic" && (
               <div className="p-6 border-b bg-green-50">
                 <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 rounded-full bg-green-100 flex items-center justify-center text-green-600 text-xl">✅</div>
+                  <div className="w-10 h-10 rounded-full bg-green-100 flex items-center justify-center text-green-600 text-xl">
+                    ✅
+                  </div>
                   <div>
                     <p className="font-semibold text-green-800">Réparation validée</p>
-                    <p className="text-sm text-green-700">Vous avez validé cette réparation. Merci !</p>
+                    <p className="text-sm text-green-700">
+                      Vous avez validé cette réparation. Merci !
+                    </p>
                     {repair?.client_comment && (
-                      <p className="text-sm text-gray-600 mt-2">💬 Votre commentaire : "{repair.client_comment}"</p>
+                      <p className="text-sm text-gray-600 mt-2">
+                        💬 Votre commentaire : "{repair.client_comment}"
+                      </p>
                     )}
                   </div>
                 </div>
@@ -349,12 +406,16 @@ export default function SuiviPage() {
             {isRejected && (
               <div className="p-6 border-b bg-pink-50">
                 <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 rounded-full bg-pink-100 flex items-center justify-center text-pink-600 text-xl">❌</div>
+                  <div className="w-10 h-10 rounded-full bg-pink-100 flex items-center justify-center text-pink-600 text-xl">
+                    ❌
+                  </div>
                   <div>
                     <p className="font-semibold text-pink-800">Réparation refusée</p>
                     <p className="text-sm text-pink-700">Vous avez refusé cette réparation.</p>
                     {repair?.client_comment && (
-                      <p className="text-sm text-gray-600 mt-2">💬 Votre commentaire : "{repair.client_comment}"</p>
+                      <p className="text-sm text-gray-600 mt-2">
+                        💬 Votre commentaire : "{repair.client_comment}"
+                      </p>
                     )}
                   </div>
                 </div>
@@ -365,22 +426,32 @@ export default function SuiviPage() {
             <div className="p-6 border-b">
               <h3 className="font-semibold text-gray-700 mb-3">📱 Appareil</h3>
               <div className="bg-gray-50 rounded-xl p-4">
-                <p><strong>Modèle :</strong> {repair?.device}</p>
-                <p className="mt-2"><strong>Problème :</strong> {repair?.issue}</p>
+                <p>
+                  <strong>Modèle :</strong> {repair?.device}
+                </p>
+                <p className="mt-2">
+                  <strong>Problème :</strong> {repair?.issue}
+                </p>
                 {repair?.imei && repair.imei !== "NC" && (
-                  <p className="mt-2"><strong>IMEI :</strong> {repair?.imei}</p>
+                  <p className="mt-2">
+                    <strong>IMEI :</strong> {repair?.imei}
+                  </p>
                 )}
-                
+
                 {/* CODE AVEC MESSAGE D'ALERTE */}
                 {repair?.unlock_code && repair.unlock_code !== "NC" && repair.unlock_code !== "" ? (
-                  <p className="mt-2"><strong>🔑 Code :</strong> {repair.unlock_code}</p>
+                  <p className="mt-2">
+                    <strong>🔑 Code :</strong> {repair.unlock_code}
+                  </p>
                 ) : (
                   <div className="mt-3 p-3 bg-red-50 border-l-4 border-red-500 rounded-lg">
                     <div className="flex items-center gap-2">
                       <span className="text-red-600 text-lg">⚠️</span>
                       <span className="text-sm font-semibold text-red-700">Code NON FOURNI</span>
                     </div>
-                    <p className="text-xs text-red-600 mt-1">Test impossible - Pas pris en garantie</p>
+                    <p className="text-xs text-red-600 mt-1">
+                      Test impossible - Pas pris en garantie
+                    </p>
                   </div>
                 )}
               </div>
@@ -400,18 +471,23 @@ export default function SuiviPage() {
             )}
 
             {/* Commentaire historique */}
-            {repair?.client_comment && !isAlreadyValidated && !isRejected && repair?.status !== "🔬 Diagnostic" && (
-              <div className="p-6 border-b bg-gray-50">
-                <h3 className="font-semibold text-gray-700 mb-2">💬 Votre commentaire</h3>
-                <p className="text-gray-600 italic">"{repair.client_comment}"</p>
-              </div>
-            )}
+            {repair?.client_comment &&
+              !isAlreadyValidated &&
+              !isRejected &&
+              repair?.status !== "🔬 Diagnostic" && (
+                <div className="p-6 border-b bg-gray-50">
+                  <h3 className="font-semibold text-gray-700 mb-2">💬 Votre commentaire</h3>
+                  <p className="text-gray-600 italic">"{repair.client_comment}"</p>
+                </div>
+              )}
 
             {/* Message si terminé */}
             {repair?.status === "✅ Terminé" && (
               <div className="p-6 border-b bg-green-50">
                 <div className="text-center">
-                  <p className="text-green-800 font-medium">✅ Votre appareil est prêt à être récupéré !</p>
+                  <p className="text-green-800 font-medium">
+                    ✅ Votre appareil est prêt à être récupéré !
+                  </p>
                   <p className="text-sm text-green-700 mt-1">Merci de votre confiance.</p>
                 </div>
               </div>
@@ -432,8 +508,14 @@ export default function SuiviPage() {
 
       <style jsx>{`
         @keyframes fadeIn {
-          from { opacity: 0; transform: translateY(-10px); }
-          to { opacity: 1; transform: translateY(0); }
+          from {
+            opacity: 0;
+            transform: translateY(-10px);
+          }
+          to {
+            opacity: 1;
+            transform: translateY(0);
+          }
         }
         .animate-fade-in {
           animation: fadeIn 0.3s ease-out;

@@ -64,7 +64,7 @@ export default function TicketsContent() {
       "🔧 En réparation": "bg-blue-100 text-blue-800",
       "✅ Validé client": "bg-purple-100 text-purple-800",
       "🔬 Diagnostic": "bg-yellow-100 text-yellow-800",
-      "📦 Rendu": "bg-gray-100 text-gray-800"
+      "📦 Rendu": "bg-gray-100 text-gray-800",
     };
     return colors[status] || "bg-gray-100 text-gray-800";
   };
@@ -114,7 +114,9 @@ export default function TicketsContent() {
                   <div>
                     <div className="flex items-center gap-2 mb-2">
                       <span className="font-mono font-bold text-gray-800">MBX-{ticket.id}</span>
-                      <span className={`text-xs px-2 py-1 rounded-full ${getStatusColor(ticket.status)}`}>
+                      <span
+                        className={`text-xs px-2 py-1 rounded-full ${getStatusColor(ticket.status)}`}
+                      >
                         {ticket.status || "🟡 Réceptionné"}
                       </span>
                     </div>
@@ -123,7 +125,9 @@ export default function TicketsContent() {
                   </div>
                   <div className="text-right">
                     <p className="text-lg font-bold text-blue-600">{ticket.final_price || 0} €</p>
-                    <p className="text-xs text-gray-400">{new Date(ticket.created_at).toLocaleDateString('fr-FR')}</p>
+                    <p className="text-xs text-gray-400">
+                      {new Date(ticket.created_at).toLocaleDateString("fr-FR")}
+                    </p>
                   </div>
                 </div>
               </div>

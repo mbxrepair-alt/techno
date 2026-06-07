@@ -9,7 +9,7 @@ interface LoginBody {
 
 export async function POST(request: NextRequest): Promise<NextResponse> {
   try {
-    const { email, access_code } = await request.json() as LoginBody;
+    const { email, access_code } = (await request.json()) as LoginBody;
 
     const supabase = createClient(
       process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -23,10 +23,7 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
       .single();
 
     if (error || !user || user.access_code !== access_code) {
-      return NextResponse.json(
-        { error: "Invalid credentials" },
-        { status: 401 }
-      );
+      return NextResponse.json({ error: "Invalid credentials" }, { status: 401 });
     }
 
     const token = crypto.randomUUID();
@@ -46,7 +43,6 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
     });
 
     return NextResponse.json({ success: true, user });
-
   } catch (e) {
     console.error("API Login error:", e);
     return NextResponse.json({ error: "Server error" }, { status: 500 });

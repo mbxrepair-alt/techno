@@ -10,11 +10,7 @@ export default function RepairDetails() {
 
   useEffect(() => {
     const fetchRepair = async () => {
-      const { data: repairData } = await supabase
-        .from("repairs")
-        .select("*")
-        .eq("id", id)
-        .single();
+      const { data: repairData } = await supabase.from("repairs").select("*").eq("id", id).single();
 
       if (!repairData) return;
 
@@ -39,21 +35,35 @@ export default function RepairDetails() {
 
   return (
     <div className="p-6 max-w-xl mx-auto bg-white rounded-xl shadow">
+      <h1 className="text-xl font-bold mb-4">🧾 Ticket MBX-{repair.id}</h1>
 
-      <h1 className="text-xl font-bold mb-4">
-        🧾 Ticket MBX-{repair.id}
-      </h1>
-
-      <p><strong>Client:</strong> {repair.client?.name}</p>
-      <p><strong>Téléphone:</strong> {repair.client?.phone}</p>
-      <p><strong>Appareil:</strong> {repair.device}</p>
-      <p><strong>Panne:</strong> {repair.issue}</p>
-      <p><strong>Description:</strong> {repair.description}</p>
-      <p><strong>IMEI:</strong> {repair.imei}</p>
-      <p><strong>Code:</strong> {repair.unlock_code}</p>
-      <p><strong>Prix:</strong> {repair.final_price} €</p>
-      <p><strong>Status:</strong> {repair.status}</p>
-
+      <p>
+        <strong>Client:</strong> {repair.client?.name}
+      </p>
+      <p>
+        <strong>Téléphone:</strong> {repair.client?.phone}
+      </p>
+      <p>
+        <strong>Appareil:</strong> {repair.device}
+      </p>
+      <p>
+        <strong>Panne:</strong> {repair.issue}
+      </p>
+      <p>
+        <strong>Description:</strong> {repair.description}
+      </p>
+      <p>
+        <strong>IMEI:</strong> {repair.imei}
+      </p>
+      <p>
+        <strong>Code:</strong> {repair.unlock_code}
+      </p>
+      <p>
+        <strong>Prix:</strong> {repair.final_price} €
+      </p>
+      <p>
+        <strong>Status:</strong> {repair.status}
+      </p>
     </div>
   );
 }

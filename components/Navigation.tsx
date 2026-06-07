@@ -56,7 +56,9 @@ export default function Navigation({ user, permissions }: NavigationProps) {
 
   const loadCompanyInfo = async (): Promise<void> => {
     try {
-      const { data: { user: currentUser } } = await supabase.auth.getUser();
+      const {
+        data: { user: currentUser },
+      } = await supabase.auth.getUser();
       if (currentUser) {
         const { data, error } = await supabase
           .from("profiles")
@@ -84,27 +86,63 @@ export default function Navigation({ user, permissions }: NavigationProps) {
 
   const navItems: NavItem[] = [
     { href: "/dashboard", label: "Tableau de bord", icon: "🏠", visible: true },
-    { href: "/repairs", label: "Réparations", icon: "🔧", visible: !!(permissions?.can_access_repairs || isGerant) },
-    { href: "/clients", label: "Clients", icon: "👥", visible: !!(permissions?.can_access_clients || isGerant) },
-    { href: "/historique", label: "Historique", icon: "📜", visible: !!(permissions?.can_access_historique || isGerant) },
-    { href: "/factures", label: "Factures", icon: "📄", visible: !!(permissions?.can_access_factures || isGerant) },
-    { href: "/paiements", label: "Paiements", icon: "💳", visible: !!(permissions?.can_access_paiements || isGerant) },
-    { href: "/statistiques", label: "Statistiques", icon: "📊", visible: !!(permissions?.can_access_statistiques || isGerant) },
+    {
+      href: "/repairs",
+      label: "Réparations",
+      icon: "🔧",
+      visible: !!(permissions?.can_access_repairs || isGerant),
+    },
+    {
+      href: "/clients",
+      label: "Clients",
+      icon: "👥",
+      visible: !!(permissions?.can_access_clients || isGerant),
+    },
+    {
+      href: "/historique",
+      label: "Historique",
+      icon: "📜",
+      visible: !!(permissions?.can_access_historique || isGerant),
+    },
+    {
+      href: "/factures",
+      label: "Factures",
+      icon: "📄",
+      visible: !!(permissions?.can_access_factures || isGerant),
+    },
+    {
+      href: "/paiements",
+      label: "Paiements",
+      icon: "💳",
+      visible: !!(permissions?.can_access_paiements || isGerant),
+    },
+    {
+      href: "/statistiques",
+      label: "Statistiques",
+      icon: "📊",
+      visible: !!(permissions?.can_access_statistiques || isGerant),
+    },
     { href: "/settings", label: "Paramètres", icon: "⚙️", visible: true },
   ];
 
-  const visibleItems = navItems.filter(item => item.visible);
+  const visibleItems = navItems.filter((item) => item.visible);
 
   return (
     <nav className="bg-gradient-to-r from-gray-900 via-gray-800 to-gray-900 shadow-2xl sticky top-0 z-50 border-b border-orange-500/30">
       <div className="container mx-auto px-4">
         <div className="flex justify-between items-center h-16">
-
-          <Link href="/dashboard" className="group relative flex items-center gap-2 transition-all duration-300 hover:scale-105">
+          <Link
+            href="/dashboard"
+            className="group relative flex items-center gap-2 transition-all duration-300 hover:scale-105"
+          >
             <div className="relative">
               <div className="absolute -inset-1 bg-orange-500 rounded-full blur-md opacity-0 group-hover:opacity-100 transition duration-300"></div>
               {logoUrl ? (
-                <img src={logoUrl} alt="Logo" className="relative w-8 h-8 object-contain rounded-lg" />
+                <img
+                  src={logoUrl}
+                  alt="Logo"
+                  className="relative w-8 h-8 object-contain rounded-lg"
+                />
               ) : (
                 <span className="relative text-2xl drop-shadow-[0_0_10px_rgba(249,115,22,0.5)] group-hover:drop-shadow-[0_0_20px_rgba(249,115,22,0.8)] transition-all duration-300">
                   🔧
@@ -131,18 +169,36 @@ export default function Navigation({ user, permissions }: NavigationProps) {
                       ? "bg-gradient-to-r from-orange-500 to-orange-600 text-white shadow-lg shadow-orange-500/30"
                       : "text-gray-300 hover:text-white"
                   }`}
-                  style={{ transform: isHovered ? "translateY(-2px) scale(1.05)" : "translateY(0) scale(1)" }}
+                  style={{
+                    transform: isHovered
+                      ? "translateY(-2px) scale(1.05)"
+                      : "translateY(0) scale(1)",
+                  }}
                 >
-                  <div className={`absolute inset-0 rounded-xl bg-gradient-to-r from-orange-500 to-orange-600 opacity-0 transition-opacity duration-300 ${isHovered && !isActive ? "opacity-20" : ""}`}></div>
+                  <div
+                    className={`absolute inset-0 rounded-xl bg-gradient-to-r from-orange-500 to-orange-600 opacity-0 transition-opacity duration-300 ${isHovered && !isActive ? "opacity-20" : ""}`}
+                  ></div>
                   <div className="relative flex items-center gap-2">
-                    <span className="text-lg transition-all duration-300 inline-block" style={{ transform: isHovered ? "scale(1.2) translateX(-2px)" : "scale(1) translateX(0)" }}>
+                    <span
+                      className="text-lg transition-all duration-300 inline-block"
+                      style={{
+                        transform: isHovered
+                          ? "scale(1.2) translateX(-2px)"
+                          : "scale(1) translateX(0)",
+                      }}
+                    >
                       {item.icon}
                     </span>
-                    <span className="text-sm transition-all duration-300" style={{ transform: isHovered ? "translateX(2px)" : "translateX(0)" }}>
+                    <span
+                      className="text-sm transition-all duration-300"
+                      style={{ transform: isHovered ? "translateX(2px)" : "translateX(0)" }}
+                    >
                       {item.label}
                     </span>
                   </div>
-                  <div className={`absolute -bottom-1 left-1/2 transform -translate-x-1/2 h-0.5 bg-gradient-to-r from-orange-400 to-orange-600 rounded-full transition-all duration-300 ${isHovered ? "w-1/2 opacity-100" : "w-0 opacity-0"}`}></div>
+                  <div
+                    className={`absolute -bottom-1 left-1/2 transform -translate-x-1/2 h-0.5 bg-gradient-to-r from-orange-400 to-orange-600 rounded-full transition-all duration-300 ${isHovered ? "w-1/2 opacity-100" : "w-0 opacity-0"}`}
+                  ></div>
                 </Link>
               );
             })}
@@ -167,11 +223,18 @@ export default function Navigation({ user, permissions }: NavigationProps) {
             >
               <span className="absolute inset-0 bg-gradient-to-r from-red-600 to-red-700 opacity-0 group-hover:opacity-100 transition duration-300"></span>
               <span className="relative z-10 flex items-center gap-2">
-                <span className="text-lg group-hover:scale-110 transition-transform duration-300">🚪</span>
+                <span className="text-lg group-hover:scale-110 transition-transform duration-300">
+                  🚪
+                </span>
                 <span className="hidden sm:inline">Déconnexion</span>
               </span>
             </button>
-            <button onClick={() => setMobileMenuOpen(!mobileMenuOpen)} className="lg:hidden text-white text-2xl">☰</button>
+            <button
+              onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
+              className="lg:hidden text-white text-2xl"
+            >
+              ☰
+            </button>
           </div>
         </div>
 
@@ -183,7 +246,9 @@ export default function Navigation({ user, permissions }: NavigationProps) {
                 href={item.href}
                 onClick={() => setMobileMenuOpen(false)}
                 className={`flex items-center gap-3 px-4 py-3 rounded-lg transition ${
-                  pathname === item.href ? "bg-orange-500/20 text-orange-400" : "text-gray-300 hover:bg-gray-800"
+                  pathname === item.href
+                    ? "bg-orange-500/20 text-orange-400"
+                    : "text-gray-300 hover:bg-gray-800"
                 }`}
               >
                 <span className="text-xl">{item.icon}</span>

@@ -21,11 +21,7 @@ export default function ClientDetailPage() {
     setLoading(true);
     try {
       // Charger le client
-      const { data: clientData } = await supabase
-        .from("clients")
-        .select("*")
-        .eq("id", id)
-        .single();
+      const { data: clientData } = await supabase.from("clients").select("*").eq("id", id).single();
 
       setClient(clientData);
 
@@ -51,7 +47,7 @@ export default function ClientDetailPage() {
       month: "2-digit",
       year: "numeric",
       hour: "2-digit",
-      minute: "2-digit"
+      minute: "2-digit",
     });
   };
 
@@ -136,7 +132,7 @@ export default function ClientDetailPage() {
         {/* Liste des réparations */}
         <div className="bg-white rounded-2xl shadow-lg border p-6">
           <h2 className="text-lg font-semibold mb-4">📱 Historique des réparations</h2>
-          
+
           {repairs.length === 0 ? (
             <p className="text-center text-gray-400 py-8">Aucune réparation pour ce client</p>
           ) : (
@@ -153,7 +149,9 @@ export default function ClientDetailPage() {
                         <span className="font-mono text-sm font-bold bg-gray-100 px-2 py-0.5 rounded">
                           MBX-{repair.id}
                         </span>
-                        <span className={`text-xs px-2 py-0.5 rounded-full ${getStatusColor(repair.status)}`}>
+                        <span
+                          className={`text-xs px-2 py-0.5 rounded-full ${getStatusColor(repair.status)}`}
+                        >
                           {repair.status}
                         </span>
                       </div>
@@ -165,9 +163,13 @@ export default function ClientDetailPage() {
                       </div>
                     </div>
                     <div className="text-right">
-                      <div className="font-bold text-green-600">{formatPrice(repair.final_price)}</div>
+                      <div className="font-bold text-green-600">
+                        {formatPrice(repair.final_price)}
+                      </div>
                       {repair.paid_amount > 0 && (
-                        <div className="text-xs text-green-500">Payé: {formatPrice(repair.paid_amount)}</div>
+                        <div className="text-xs text-green-500">
+                          Payé: {formatPrice(repair.paid_amount)}
+                        </div>
                       )}
                     </div>
                   </div>

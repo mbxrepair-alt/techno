@@ -143,5 +143,5 @@ const allDevices = [
   "Steam Deck OLED",
   "Steam Deck",
   "Asus ROG Ally",
-  "Lenovo Legion Go"
+  "Lenovo Legion Go",
 ];

@@ -1,4 +1,4 @@
-import { createClient } from '@supabase/supabase-js';
+import { createClient } from "@supabase/supabase-js";
 
 export async function GET(): Promise<Response> {
   const supabase = createClient(
@@ -8,20 +8,20 @@ export async function GET(): Promise<Response> {
 
   try {
     const { error } = await supabase
-      .from('profiles')
+      .from("profiles")
       .update({ licence_active: false })
-      .lt('licence_expiry_date', new Date().toISOString())
-      .eq('licence_active', true);
+      .lt("licence_expiry_date", new Date().toISOString())
+      .eq("licence_active", true);
 
     if (error) throw error;
 
     return new Response(
-      JSON.stringify({ success: true, message: 'Licences expirées désactivées' }),
+      JSON.stringify({ success: true, message: "Licences expirées désactivées" }),
       { status: 200 }
     );
   } catch (error) {
-    console.error('Erreur:', error);
-    const message = error instanceof Error ? error.message : 'Erreur inconnue';
+    console.error("Erreur:", error);
+    const message = error instanceof Error ? error.message : "Erreur inconnue";
     return new Response(JSON.stringify({ error: message }), { status: 500 });
   }
 }

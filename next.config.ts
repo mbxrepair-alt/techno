@@ -1,4 +1,4 @@
-﻿import type { NextConfig } from "next"
+﻿import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
   typescript: {
@@ -32,8 +32,8 @@ const nextConfig: NextConfig = {
           { key: "X-XSS-Protection", value: "1; mode=block" },
         ],
       },
-    ]
+    ];
   },
-}
+};
 
-export default nextConfig
+export default nextConfig;

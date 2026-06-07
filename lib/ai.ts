@@ -16,14 +16,23 @@ interface ClientData {
   name?: string;
 }
 
-export async function chatWithAssistant(message: string, history: ChatMessage[] = []): Promise<string> {
+export async function chatWithAssistant(
+  message: string,
+  history: ChatMessage[] = []
+): Promise<string> {
   const msg = message.toLowerCase();
 
   // ========== DIAGNOSTIC PAR TYPE D'APPAREIL ==========
   if (msg.includes("diagnostic") || msg.includes("panne") || msg.includes("problème")) {
-
     // Diagnostic Console (PS5, Xbox, Switch, Nintendo)
-    if (msg.includes("ps5") || msg.includes("playstation") || msg.includes("xbox") || msg.includes("switch") || msg.includes("nintendo") || msg.includes("console")) {
+    if (
+      msg.includes("ps5") ||
+      msg.includes("playstation") ||
+      msg.includes("xbox") ||
+      msg.includes("switch") ||
+      msg.includes("nintendo") ||
+      msg.includes("console")
+    ) {
       return `🎮 **DIAGNOSTIC CONSOLE - 40€**
 
 ✅ **Pour :** PS5, Xbox Series, Nintendo Switch, etc.
@@ -40,7 +49,12 @@ export async function chatWithAssistant(message: string, history: ChatMessage[] 
     }
 
     // Diagnostic Tablette
-    if (msg.includes("tablette") || msg.includes("ipad") || msg.includes("galaxy tab") || msg.includes("lenovo")) {
+    if (
+      msg.includes("tablette") ||
+      msg.includes("ipad") ||
+      msg.includes("galaxy tab") ||
+      msg.includes("lenovo")
+    ) {
       return `📟 **DIAGNOSTIC TABLETTE - 25€**
 
 ✅ **Pour :** iPad, Samsung Tab, Lenovo, etc.
@@ -57,8 +71,15 @@ export async function chatWithAssistant(message: string, history: ChatMessage[] 
     }
 
     // Diagnostic Smartphone complexe (iPhone haut de gamme, Samsung haut de gamme)
-    if ((msg.includes("iphone") && (msg.includes("pro") || msg.includes("pro max") || msg.includes("14") || msg.includes("15"))) ||
-        (msg.includes("samsung") && (msg.includes("s23") || msg.includes("s24") || msg.includes("ultra")))) {
+    if (
+      (msg.includes("iphone") &&
+        (msg.includes("pro") ||
+          msg.includes("pro max") ||
+          msg.includes("14") ||
+          msg.includes("15"))) ||
+      (msg.includes("samsung") &&
+        (msg.includes("s23") || msg.includes("s24") || msg.includes("ultra")))
+    ) {
       return `🔧 **DIAGNOSTIC SMARTPHONE COMPLEXE - 40€**
 
 ✅ **Pour :** iPhone Pro/Max (12/13/14/15), Samsung Galaxy S23/S24 Ultra
@@ -91,7 +112,10 @@ export async function chatWithAssistant(message: string, history: ChatMessage[] 
   }
 
   // ========== IPHONE PRIX ==========
-  if (msg.includes("iphone") && (msg.includes("écran") || msg.includes("cassé") || msg.includes("vitre"))) {
+  if (
+    msg.includes("iphone") &&
+    (msg.includes("écran") || msg.includes("cassé") || msg.includes("vitre"))
+  ) {
     if (msg.includes("iphone 14") || msg.includes("iphone14")) {
       return `📱 **ÉCRAN iPhone 14**
 
@@ -254,7 +278,10 @@ export async function chatWithAssistant(message: string, history: ChatMessage[] 
   }
 
   // ========== TABLETTES ==========
-  if ((msg.includes("ipad") || msg.includes("tablette")) && (msg.includes("écran") || msg.includes("cassé"))) {
+  if (
+    (msg.includes("ipad") || msg.includes("tablette")) &&
+    (msg.includes("écran") || msg.includes("cassé"))
+  ) {
     return `📟 **ÉCRAN TABLETTE**
 
 💰 **Prix : 89-189€** (selon modèle : iPad, Samsung Tab, etc.)
@@ -281,7 +308,10 @@ export async function chatWithAssistant(message: string, history: ChatMessage[] 
   }
 
   // ========== CONSOLES ==========
-  if ((msg.includes("ps5") || msg.includes("playstation")) && (msg.includes("réparation") || msg.includes("panne"))) {
+  if (
+    (msg.includes("ps5") || msg.includes("playstation")) &&
+    (msg.includes("réparation") || msg.includes("panne"))
+  ) {
     return `🎮 **RÉPARATION PS5**
 
 💰 **Prix : 89-199€** (selon panne)
@@ -298,7 +328,7 @@ export async function chatWithAssistant(message: string, history: ChatMessage[] 
 ⏱️ Délai : 5-7 jours`;
   }
 
-  if ((msg.includes("xbox")) && (msg.includes("réparation") || msg.includes("panne"))) {
+  if (msg.includes("xbox") && (msg.includes("réparation") || msg.includes("panne"))) {
     return `🎮 **RÉPARATION XBOX Series X/S**
 
 💰 **Prix : 79-179€** (selon panne)
@@ -309,7 +339,10 @@ export async function chatWithAssistant(message: string, history: ChatMessage[] 
 ⏱️ Délai : 5-7 jours`;
   }
 
-  if ((msg.includes("switch") || msg.includes("nintendo")) && (msg.includes("réparation") || msg.includes("panne"))) {
+  if (
+    (msg.includes("switch") || msg.includes("nintendo")) &&
+    (msg.includes("réparation") || msg.includes("panne"))
+  ) {
     return `🎮 **RÉPARATION Nintendo Switch**
 
 💰 **Prix : 59-129€** (selon panne)
@@ -333,7 +366,12 @@ export async function chatWithAssistant(message: string, history: ChatMessage[] 
   }
 
   // ========== TARIFS GÉNÉRAUX ==========
-  if (msg.includes("prix") || msg.includes("tarif") || msg.includes("coût") || msg.includes("devis")) {
+  if (
+    msg.includes("prix") ||
+    msg.includes("tarif") ||
+    msg.includes("coût") ||
+    msg.includes("devis")
+  ) {
     return `💰 **TARIFS MBX RÉPARATIONS**
 
 🔬 **DIAGNOSTIC :**
@@ -434,7 +472,10 @@ export async function suggestIssues(deviceType: string): Promise<string[]> {
     ];
   }
 
-  if (type.includes("iphone") && (type.includes("pro") || type.includes("14") || type.includes("15"))) {
+  if (
+    type.includes("iphone") &&
+    (type.includes("pro") || type.includes("14") || type.includes("15"))
+  ) {
     return [
       "🔧 Diagnostic iPhone Pro - 40€",
       "📱 Écran iPhone 14 - 229€",
@@ -450,7 +491,11 @@ export async function suggestIssues(deviceType: string): Promise<string[]> {
   ];
 }
 
-export async function generateDiagnostic(device: string, issue: string, symptoms?: string): Promise<string> {
+export async function generateDiagnostic(
+  device: string,
+  issue: string,
+  symptoms?: string
+): Promise<string> {
   return `🔍 **DIAGNOSTIC TECHNIQUE**
 
 📱 Appareil : ${device}
@@ -469,7 +514,12 @@ export async function generateDiagnostic(device: string, issue: string, symptoms
 📍 8 Rue de l'Épée, 69003 Lyon`;
 }
 
-export async function generateRepairSummary(device: string, issue: string, diagnosis: string, partsUsed: string): Promise<string> {
+export async function generateRepairSummary(
+  device: string,
+  issue: string,
+  diagnosis: string,
+  partsUsed: string
+): Promise<string> {
   return `✅ **RÉSUMÉ DES TRAVAUX**
 
 📱 Appareil : ${device}
@@ -486,7 +536,11 @@ export async function generateRepairSummary(device: string, issue: string, diagn
 🔧 Garantie : 3 mois (6 mois batterie)`;
 }
 
-export async function generateInvoice(repairData: RepairData, clientData: ClientData, partsList: unknown): Promise<string> {
+export async function generateInvoice(
+  repairData: RepairData,
+  clientData: ClientData,
+  partsList: unknown
+): Promise<string> {
   return `🧾 **FACTURE MBX RÉPARATIONS**
 
 N° : F-${Date.now()}

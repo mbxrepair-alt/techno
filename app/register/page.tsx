@@ -25,7 +25,7 @@ export default function RegisterPage() {
     const hasLowerCase = /[a-z]/.test(pwd);
     const hasNumber = /[0-9]/.test(pwd);
     const hasMinLength = pwd.length >= 8;
-    
+
     if (!hasMinLength) return "Le mot de passe doit contenir au moins 8 caractères";
     if (!hasUpperCase) return "Le mot de passe doit contenir au moins une majuscule";
     if (!hasLowerCase) return "Le mot de passe doit contenir au moins une minuscule";
@@ -76,18 +76,20 @@ export default function RegisterPage() {
           data: {
             name: name,
             phone: phone,
-            shop_name: shopName
-          }
-        }
+            shop_name: shopName,
+          },
+        },
       });
 
       if (signUpError) {
         console.error("SignUp Error:", signUpError);
-        
+
         if (signUpError.message.includes("already registered")) {
           setError("Cet email est déjà utilisé. Connectez-vous ou utilisez un autre email.");
         } else if (signUpError.message.includes("password")) {
-          setError("Le mot de passe doit contenir au moins 8 caractères avec une majuscule, une minuscule et un chiffre.");
+          setError(
+            "Le mot de passe doit contenir au moins 8 caractères avec une majuscule, une minuscule et un chiffre."
+          );
         } else {
           setError("Erreur d'inscription: " + signUpError.message);
         }
@@ -110,12 +112,12 @@ export default function RegisterPage() {
           phone: phone || null,
           shop_name: shopName || null,
           created_at: new Date().toISOString(),
-          is_admin: false
+          is_admin: false,
         };
 
         const { error: profileError } = await supabase
           .from("profiles")
-          .upsert(profileData, { onConflict: 'id' });
+          .upsert(profileData, { onConflict: "id" });
 
         if (profileError) {
           console.error("Profile Error:", profileError);
@@ -130,19 +132,19 @@ export default function RegisterPage() {
           status: "active",
           is_trial: true,
           trial_end_date: trialEndDate.toISOString(),
-          approved_at: new Date().toISOString()
+          approved_at: new Date().toISOString(),
         };
 
         const { error: licenceError } = await supabase
           .from("licences")
-          .upsert(licenceData, { onConflict: 'email' });
+          .upsert(licenceData, { onConflict: "email" });
 
         if (licenceError) {
           console.error("Licence Error:", licenceError);
         }
 
         setSuccess(true);
-        
+
         // Rediriger après 3 secondes
         setTimeout(() => {
           router.push("/login?registered=true");
@@ -163,11 +165,15 @@ export default function RegisterPage() {
           <div className="text-5xl mb-4">🎉</div>
           <h2 className="text-2xl font-bold text-gray-800 mb-2">Inscription réussie !</h2>
           <p className="text-gray-600 mb-4">
-            Votre compte a été créé avec succès.<br/>
+            Votre compte a été créé avec succès.
+            <br />
             Vous bénéficiez de <strong className="text-green-600">7 jours d'essai gratuits</strong>.
           </p>
           <div className="bg-green-50 p-3 rounded-lg mb-4">
-            <p className="text-green-800 text-sm">📅 Votre essai se termine le {new Date(Date.now() + 7*24*60*60*1000).toLocaleDateString('fr-FR')}</p>
+            <p className="text-green-800 text-sm">
+              📅 Votre essai se termine le{" "}
+              {new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toLocaleDateString("fr-FR")}
+            </p>
           </div>
           <p className="text-gray-500 text-sm">Redirection vers la connexion...</p>
         </div>
@@ -187,9 +193,7 @@ export default function RegisterPage() {
         <h2 className="text-xl font-semibold text-center mb-6">Inscription</h2>
 
         {error && (
-          <div className="bg-red-100 text-red-700 p-3 rounded-lg mb-4 text-sm">
-            {error}
-          </div>
+          <div className="bg-red-100 text-red-700 p-3 rounded-lg mb-4 text-sm">{error}</div>
         )}
 
         <form onSubmit={handleRegister} className="space-y-4">
@@ -229,7 +233,9 @@ export default function RegisterPage() {
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Nom de l'atelier (optionnel)</label>
+            <label className="block text-sm font-medium text-gray-700 mb-1">
+              Nom de l'atelier (optionnel)
+            </label>
             <input
               type="text"
               value={shopName}
@@ -264,7 +270,9 @@ export default function RegisterPage() {
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Confirmer le mot de passe *</label>
+            <label className="block text-sm font-medium text-gray-700 mb-1">
+              Confirmer le mot de passe *
+            </label>
             <input
               type="password"
               value={confirmPassword}
@@ -292,7 +300,9 @@ export default function RegisterPage() {
 
         <div className="mt-6 p-3 bg-green-50 rounded-lg text-center">
           <p className="text-green-800 text-sm font-medium">🎁 Offre de lancement</p>
-          <p className="text-green-600 text-xs">7 jours d'essai gratuits • Sans engagement • Annulation à tout moment</p>
+          <p className="text-green-600 text-xs">
+            7 jours d'essai gratuits • Sans engagement • Annulation à tout moment
+          </p>
           <p className="text-gray-500 text-xs mt-2">✓ Toutes les fonctionnalités incluses</p>
         </div>
       </div>

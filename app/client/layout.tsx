@@ -20,7 +20,7 @@ export default function ClientLayout({ children }: ClientLayoutProps) {
   const pathname = usePathname();
 
   useEffect(() => {
-    if (PUBLIC_PREFIXES.some(page => pathname?.startsWith(page))) return;
+    if (PUBLIC_PREFIXES.some((page) => pathname?.startsWith(page))) return;
     const token = localStorage.getItem("clientToken");
     const clientCode = localStorage.getItem("clientCode");
     if (!token || !clientCode) router.push("/login");

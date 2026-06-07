@@ -36,7 +36,7 @@ export default function LogsPage() {
       update_technician: "bg-yellow-100 text-yellow-700",
       delete_technician: "bg-red-100 text-red-700",
       activate_technician: "bg-green-100 text-green-700",
-      deactivate_technician: "bg-orange-100 text-orange-700"
+      deactivate_technician: "bg-orange-100 text-orange-700",
     };
     return badges[action] || "bg-gray-100 text-gray-700";
   };
@@ -48,7 +48,7 @@ export default function LogsPage() {
       update_technician: "✏️",
       delete_technician: "🗑️",
       activate_technician: "✅",
-      deactivate_technician: "⛔"
+      deactivate_technician: "⛔",
     };
     return icons[action] || "📝";
   };
@@ -60,7 +60,7 @@ export default function LogsPage() {
       update_technician: "Modification",
       delete_technician: "Suppression",
       activate_technician: "Activation",
-      deactivate_technician: "Désactivation"
+      deactivate_technician: "Désactivation",
     };
     return names[action] || action;
   };
@@ -90,10 +90,18 @@ export default function LogsPage() {
             <table className="min-w-full divide-y divide-gray-200">
               <thead className="bg-gray-50">
                 <tr>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Date</th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Action</th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Technicien</th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Détails</th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">
+                    Date
+                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">
+                    Action
+                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">
+                    Technicien
+                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">
+                    Détails
+                  </th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-200">
@@ -103,7 +111,9 @@ export default function LogsPage() {
                       {new Date(log.created_at).toLocaleString()}
                     </td>
                     <td className="px-6 py-4">
-                      <span className={`px-2 py-1 rounded-full text-xs ${getActionBadge(log.action)}`}>
+                      <span
+                        className={`px-2 py-1 rounded-full text-xs ${getActionBadge(log.action)}`}
+                      >
                         {getActionIcon(log.action)} {getActionName(log.action)}
                       </span>
                     </td>
@@ -125,4 +135,3 @@ export default function LogsPage() {
     </div>
   );
 }
-

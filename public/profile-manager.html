@@ -1,425 +1,431 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="fr">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Gestion des Profils - MBX Repair Admin</title>
     <style>
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-        }
+      * {
+        margin: 0;
+        padding: 0;
+        box-sizing: border-box;
+      }
 
-        body {
-            font-family: 'Inter', 'Segoe UI', sans-serif;
-            background: linear-gradient(135deg, #f5f7fa 0%, #e9edf2 100%);
-            min-height: 100vh;
-            padding: 40px 20px;
-        }
+      body {
+        font-family: "Inter", "Segoe UI", sans-serif;
+        background: linear-gradient(135deg, #f5f7fa 0%, #e9edf2 100%);
+        min-height: 100vh;
+        padding: 40px 20px;
+      }
 
-        .container {
-            max-width: 1400px;
-            margin: 0 auto;
-        }
+      .container {
+        max-width: 1400px;
+        margin: 0 auto;
+      }
 
-        .header {
-            text-align: center;
-            margin-bottom: 40px;
-        }
+      .header {
+        text-align: center;
+        margin-bottom: 40px;
+      }
 
-        .header h1 {
-            font-size: 28px;
-            color: #0a2a44;
-            margin-bottom: 10px;
-        }
+      .header h1 {
+        font-size: 28px;
+        color: #0a2a44;
+        margin-bottom: 10px;
+      }
 
-        .header p {
-            color: #6c7a8a;
-            font-size: 14px;
-        }
+      .header p {
+        color: #6c7a8a;
+        font-size: 14px;
+      }
 
+      .profiles-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(350px, 1fr));
+        gap: 30px;
+        margin-bottom: 40px;
+      }
+
+      .profile-card {
+        background: white;
+        border-radius: 20px;
+        box-shadow: 0 10px 40px rgba(0, 0, 0, 0.1);
+        overflow: hidden;
+        transition:
+          transform 0.3s ease,
+          box-shadow 0.3s ease;
+      }
+
+      .profile-card:hover {
+        transform: translateY(-5px);
+        box-shadow: 0 20px 50px rgba(0, 0, 0, 0.15);
+      }
+
+      .card-header {
+        background: linear-gradient(135deg, #0a2a44 0%, #1a3a5c 100%);
+        padding: 20px;
+        display: flex;
+        align-items: center;
+        gap: 15px;
+        position: relative;
+      }
+
+      .avatar-container {
+        position: relative;
+      }
+
+      .avatar {
+        width: 80px;
+        height: 80px;
+        border-radius: 50%;
+        object-fit: cover;
+        border: 3px solid white;
+        background: white;
+      }
+
+      .mb-badge {
+        position: absolute;
+        bottom: -5px;
+        right: -5px;
+        background: #c0392b;
+        color: white;
+        font-size: 10px;
+        font-weight: bold;
+        width: 24px;
+        height: 24px;
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        border: 2px solid white;
+      }
+
+      .profile-info {
+        flex: 1;
+        color: white;
+      }
+
+      .profile-name {
+        font-size: 18px;
+        font-weight: 700;
+        margin-bottom: 5px;
+      }
+
+      .profile-email {
+        font-size: 12px;
+        opacity: 0.8;
+      }
+
+      .profile-role {
+        font-size: 11px;
+        background: rgba(255, 255, 255, 0.2);
+        display: inline-block;
+        padding: 3px 10px;
+        border-radius: 20px;
+        margin-top: 8px;
+      }
+
+      .btn-settings {
+        background: rgba(255, 255, 255, 0.15);
+        border: none;
+        color: white;
+        width: 36px;
+        height: 36px;
+        border-radius: 50%;
+        cursor: pointer;
+        font-size: 18px;
+        transition: all 0.3s ease;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+      }
+
+      .btn-settings:hover {
+        background: rgba(255, 255, 255, 0.3);
+        transform: rotate(15deg);
+      }
+
+      .card-body {
+        padding: 20px;
+      }
+
+      .info-row {
+        display: flex;
+        justify-content: space-between;
+        padding: 10px 0;
+        border-bottom: 1px solid #eee;
+        font-size: 13px;
+      }
+
+      .info-label {
+        font-weight: 600;
+        color: #0a2a44;
+      }
+
+      .info-value {
+        color: #6c7a8a;
+        word-break: break-all;
+        text-align: right;
+        max-width: 60%;
+      }
+
+      .modal {
+        display: none;
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background: rgba(0, 0, 0, 0.5);
+        backdrop-filter: blur(4px);
+        z-index: 1000;
+        justify-content: center;
+        align-items: center;
+      }
+
+      .modal.active {
+        display: flex;
+      }
+
+      .modal-content {
+        background: white;
+        border-radius: 24px;
+        width: 90%;
+        max-width: 500px;
+        max-height: 85vh;
+        overflow-y: auto;
+        box-shadow: 0 25px 50px rgba(0, 0, 0, 0.3);
+        animation: modalIn 0.3s ease;
+      }
+
+      @keyframes modalIn {
+        from {
+          opacity: 0;
+          transform: scale(0.95);
+        }
+        to {
+          opacity: 1;
+          transform: scale(1);
+        }
+      }
+
+      .modal-header {
+        padding: 20px 24px;
+        background: linear-gradient(135deg, #0a2a44 0%, #1a3a5c 100%);
+        color: white;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        border-radius: 24px 24px 0 0;
+      }
+
+      .modal-header h3 {
+        font-size: 20px;
+      }
+
+      .close-modal {
+        background: none;
+        border: none;
+        color: white;
+        font-size: 28px;
+        cursor: pointer;
+        opacity: 0.8;
+      }
+
+      .close-modal:hover {
+        opacity: 1;
+      }
+
+      .modal-body {
+        padding: 24px;
+      }
+
+      .form-group {
+        margin-bottom: 20px;
+      }
+
+      .form-group label {
+        display: block;
+        font-weight: 600;
+        margin-bottom: 8px;
+        color: #0a2a44;
+        font-size: 13px;
+      }
+
+      .form-group input {
+        width: 100%;
+        padding: 12px;
+        border: 2px solid #e1e5e9;
+        border-radius: 12px;
+        font-size: 14px;
+        transition: border-color 0.3s;
+      }
+
+      .form-group input:focus {
+        outline: none;
+        border-color: #0a2a44;
+      }
+
+      .photo-preview {
+        display: flex;
+        align-items: center;
+        gap: 15px;
+        margin-top: 10px;
+      }
+
+      .photo-preview img {
+        width: 70px;
+        height: 70px;
+        border-radius: 50%;
+        object-fit: cover;
+        border: 2px solid #0a2a44;
+      }
+
+      .logo-preview img {
+        width: 60px;
+        height: 60px;
+        border-radius: 12px;
+        object-fit: contain;
+        background: #f0f0f0;
+        padding: 5px;
+      }
+
+      .btn-save {
+        width: 100%;
+        background: linear-gradient(135deg, #0a2a44 0%, #1a3a5c 100%);
+        color: white;
+        border: none;
+        padding: 14px;
+        border-radius: 12px;
+        font-size: 16px;
+        font-weight: 600;
+        cursor: pointer;
+        transition: transform 0.2s;
+      }
+
+      .btn-save:hover {
+        transform: scale(1.02);
+      }
+
+      .alert {
+        padding: 12px;
+        border-radius: 10px;
+        margin-bottom: 20px;
+        font-size: 13px;
+      }
+
+      @media (max-width: 768px) {
         .profiles-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fill, minmax(350px, 1fr));
-            gap: 30px;
-            margin-bottom: 40px;
+          grid-template-columns: 1fr;
         }
-
-        .profile-card {
-            background: white;
-            border-radius: 20px;
-            box-shadow: 0 10px 40px rgba(0, 0, 0, 0.1);
-            overflow: hidden;
-            transition: transform 0.3s ease, box-shadow 0.3s ease;
-        }
-
-        .profile-card:hover {
-            transform: translateY(-5px);
-            box-shadow: 0 20px 50px rgba(0, 0, 0, 0.15);
-        }
-
-        .card-header {
-            background: linear-gradient(135deg, #0a2a44 0%, #1a3a5c 100%);
-            padding: 20px;
-            display: flex;
-            align-items: center;
-            gap: 15px;
-            position: relative;
-        }
-
-        .avatar-container {
-            position: relative;
-        }
-
-        .avatar {
-            width: 80px;
-            height: 80px;
-            border-radius: 50%;
-            object-fit: cover;
-            border: 3px solid white;
-            background: white;
-        }
-
-        .mb-badge {
-            position: absolute;
-            bottom: -5px;
-            right: -5px;
-            background: #c0392b;
-            color: white;
-            font-size: 10px;
-            font-weight: bold;
-            width: 24px;
-            height: 24px;
-            border-radius: 50%;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            border: 2px solid white;
-        }
-
-        .profile-info {
-            flex: 1;
-            color: white;
-        }
-
-        .profile-name {
-            font-size: 18px;
-            font-weight: 700;
-            margin-bottom: 5px;
-        }
-
-        .profile-email {
-            font-size: 12px;
-            opacity: 0.8;
-        }
-
-        .profile-role {
-            font-size: 11px;
-            background: rgba(255,255,255,0.2);
-            display: inline-block;
-            padding: 3px 10px;
-            border-radius: 20px;
-            margin-top: 8px;
-        }
-
-        .btn-settings {
-            background: rgba(255,255,255,0.15);
-            border: none;
-            color: white;
-            width: 36px;
-            height: 36px;
-            border-radius: 50%;
-            cursor: pointer;
-            font-size: 18px;
-            transition: all 0.3s ease;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-        }
-
-        .btn-settings:hover {
-            background: rgba(255,255,255,0.3);
-            transform: rotate(15deg);
-        }
-
-        .card-body {
-            padding: 20px;
-        }
-
-        .info-row {
-            display: flex;
-            justify-content: space-between;
-            padding: 10px 0;
-            border-bottom: 1px solid #eee;
-            font-size: 13px;
-        }
-
-        .info-label {
-            font-weight: 600;
-            color: #0a2a44;
-        }
-
-        .info-value {
-            color: #6c7a8a;
-            word-break: break-all;
-            text-align: right;
-            max-width: 60%;
-        }
-
-        .modal {
-            display: none;
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            background: rgba(0,0,0,0.5);
-            backdrop-filter: blur(4px);
-            z-index: 1000;
-            justify-content: center;
-            align-items: center;
-        }
-
-        .modal.active {
-            display: flex;
-        }
-
-        .modal-content {
-            background: white;
-            border-radius: 24px;
-            width: 90%;
-            max-width: 500px;
-            max-height: 85vh;
-            overflow-y: auto;
-            box-shadow: 0 25px 50px rgba(0,0,0,0.3);
-            animation: modalIn 0.3s ease;
-        }
-
-        @keyframes modalIn {
-            from {
-                opacity: 0;
-                transform: scale(0.95);
-            }
-            to {
-                opacity: 1;
-                transform: scale(1);
-            }
-        }
-
-        .modal-header {
-            padding: 20px 24px;
-            background: linear-gradient(135deg, #0a2a44 0%, #1a3a5c 100%);
-            color: white;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            border-radius: 24px 24px 0 0;
-        }
-
-        .modal-header h3 {
-            font-size: 20px;
-        }
-
-        .close-modal {
-            background: none;
-            border: none;
-            color: white;
-            font-size: 28px;
-            cursor: pointer;
-            opacity: 0.8;
-        }
-
-        .close-modal:hover {
-            opacity: 1;
-        }
-
-        .modal-body {
-            padding: 24px;
-        }
-
-        .form-group {
-            margin-bottom: 20px;
-        }
-
-        .form-group label {
-            display: block;
-            font-weight: 600;
-            margin-bottom: 8px;
-            color: #0a2a44;
-            font-size: 13px;
-        }
-
-        .form-group input {
-            width: 100%;
-            padding: 12px;
-            border: 2px solid #e1e5e9;
-            border-radius: 12px;
-            font-size: 14px;
-            transition: border-color 0.3s;
-        }
-
-        .form-group input:focus {
-            outline: none;
-            border-color: #0a2a44;
-        }
-
-        .photo-preview {
-            display: flex;
-            align-items: center;
-            gap: 15px;
-            margin-top: 10px;
-        }
-
-        .photo-preview img {
-            width: 70px;
-            height: 70px;
-            border-radius: 50%;
-            object-fit: cover;
-            border: 2px solid #0a2a44;
-        }
-
-        .logo-preview img {
-            width: 60px;
-            height: 60px;
-            border-radius: 12px;
-            object-fit: contain;
-            background: #f0f0f0;
-            padding: 5px;
-        }
-
-        .btn-save {
-            width: 100%;
-            background: linear-gradient(135deg, #0a2a44 0%, #1a3a5c 100%);
-            color: white;
-            border: none;
-            padding: 14px;
-            border-radius: 12px;
-            font-size: 16px;
-            font-weight: 600;
-            cursor: pointer;
-            transition: transform 0.2s;
-        }
-
-        .btn-save:hover {
-            transform: scale(1.02);
-        }
-
-        .alert {
-            padding: 12px;
-            border-radius: 10px;
-            margin-bottom: 20px;
-            font-size: 13px;
-        }
-
-        @media (max-width: 768px) {
-            .profiles-grid {
-                grid-template-columns: 1fr;
-            }
-        }
+      }
     </style>
-</head>
-<body>
+  </head>
+  <body>
     <div class="container">
-        <div class="header">
-            <h1>⚙️ Gestion des Profils MBX Repair</h1>
-            <p>Chaque administrateur peut modifier ses informations personnelles</p>
-        </div>
+      <div class="header">
+        <h1>⚙️ Gestion des Profils MBX Repair</h1>
+        <p>Chaque administrateur peut modifier ses informations personnelles</p>
+      </div>
 
-        <div id="profilesGrid" class="profiles-grid"></div>
+      <div id="profilesGrid" class="profiles-grid"></div>
     </div>
 
     <div id="settingsModal" class="modal">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h3>⚙️ Paramètres du profil</h3>
-                <button class="close-modal" onclick="closeModal()">&times;</button>
-            </div>
-            <div class="modal-body">
-                <div id="modalAlert"></div>
-                <form id="profileForm">
-                    <input type="hidden" id="profileId">
-                    
-                    <div class="form-group">
-                        <label>👤 Nom complet</label>
-                        <input type="text" id="fullName" placeholder="Nom et prénom">
-                    </div>
-
-                    <div class="form-group">
-                        <label>📧 Adresse email</label>
-                        <input type="email" id="email" placeholder="email@exemple.com">
-                    </div>
-
-                    <div class="form-group">
-                        <label>🏢 Logo MBX (URL)</label>
-                        <input type="text" id="logoUrl" placeholder="URL du logo">
-                        <div class="logo-preview">
-                            <img id="logoPreview" src="" alt="Aperçu logo">
-                        </div>
-                    </div>
-
-                    <div class="form-group">
-                        <label>🖼️ Photo de profil (URL)</label>
-                        <input type="text" id="photoUrl" placeholder="URL de la photo">
-                        <div class="photo-preview">
-                            <img id="photoPreview" src="" alt="Aperçu photo">
-                        </div>
-                    </div>
-
-                    <div class="form-group">
-                        <label>🔒 Nouveau mot de passe</label>
-                        <input type="password" id="newPassword" placeholder="Laisser vide pour ne pas changer">
-                    </div>
-
-                    <div class="form-group">
-                        <label>🔐 Confirmer le mot de passe</label>
-                        <input type="password" id="confirmPassword" placeholder="Confirmer">
-                    </div>
-
-                    <button type="submit" class="btn-save">💾 Enregistrer les modifications</button>
-                </form>
-            </div>
+      <div class="modal-content">
+        <div class="modal-header">
+          <h3>⚙️ Paramètres du profil</h3>
+          <button class="close-modal" onclick="closeModal()">&times;</button>
         </div>
+        <div class="modal-body">
+          <div id="modalAlert"></div>
+          <form id="profileForm">
+            <input type="hidden" id="profileId" />
+
+            <div class="form-group">
+              <label>👤 Nom complet</label>
+              <input type="text" id="fullName" placeholder="Nom et prénom" />
+            </div>
+
+            <div class="form-group">
+              <label>📧 Adresse email</label>
+              <input type="email" id="email" placeholder="email@exemple.com" />
+            </div>
+
+            <div class="form-group">
+              <label>🏢 Logo MBX (URL)</label>
+              <input type="text" id="logoUrl" placeholder="URL du logo" />
+              <div class="logo-preview">
+                <img id="logoPreview" src="" alt="Aperçu logo" />
+              </div>
+            </div>
+
+            <div class="form-group">
+              <label>🖼️ Photo de profil (URL)</label>
+              <input type="text" id="photoUrl" placeholder="URL de la photo" />
+              <div class="photo-preview">
+                <img id="photoPreview" src="" alt="Aperçu photo" />
+              </div>
+            </div>
+
+            <div class="form-group">
+              <label>🔒 Nouveau mot de passe</label>
+              <input
+                type="password"
+                id="newPassword"
+                placeholder="Laisser vide pour ne pas changer"
+              />
+            </div>
+
+            <div class="form-group">
+              <label>🔐 Confirmer le mot de passe</label>
+              <input type="password" id="confirmPassword" placeholder="Confirmer" />
+            </div>
+
+            <button type="submit" class="btn-save">💾 Enregistrer les modifications</button>
+          </form>
+        </div>
+      </div>
     </div>
 
     <script>
-        let profiles = [
-            {
-                id: 1,
-                name: "Jean Dupont",
-                email: "jean.dupont@mbx-repair.fr",
-                role: "Administrateur principal",
-                logo: "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Crect width='100' height='100' fill='%230a2a44'/%3E%3Ctext x='50' y='68' font-size='40' font-weight='bold' fill='white' text-anchor='middle'%3EMB%3C/text%3E%3C/svg%3E",
-                photo: "https://randomuser.me/api/portraits/men/1.jpg"
-            },
-            {
-                id: 2,
-                name: "Sophie Martin",
-                email: "sophie.martin@mbx-repair.fr",
-                role: "Responsable maintenance",
-                logo: "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Crect width='100' height='100' fill='%231a3a5c'/%3E%3Ctext x='50' y='68' font-size='40' font-weight='bold' fill='white' text-anchor='middle'%3EMB%3C/text%3E%3C/svg%3E",
-                photo: "https://randomuser.me/api/portraits/women/2.jpg"
-            },
-            {
-                id: 3,
-                name: "Thomas Bernard",
-                email: "thomas.bernard@mbx-repair.fr",
-                role: "Technicien admin",
-                logo: "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Crect width='100' height='100' fill='%232c3e50'/%3E%3Ctext x='50' y='68' font-size='40' font-weight='bold' fill='white' text-anchor='middle'%3EMB%3C/text%3E%3C/svg%3E",
-                photo: "https://randomuser.me/api/portraits/men/3.jpg"
-            }
-        ];
+      let profiles = [
+        {
+          id: 1,
+          name: "Jean Dupont",
+          email: "jean.dupont@mbx-repair.fr",
+          role: "Administrateur principal",
+          logo: "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Crect width='100' height='100' fill='%230a2a44'/%3E%3Ctext x='50' y='68' font-size='40' font-weight='bold' fill='white' text-anchor='middle'%3EMB%3C/text%3E%3C/svg%3E",
+          photo: "https://randomuser.me/api/portraits/men/1.jpg",
+        },
+        {
+          id: 2,
+          name: "Sophie Martin",
+          email: "sophie.martin@mbx-repair.fr",
+          role: "Responsable maintenance",
+          logo: "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Crect width='100' height='100' fill='%231a3a5c'/%3E%3Ctext x='50' y='68' font-size='40' font-weight='bold' fill='white' text-anchor='middle'%3EMB%3C/text%3E%3C/svg%3E",
+          photo: "https://randomuser.me/api/portraits/women/2.jpg",
+        },
+        {
+          id: 3,
+          name: "Thomas Bernard",
+          email: "thomas.bernard@mbx-repair.fr",
+          role: "Technicien admin",
+          logo: "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Crect width='100' height='100' fill='%232c3e50'/%3E%3Ctext x='50' y='68' font-size='40' font-weight='bold' fill='white' text-anchor='middle'%3EMB%3C/text%3E%3C/svg%3E",
+          photo: "https://randomuser.me/api/portraits/men/3.jpg",
+        },
+      ];
 
-        let currentProfileId = null;
+      let currentProfileId = null;
 
-        function renderProfiles() {
-            const grid = document.getElementById('profilesGrid');
-            grid.innerHTML = '';
+      function renderProfiles() {
+        const grid = document.getElementById("profilesGrid");
+        grid.innerHTML = "";
 
-            profiles.forEach(profile => {
-                const card = document.createElement('div');
-                card.className = 'profile-card';
-                card.innerHTML = `
+        profiles.forEach((profile) => {
+          const card = document.createElement("div");
+          card.className = "profile-card";
+          card.innerHTML = `
                     <div class="card-header">
                         <div class="avatar-container">
                             <img src="${profile.photo}" alt="Photo" class="avatar" onerror="this.src='https://via.placeholder.com/80?text=Photo'">
@@ -447,110 +453,110 @@
                         </div>
                     </div>
                 `;
-                grid.appendChild(card);
-            });
+          grid.appendChild(card);
+        });
+      }
+
+      function openSettings(profileId) {
+        currentProfileId = profileId;
+        const profile = profiles.find((p) => p.id === profileId);
+        if (!profile) return;
+
+        document.getElementById("profileId").value = profile.id;
+        document.getElementById("fullName").value = profile.name;
+        document.getElementById("email").value = profile.email;
+        document.getElementById("logoUrl").value = profile.logo;
+        document.getElementById("photoUrl").value = profile.photo;
+        document.getElementById("newPassword").value = "";
+        document.getElementById("confirmPassword").value = "";
+
+        document.getElementById("logoPreview").src = profile.logo;
+        document.getElementById("photoPreview").src = profile.photo;
+
+        document.getElementById("settingsModal").classList.add("active");
+        document.getElementById("modalAlert").innerHTML = "";
+      }
+
+      function closeModal() {
+        document.getElementById("settingsModal").classList.remove("active");
+        currentProfileId = null;
+      }
+
+      function saveProfile(event) {
+        event.preventDefault();
+
+        const profileId = parseInt(document.getElementById("profileId").value);
+        const profileIndex = profiles.findIndex((p) => p.id === profileId);
+        if (profileIndex === -1) return;
+
+        const newName = document.getElementById("fullName").value.trim();
+        const newEmail = document.getElementById("email").value.trim();
+        const newLogo = document.getElementById("logoUrl").value.trim();
+        const newPhoto = document.getElementById("photoUrl").value.trim();
+        const newPassword = document.getElementById("newPassword").value;
+        const confirmPassword = document.getElementById("confirmPassword").value;
+
+        if (!newName || !newEmail) {
+          showAlert("Veuillez remplir le nom et l'email", "error");
+          return;
         }
 
-        function openSettings(profileId) {
-            currentProfileId = profileId;
-            const profile = profiles.find(p => p.id === profileId);
-            if (!profile) return;
-
-            document.getElementById('profileId').value = profile.id;
-            document.getElementById('fullName').value = profile.name;
-            document.getElementById('email').value = profile.email;
-            document.getElementById('logoUrl').value = profile.logo;
-            document.getElementById('photoUrl').value = profile.photo;
-            document.getElementById('newPassword').value = '';
-            document.getElementById('confirmPassword').value = '';
-
-            document.getElementById('logoPreview').src = profile.logo;
-            document.getElementById('photoPreview').src = profile.photo;
-
-            document.getElementById('settingsModal').classList.add('active');
-            document.getElementById('modalAlert').innerHTML = '';
+        if (!newEmail.includes("@")) {
+          showAlert("Email invalide", "error");
+          return;
         }
 
-        function closeModal() {
-            document.getElementById('settingsModal').classList.remove('active');
-            currentProfileId = null;
+        if (newPassword && newPassword !== confirmPassword) {
+          showAlert("Les mots de passe ne correspondent pas", "error");
+          return;
         }
 
-        function saveProfile(event) {
-            event.preventDefault();
-
-            const profileId = parseInt(document.getElementById('profileId').value);
-            const profileIndex = profiles.findIndex(p => p.id === profileId);
-            if (profileIndex === -1) return;
-
-            const newName = document.getElementById('fullName').value.trim();
-            const newEmail = document.getElementById('email').value.trim();
-            const newLogo = document.getElementById('logoUrl').value.trim();
-            const newPhoto = document.getElementById('photoUrl').value.trim();
-            const newPassword = document.getElementById('newPassword').value;
-            const confirmPassword = document.getElementById('confirmPassword').value;
-
-            if (!newName || !newEmail) {
-                showAlert('Veuillez remplir le nom et l\'email', 'error');
-                return;
-            }
-
-            if (!newEmail.includes('@')) {
-                showAlert('Email invalide', 'error');
-                return;
-            }
-
-            if (newPassword && newPassword !== confirmPassword) {
-                showAlert('Les mots de passe ne correspondent pas', 'error');
-                return;
-            }
-
-            profiles[profileIndex] = {
-                ...profiles[profileIndex],
-                name: newName,
-                email: newEmail,
-                logo: newLogo || profiles[profileIndex].logo,
-                photo: newPhoto || profiles[profileIndex].photo
-            };
-
-            renderProfiles();
-            showAlert('✅ Profil mis à jour avec succès !', 'success');
-
-            setTimeout(() => {
-                closeModal();
-            }, 1500);
-        }
-
-        function showAlert(message, type) {
-            const alertDiv = document.getElementById('modalAlert');
-            alertDiv.innerHTML = `<div class="alert" style="background:${type === 'success' ? '#d4edda' : '#f8d7da'};color:${type === 'success' ? '#155724' : '#721c24'}">${message}</div>`;
-            setTimeout(() => {
-                if (document.getElementById('modalAlert').innerHTML === alertDiv.innerHTML) {
-                    alertDiv.innerHTML = '';
-                }
-            }, 3000);
-        }
-
-        function escapeHtml(str) {
-            if (!str) return '';
-            return str.replace(/[&<>]/g, function(m) {
-                if (m === '&') return '&amp;';
-                if (m === '<') return '&lt;';
-                if (m === '>') return '&gt;';
-                return m;
-            });
-        }
-
-        document.getElementById('profileForm').addEventListener('submit', saveProfile);
-
-        window.onclick = function(event) {
-            const modal = document.getElementById('settingsModal');
-            if (event.target === modal) {
-                closeModal();
-            }
+        profiles[profileIndex] = {
+          ...profiles[profileIndex],
+          name: newName,
+          email: newEmail,
+          logo: newLogo || profiles[profileIndex].logo,
+          photo: newPhoto || profiles[profileIndex].photo,
         };
 
         renderProfiles();
+        showAlert("✅ Profil mis à jour avec succès !", "success");
+
+        setTimeout(() => {
+          closeModal();
+        }, 1500);
+      }
+
+      function showAlert(message, type) {
+        const alertDiv = document.getElementById("modalAlert");
+        alertDiv.innerHTML = `<div class="alert" style="background:${type === "success" ? "#d4edda" : "#f8d7da"};color:${type === "success" ? "#155724" : "#721c24"}">${message}</div>`;
+        setTimeout(() => {
+          if (document.getElementById("modalAlert").innerHTML === alertDiv.innerHTML) {
+            alertDiv.innerHTML = "";
+          }
+        }, 3000);
+      }
+
+      function escapeHtml(str) {
+        if (!str) return "";
+        return str.replace(/[&<>]/g, function (m) {
+          if (m === "&") return "&amp;";
+          if (m === "<") return "&lt;";
+          if (m === ">") return "&gt;";
+          return m;
+        });
+      }
+
+      document.getElementById("profileForm").addEventListener("submit", saveProfile);
+
+      window.onclick = function (event) {
+        const modal = document.getElementById("settingsModal");
+        if (event.target === modal) {
+          closeModal();
+        }
+      };
+
+      renderProfiles();
     </script>
-</body>
+  </body>
 </html>

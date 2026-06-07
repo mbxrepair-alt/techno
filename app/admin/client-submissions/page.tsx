@@ -37,10 +37,12 @@ export default function ClientSubmissionsPage() {
 
       const { data, error } = await supabase
         .from("repairs")
-        .select(`
+        .select(
+          `
           *,
           clients (name, client_code, phone, email)
-        `)
+        `
+        )
         .eq("is_client_submitted", true)
         .eq("user_id", profileId)
         .order("submitted_at", { ascending: false });
@@ -67,7 +69,7 @@ export default function ClientSubmissionsPage() {
       "✅ Terminé": "bg-green-600",
       "📦 Rendu": "bg-gray-500",
       "❌ KO": "bg-red-500",
-      "🚫 Refus client": "bg-pink-500"
+      "🚫 Refus client": "bg-pink-500",
     };
     return colors[status] || "bg-gray-500";
   };
@@ -79,7 +81,7 @@ export default function ClientSubmissionsPage() {
       month: "2-digit",
       year: "numeric",
       hour: "2-digit",
-      minute: "2-digit"
+      minute: "2-digit",
     });
   };
 
@@ -96,7 +98,9 @@ export default function ClientSubmissionsPage() {
       <div className="max-w-6xl mx-auto">
         <div className="flex justify-between items-center mb-6">
           <div>
-            <h1 className="text-2xl font-bold text-gray-800">📱 Appareils saisis par les clients</h1>
+            <h1 className="text-2xl font-bold text-gray-800">
+              📱 Appareils saisis par les clients
+            </h1>
             <p className="text-gray-500 text-sm mt-1">
               Connecté : <strong>{currentUserEmail}</strong>
             </p>
@@ -111,13 +115,27 @@ export default function ClientSubmissionsPage() {
             <table className="w-full">
               <thead className="bg-gray-50 border-b">
                 <tr>
-                  <th className="px-6 py-3 text-left text-xs font-semibold text-gray-500 uppercase">ID</th>
-                  <th className="px-6 py-3 text-left text-xs font-semibold text-gray-500 uppercase">Client</th>
-                  <th className="px-6 py-3 text-left text-xs font-semibold text-gray-500 uppercase">Appareil</th>
-                  <th className="px-6 py-3 text-left text-xs font-semibold text-gray-500 uppercase">Panne</th>
-                  <th className="px-6 py-3 text-left text-xs font-semibold text-gray-500 uppercase">Statut</th>
-                  <th className="px-6 py-3 text-left text-xs font-semibold text-gray-500 uppercase">Soumis le</th>
-                  <th className="px-6 py-3 text-left text-xs font-semibold text-gray-500 uppercase">Action</th>
+                  <th className="px-6 py-3 text-left text-xs font-semibold text-gray-500 uppercase">
+                    ID
+                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-semibold text-gray-500 uppercase">
+                    Client
+                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-semibold text-gray-500 uppercase">
+                    Appareil
+                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-semibold text-gray-500 uppercase">
+                    Panne
+                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-semibold text-gray-500 uppercase">
+                    Statut
+                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-semibold text-gray-500 uppercase">
+                    Soumis le
+                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-semibold text-gray-500 uppercase">
+                    Action
+                  </th>
                 </tr>
               </thead>
               <tbody className="divide-y">
@@ -127,8 +145,12 @@ export default function ClientSubmissionsPage() {
                       #{sub.id}
                     </td>
                     <td className="px-6 py-4">
-                      <div className="font-medium text-gray-800">{sub.clients?.name || "Inconnu"}</div>
-                      <div className="text-xs text-gray-500 font-mono">{sub.clients?.client_code}</div>
+                      <div className="font-medium text-gray-800">
+                        {sub.clients?.name || "Inconnu"}
+                      </div>
+                      <div className="text-xs text-gray-500 font-mono">
+                        {sub.clients?.client_code}
+                      </div>
                     </td>
                     <td className="px-6 py-4">
                       <div className="font-medium text-gray-800">{sub.device}</div>
@@ -137,7 +159,9 @@ export default function ClientSubmissionsPage() {
                       {sub.issue}
                     </td>
                     <td className="px-6 py-4">
-                      <span className={`px-2 py-1 text-xs rounded-full text-white ${getStatusBadge(sub.status)}`}>
+                      <span
+                        className={`px-2 py-1 text-xs rounded-full text-white ${getStatusBadge(sub.status)}`}
+                      >
                         {sub.status || "🟡 Réceptionné"}
                       </span>
                     </td>
@@ -145,8 +169,8 @@ export default function ClientSubmissionsPage() {
                       {formatDate(sub.submitted_at || sub.created_at)}
                     </td>
                     <td className="px-6 py-4">
-                      <Link 
-                        href={`/repairs/${sub.id}`} 
+                      <Link
+                        href={`/repairs/${sub.id}`}
                         className="text-orange-500 hover:text-orange-600 text-sm font-medium flex items-center gap-1"
                       >
                         Voir détails →

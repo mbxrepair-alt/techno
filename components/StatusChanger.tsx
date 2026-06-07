@@ -23,7 +23,11 @@ interface StatusChangerProps {
   onStatusChange: (repairId: number | string, newStatus: string) => Promise<void> | void;
 }
 
-export default function StatusChanger({ repairId, currentStatus, onStatusChange }: StatusChangerProps) {
+export default function StatusChanger({
+  repairId,
+  currentStatus,
+  onStatusChange,
+}: StatusChangerProps) {
   const [loading, setLoading] = useState(false);
   const [selectedStatus, setSelectedStatus] = useState(currentStatus);
 
@@ -56,7 +60,9 @@ export default function StatusChanger({ repairId, currentStatus, onStatusChange 
       className="px-3 py-2 border rounded-lg text-sm focus:ring-2 focus:ring-blue-500"
     >
       {STATUS_LIST.map((status) => (
-        <option key={status} value={status}>{status}</option>
+        <option key={status} value={status}>
+          {status}
+        </option>
       ))}
     </select>
   );

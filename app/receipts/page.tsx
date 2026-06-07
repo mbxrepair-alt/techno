@@ -63,18 +63,22 @@ export default function ReceiptsHistory() {
   };
 
   const viewReceipt = (receipt) => {
-    const date = new Date(receipt.created_at).toLocaleString('fr-FR');
-    const ticketListHtml = receipt.tickets.map((ticket, idx) => `
+    const date = new Date(receipt.created_at).toLocaleString("fr-FR");
+    const ticketListHtml = receipt.tickets
+      .map(
+        (ticket, idx) => `
       <div style="border-bottom:1px solid #ddd; margin-bottom:16px; padding-bottom:12px;">
         <h3 style="margin:0 0 6px 0; font-size:16px;">Ticket n° MBX-${ticket.id}</h3>
         <p><strong>Appareil :</strong> ${ticket.device}</p>
         <p><strong>Panne :</strong> ${ticket.issue}</p>
-        <p><strong>IMEI :</strong> ${ticket.imei || 'NC'}</p>
-        <p><strong>Code :</strong> ${ticket.code || 'NC'}</p>
-        <p><strong>Notes :</strong> ${ticket.notes || 'Aucune'}</p>
+        <p><strong>IMEI :</strong> ${ticket.imei || "NC"}</p>
+        <p><strong>Code :</strong> ${ticket.code || "NC"}</p>
+        <p><strong>Notes :</strong> ${ticket.notes || "Aucune"}</p>
       </div>
-    `).join('');
-    
+    `
+      )
+      .join("");
+
     const html = `<!DOCTYPE html>
     <html>
     <head>
@@ -114,8 +118,8 @@ export default function ReceiptsHistory() {
       </div>
     </body>
     </html>`;
-    
-    const printWindow = window.open('', '_blank');
+
+    const printWindow = window.open("", "_blank");
     printWindow.document.write(html);
     printWindow.document.close();
   };
@@ -126,13 +130,14 @@ export default function ReceiptsHistory() {
       month: "2-digit",
       year: "numeric",
       hour: "2-digit",
-      minute: "2-digit"
+      minute: "2-digit",
     });
   };
 
-  const filteredReceipts = receipts.filter(r => 
-    r.client_name?.toLowerCase().includes(search.toLowerCase()) ||
-    r.receipt_number?.toLowerCase().includes(search.toLowerCase())
+  const filteredReceipts = receipts.filter(
+    (r) =>
+      r.client_name?.toLowerCase().includes(search.toLowerCase()) ||
+      r.receipt_number?.toLowerCase().includes(search.toLowerCase())
   );
 
   if (loading) {
@@ -148,31 +153,29 @@ export default function ReceiptsHistory() {
       <div className="bg-white rounded-xl shadow p-6">
         <div className="flex justify-between items-center mb-4">
           <h1 className="text-2xl font-bold">📜 Historique des reçus</h1>
-          <button 
+          <button
             onClick={loadReceipts}
             className="bg-blue-600 text-white px-3 py-1 rounded text-sm hover:bg-blue-700"
           >
             🔄 Actualiser
           </button>
         </div>
-        
+
         <input
           className="w-full p-2 border rounded-lg mb-4"
           placeholder="🔍 Rechercher par client ou numéro de reçu..."
           value={search}
           onChange={(e) => setSearch(e.target.value)}
         />
-        
+
         {filteredReceipts.length === 0 && (
-          <div className="text-center py-12 text-gray-400">
-            📭 Aucun reçu sauvegardé
-          </div>
+          <div className="text-center py-12 text-gray-400">📭 Aucun reçu sauvegardé</div>
         )}
-        
+
         <div className="space-y-3 max-h-[600px] overflow-auto">
           {filteredReceipts.map((receipt) => (
-            <div 
-              key={receipt.id} 
+            <div
+              key={receipt.id}
               className="border rounded-lg p-4 hover:bg-gray-50 cursor-pointer transition"
               onClick={() => viewReceipt(receipt)}
             >
@@ -216,7 +219,7 @@ export default function ReceiptsHistory() {
             </div>
           ))}
         </div>
-        
+
         <div className="mt-4 pt-3 border-t text-xs text-gray-400 text-center">
           💾 Reçus sauvegardés définitivement dans la base de données
         </div>

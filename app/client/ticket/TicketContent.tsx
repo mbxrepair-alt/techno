@@ -78,7 +78,7 @@ export default function TicketContent() {
       "🔧 En réparation": "bg-blue-100 text-blue-800",
       "✅ Validé client": "bg-purple-100 text-purple-800",
       "🔬 Diagnostic": "bg-yellow-100 text-yellow-800",
-      "📦 Rendu": "bg-gray-100 text-gray-800"
+      "📦 Rendu": "bg-gray-100 text-gray-800",
     };
     return colors[status] || "bg-gray-100 text-gray-800";
   };
@@ -89,7 +89,7 @@ export default function TicketContent() {
       "🔧 En réparation": "🔧",
       "✅ Validé client": "✅",
       "🔬 Diagnostic": "🔬",
-      "📦 Rendu": "📦"
+      "📦 Rendu": "📦",
     };
     return icons[status] || "🟡";
   };
@@ -134,11 +134,9 @@ export default function TicketContent() {
                 {getStatusIcon(status)} Ticket #{ticket.id}
               </h1>
               <p className="text-gray-500 mt-1">
-                Créé le {new Date(ticket.created_at).toLocaleDateString('fr-FR')}
+                Créé le {new Date(ticket.created_at).toLocaleDateString("fr-FR")}
               </p>
-              <p className="text-sm text-gray-500">
-                Client : {ticket.clients?.name}
-              </p>
+              <p className="text-sm text-gray-500">Client : {ticket.clients?.name}</p>
             </div>
             <div className={`px-3 py-1 rounded-full text-sm font-medium ${getStatusColor(status)}`}>
               {status}
@@ -169,14 +167,21 @@ export default function TicketContent() {
           <div className="mt-6 pt-4 border-t border-gray-200">
             <label className="text-sm text-gray-500 block mb-2">Mettre à jour le statut</label>
             <div className="flex gap-2 flex-wrap">
-              {["🔬 Diagnostic", "🔧 En réparation", "✅ Validé client", "✅ Terminé", "📦 Rendu"].map((s) => (
+              {[
+                "🔬 Diagnostic",
+                "🔧 En réparation",
+                "✅ Validé client",
+                "✅ Terminé",
+                "📦 Rendu",
+              ].map((s) => (
                 <button
                   key={s}
                   onClick={() => handleStatusUpdate(s)}
                   disabled={isUpdating}
-                  className={`px-3 py-1 rounded-full text-sm transition ${status === s
-                    ? "bg-blue-600 text-white"
-                    : "bg-gray-100 text-gray-700 hover:bg-gray-200"
+                  className={`px-3 py-1 rounded-full text-sm transition ${
+                    status === s
+                      ? "bg-blue-600 text-white"
+                      : "bg-gray-100 text-gray-700 hover:bg-gray-200"
                   }`}
                 >
                   {s}

@@ -7,7 +7,7 @@ interface UpdatePasswordBody {
 }
 
 export async function POST(request: NextRequest): Promise<NextResponse> {
-  const { id, new_password } = await request.json() as UpdatePasswordBody;
+  const { id, new_password } = (await request.json()) as UpdatePasswordBody;
 
   const supabase = createClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,

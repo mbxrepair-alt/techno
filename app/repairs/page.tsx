@@ -9,26 +9,26 @@ import { addHistoriqueAction, getCurrentTechnician } from "../../lib/historique"
 // ========== NORMALISATION DES STATUTS ==========
 const normalizeStatus = (status) => {
   if (!status) return "📥 Réceptionné";
-  
+
   const statusLower = status.toLowerCase().trim();
-  
+
   const statusMap = {
-    "réceptionné": "📥 Réceptionné",
-    "receptionne": "📥 Réceptionné",
-    "reçu": "📥 Réceptionné",
-    "recu": "📥 Réceptionné",
-    "diagnostic": "🔬 Diagnostic",
+    réceptionné: "📥 Réceptionné",
+    receptionne: "📥 Réceptionné",
+    reçu: "📥 Réceptionné",
+    recu: "📥 Réceptionné",
+    diagnostic: "🔬 Diagnostic",
     "validé client": "✅ Validé client",
     "valide client": "✅ Validé client",
     "en réparation": "🔧 En réparation",
-    "reparation": "🔧 En réparation",
-    "terminé": "✅ Terminé",
-    "termine": "✅ Terminé",
-    "rendu": "📦 Rendu",
-    "ko": "❌ KO",
-    "irréparable": "❌ KO",
+    reparation: "🔧 En réparation",
+    terminé: "✅ Terminé",
+    termine: "✅ Terminé",
+    rendu: "📦 Rendu",
+    ko: "❌ KO",
+    irréparable: "❌ KO",
     "refus client": "🚫 Refus client",
-    "refus": "🚫 Refus client",
+    refus: "🚫 Refus client",
     "envoyé à l'atelier": "📤 Envoyé à l'atelier",
     "envoye atelier": "📤 Envoyé à l'atelier",
     "attente validation client": "⏳ Attente validation client",
@@ -36,14 +36,14 @@ const normalizeStatus = (status) => {
     "mot de passe incorrect": "🔐 Mot de passe incorrect",
     "mdp incorrect": "🔐 Mot de passe incorrect",
     "attente pièce": "📦 Attente pièce",
-    "attente piece": "📦 Attente pièce"
+    "attente piece": "📦 Attente pièce",
   };
-  
+
   if (statusMap[statusLower]) return statusMap[statusLower];
-  
+
   const emojiStatus = ["📥", "🔬", "✅", "🔧", "📦", "❌", "🚫", "📤", "⏳", "🔐"];
-  if (emojiStatus.some(e => status.includes(e))) return status;
-  
+  if (emojiStatus.some((e) => status.includes(e))) return status;
+
   return "📥 Réceptionné";
 };
 
@@ -97,7 +97,7 @@ export default function RepairsPage() {
   const [changingRepair, setChangingRepair] = useState(null);
   const [selectedNewTech, setSelectedNewTech] = useState("");
   const [currentTechnician, setCurrentTechnician] = useState(null);
-  
+
   // État pour le modal d'avertissement
   const [showWarningModal, setShowWarningModal] = useState(false);
   const [pendingRepair, setPendingRepair] = useState(null);
@@ -106,14 +106,14 @@ export default function RepairsPage() {
     loadCurrentTechnician();
     loadData();
     loadTechnicians();
-    
+
     const repairsChannel = supabase
-      .channel('repairs-changes')
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'repairs' }, () => {
+      .channel("repairs-changes")
+      .on("postgres_changes", { event: "*", schema: "public", table: "repairs" }, () => {
         loadData();
       })
       .subscribe();
-      
+
     return () => {
       supabase.removeChannel(repairsChannel);
     };
@@ -153,9 +153,9 @@ export default function RepairsPage() {
       .select("*, clients(*)")
       .eq("user_id", user.id);
 
-    const normalizedRepairs = (repairsData || []).map(repair => ({
+    const normalizedRepairs = (repairsData || []).map((repair) => ({
       ...repair,
-      status: normalizeStatus(repair.status)
+      status: normalizeStatus(repair.status),
     }));
 
     setRepairs(normalizedRepairs);
@@ -164,23 +164,23 @@ export default function RepairsPage() {
 
   const changeTechnician = async () => {
     if (!changingRepair || !selectedNewTech) return;
-    
+
     const oldTechnician = changingRepair.technician;
-    
+
     await supabase
       .from("repairs")
       .update({ technician: selectedNewTech, repaired_by: selectedNewTech })
       .eq("id", changingRepair.id);
-    
+
     // Enregistrer dans l'historique
     await addHistoriqueAction({
       repairId: changingRepair.id,
       action: "changement_technicien",
-      description: `Changement de technicien : "${oldTechnician || 'Non assigné'}" → "${selectedNewTech}"`,
+      description: `Changement de technicien : "${oldTechnician || "Non assigné"}" → "${selectedNewTech}"`,
       oldValue: oldTechnician || "Non assigné",
-      newValue: selectedNewTech
+      newValue: selectedNewTech,
     });
-    
+
     setShowChangeTechModal(false);
     setChangingRepair(null);
     setSelectedNewTech("");
@@ -197,27 +197,27 @@ export default function RepairsPage() {
   // Auto-assignation avec historique
   const assignRepairToCurrentTechnician = async (repair) => {
     if (!currentTechnician) return;
-    
+
     const oldTechnician = repair.technician;
-    
+
     await supabase
       .from("repairs")
-      .update({ 
+      .update({
         technician: currentTechnician.name,
         repaired_by: currentTechnician.name,
-        assigned_at: new Date().toISOString()
+        assigned_at: new Date().toISOString(),
       })
       .eq("id", repair.id);
-    
+
     // Enregistrer dans l'historique
     await addHistoriqueAction({
       repairId: repair.id,
       action: "changement_technicien",
       description: `Assignation automatique à ${currentTechnician.name}`,
       oldValue: oldTechnician || "Non assigné",
-      newValue: currentTechnician.name
+      newValue: currentTechnician.name,
     });
-    
+
     await loadData();
   };
 
@@ -250,27 +250,27 @@ export default function RepairsPage() {
   // Prendre la main sur une réparation (pour le 2ème technicien)
   const takeOverRepair = async () => {
     if (!pendingRepair || !currentTechnician) return;
-    
+
     const oldTechnician = pendingRepair.technician;
-    
+
     await supabase
       .from("repairs")
-      .update({ 
+      .update({
         technician: currentTechnician.name,
         repaired_by: currentTechnician.name,
-        assigned_at: new Date().toISOString()
+        assigned_at: new Date().toISOString(),
       })
       .eq("id", pendingRepair.id);
-    
+
     // Enregistrer dans l'historique
     await addHistoriqueAction({
       repairId: pendingRepair.id,
       action: "changement_technicien",
       description: `${currentTechnician.name} a pris la main sur la réparation (était à ${oldTechnician})`,
       oldValue: oldTechnician,
-      newValue: currentTechnician.name
+      newValue: currentTechnician.name,
     });
-    
+
     setShowWarningModal(false);
     await loadData();
     router.push(`/repairs/${pendingRepair.id}`);
@@ -278,34 +278,36 @@ export default function RepairsPage() {
 
   const statsByStatus = useMemo(() => {
     const stats = {};
-    Object.keys(STATUS_ORDER).forEach(status => {
-      stats[status] = repairs.filter(r => r.status === status).length;
+    Object.keys(STATUS_ORDER).forEach((status) => {
+      stats[status] = repairs.filter((r) => r.status === status).length;
     });
     return stats;
   }, [repairs]);
 
   const sortedRepairs = useMemo(() => {
     let filtered = [...repairs];
-    
+
     if (searchTerm) {
-      filtered = filtered.filter(r => 
-        (r.clients?.name + r.device + r.id + r.issue).toLowerCase().includes(searchTerm.toLowerCase())
+      filtered = filtered.filter((r) =>
+        (r.clients?.name + r.device + r.id + r.issue)
+          .toLowerCase()
+          .includes(searchTerm.toLowerCase())
       );
     }
-    
+
     if (filterStatus !== "all") {
-      filtered = filtered.filter(r => r.status === filterStatus);
+      filtered = filtered.filter((r) => r.status === filterStatus);
     }
-    
+
     if (filterPeriod !== "all") {
-      const period = PERIOD_OPTIONS.find(p => p.value === filterPeriod);
+      const period = PERIOD_OPTIONS.find((p) => p.value === filterPeriod);
       if (period && period.days) {
         const cutoffDate = new Date();
         cutoffDate.setDate(cutoffDate.getDate() - period.days);
-        filtered = filtered.filter(r => new Date(r.created_at) >= cutoffDate);
+        filtered = filtered.filter((r) => new Date(r.created_at) >= cutoffDate);
       }
     }
-    
+
     return filtered.sort((a, b) => {
       const orderA = STATUS_ORDER[a.status] || 99;
       const orderB = STATUS_ORDER[b.status] || 99;
@@ -322,19 +324,19 @@ export default function RepairsPage() {
 
   const totalRepairs = repairs.length;
 
-  if (loading) return (
-    <div className="h-screen flex items-center justify-center bg-gradient-to-br from-gray-50 to-gray-100">
-      <div className="text-center">
-        <div className="w-16 h-16 border-4 border-blue-600 border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
-        <p className="text-gray-400 font-medium">Chargement de l'atelier...</p>
+  if (loading)
+    return (
+      <div className="h-screen flex items-center justify-center bg-gradient-to-br from-gray-50 to-gray-100">
+        <div className="text-center">
+          <div className="w-16 h-16 border-4 border-blue-600 border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
+          <p className="text-gray-400 font-medium">Chargement de l'atelier...</p>
+        </div>
       </div>
-    </div>
-  );
+    );
 
   return (
     <Layout>
       <div className="w-full mx-auto px-2 sm:px-3 md:px-4 py-3">
-        
         {/* HEADER */}
         <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-3 mb-5">
           <div>
@@ -359,12 +361,12 @@ export default function RepairsPage() {
 
           {/* BARRE DE RECHERCHE */}
           <div className="relative w-full md:w-80">
-            <input 
-              type="text" 
-              placeholder="🔍 Rechercher par ticket, nom, modèle ou panne..." 
-              className="w-full p-2.5 pl-10 bg-white border-2 border-blue-200 rounded-xl focus:outline-none focus:border-blue-500" 
-              value={searchTerm} 
-              onChange={(e) => setSearchTerm(e.target.value)} 
+            <input
+              type="text"
+              placeholder="🔍 Rechercher par ticket, nom, modèle ou panne..."
+              className="w-full p-2.5 pl-10 bg-white border-2 border-blue-200 rounded-xl focus:outline-none focus:border-blue-500"
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
             />
             <div className="absolute left-3 top-1/2 -translate-y-1/2 text-blue-500">🔍</div>
           </div>
@@ -379,7 +381,9 @@ export default function RepairsPage() {
           >
             <option value="all">📊 Tous ({totalRepairs})</option>
             {Object.keys(STATUS_ORDER).map((status) => (
-              <option key={status} value={status}>{status} ({statsByStatus[status] || 0})</option>
+              <option key={status} value={status}>
+                {status} ({statsByStatus[status] || 0})
+              </option>
             ))}
           </select>
 
@@ -388,8 +392,10 @@ export default function RepairsPage() {
             onChange={(e) => setFilterPeriod(e.target.value)}
             className="px-3 py-1.5 bg-white border-2 border-blue-200 rounded-xl text-sm"
           >
-            {PERIOD_OPTIONS.map(option => (
-              <option key={option.value} value={option.value}>{option.label}</option>
+            {PERIOD_OPTIONS.map((option) => (
+              <option key={option.value} value={option.value}>
+                {option.label}
+              </option>
             ))}
           </select>
 
@@ -417,10 +423,13 @@ export default function RepairsPage() {
             ) : (
               sortedRepairs.map((repair) => {
                 const dateObj = new Date(repair.created_at);
-                const formattedDate = dateObj.toLocaleDateString('fr-FR', { day: '2-digit', month: '2-digit' });
+                const formattedDate = dateObj.toLocaleDateString("fr-FR", {
+                  day: "2-digit",
+                  month: "2-digit",
+                });
 
                 return (
-                  <div 
+                  <div
                     key={repair.id}
                     onClick={() => handleRowClick(repair)}
                     className={`grid grid-cols-12 items-center px-4 py-3 cursor-pointer hover:bg-blue-50 transition ${
@@ -434,7 +443,9 @@ export default function RepairsPage() {
                     </div>
 
                     <div className="col-span-4">
-                      <div className="font-bold text-gray-900 text-sm">{repair.clients?.name || "Client inconnu"}</div>
+                      <div className="font-bold text-gray-900 text-sm">
+                        {repair.clients?.name || "Client inconnu"}
+                      </div>
                       <div className="text-xs text-gray-500">{repair.device || "?"}</div>
                     </div>
 
@@ -446,14 +457,23 @@ export default function RepairsPage() {
                           <div className="w-6 h-6 rounded-full bg-green-100 flex items-center justify-center text-green-600 text-xs font-bold">
                             {repair.technician.charAt(0)}
                           </div>
-                          <span className="text-xs font-medium text-gray-700">{repair.technician}</span>
+                          <span className="text-xs font-medium text-gray-700">
+                            {repair.technician}
+                          </span>
                           {currentTechnician?.is_gerant && (
-                            <button onClick={(e) => openChangeTechModal(repair, e)} className="text-gray-400 hover:text-blue-500">✏️</button>
+                            <button
+                              onClick={(e) => openChangeTechModal(repair, e)}
+                              className="text-gray-400 hover:text-blue-500"
+                            >
+                              ✏️
+                            </button>
                           )}
                         </div>
                       ) : (
                         <div className="flex items-center gap-1">
-                          <span className="text-xs text-amber-600 bg-amber-50 px-2 py-1 rounded-full">⚠️ Non assigné</span>
+                          <span className="text-xs text-amber-600 bg-amber-50 px-2 py-1 rounded-full">
+                            ⚠️ Non assigné
+                          </span>
                           {currentTechnician && !currentTechnician.is_gerant && (
                             <span className="text-xs text-blue-500">(Cliquez pour prendre)</span>
                           )}
@@ -462,7 +482,9 @@ export default function RepairsPage() {
                     </div>
 
                     <div className="col-span-1">
-                      <span className={`inline-block px-2 py-1 rounded-lg text-[10px] font-bold border ${STATUS_STYLE[repair.status] || "bg-gray-100"}`}>
+                      <span
+                        className={`inline-block px-2 py-1 rounded-lg text-[10px] font-bold border ${STATUS_STYLE[repair.status] || "bg-gray-100"}`}
+                      >
                         {repair.status}
                       </span>
                     </div>
@@ -487,7 +509,7 @@ export default function RepairsPage() {
                 </div>
                 <h3 className="text-xl font-bold text-orange-600">Attention !</h3>
               </div>
-              
+
               <p className="text-gray-700 text-center mb-2">
                 Cette réparation est déjà assignée à :
               </p>
@@ -499,13 +521,15 @@ export default function RepairsPage() {
                   <span className="font-semibold text-gray-800">{pendingRepair.technician}</span>
                 </div>
               </div>
-              
+
               <p className="text-gray-600 text-sm text-center mb-5">
                 Voulez-vous prendre la main sur cette réparation ?
                 <br />
-                <span className="text-xs text-gray-400">Le précédent technicien n'aura plus accès</span>
+                <span className="text-xs text-gray-400">
+                  Le précédent technicien n'aura plus accès
+                </span>
               </p>
-              
+
               <div className="flex gap-3">
                 <button
                   onClick={() => {
@@ -533,13 +557,31 @@ export default function RepairsPage() {
             <div className="bg-white rounded-xl p-5 w-96">
               <h3 className="text-lg font-bold mb-2">👨‍🔧 Changer le technicien</h3>
               <p className="text-sm text-gray-500 mb-3">Réparation #{changingRepair.id}</p>
-              <select value={selectedNewTech} onChange={(e) => setSelectedNewTech(e.target.value)} className="w-full p-2 border rounded-lg mb-3">
+              <select
+                value={selectedNewTech}
+                onChange={(e) => setSelectedNewTech(e.target.value)}
+                className="w-full p-2 border rounded-lg mb-3"
+              >
                 <option value="">-- Sélectionner --</option>
-                {technicians.map((tech) => (<option key={tech.id} value={tech.name}>{tech.name}</option>))}
+                {technicians.map((tech) => (
+                  <option key={tech.id} value={tech.name}>
+                    {tech.name}
+                  </option>
+                ))}
               </select>
               <div className="flex gap-2">
-                <button onClick={changeTechnician} className="flex-1 bg-blue-600 text-white py-2 rounded-lg">Confirmer</button>
-                <button onClick={() => setShowChangeTechModal(false)} className="flex-1 bg-gray-200 py-2 rounded-lg">Annuler</button>
+                <button
+                  onClick={changeTechnician}
+                  className="flex-1 bg-blue-600 text-white py-2 rounded-lg"
+                >
+                  Confirmer
+                </button>
+                <button
+                  onClick={() => setShowChangeTechModal(false)}
+                  className="flex-1 bg-gray-200 py-2 rounded-lg"
+                >
+                  Annuler
+                </button>
               </div>
             </div>
           </div>

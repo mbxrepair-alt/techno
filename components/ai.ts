@@ -1,7 +1,8 @@
 import { supabase } from "../lib/supabase";
 
 const GEMINI_API_KEY = process.env.NEXT_PUBLIC_GEMINI_API_KEY ?? "";
-const GEMINI_API_URL = "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash-exp:generateContent";
+const GEMINI_API_URL =
+  "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash-exp:generateContent";
 
 interface RepairData {
   device: string;
@@ -62,7 +63,11 @@ function fallbackResponse(prompt: string): string {
   return "Analyse en cours...";
 }
 
-export async function generateDiagnostic(device: string, issue: string, symptoms?: string): Promise<string> {
+export async function generateDiagnostic(
+  device: string,
+  issue: string,
+  symptoms?: string
+): Promise<string> {
   const prompt = `En tant qu'expert en réparation électronique, génère un diagnostic détaillé pour cet appareil :
 
 Appareil : ${device}
@@ -126,7 +131,10 @@ export async function suggestIssues(deviceType: string): Promise<string[]> {
 Réponds uniquement sous forme de liste simple, chaque élément commençant par 📱, 🔋, 📱, etc.`;
 
   const result = await callGemini(prompt);
-  return result.split('\n').filter(l => l.trim()).slice(0, 8);
+  return result
+    .split("\n")
+    .filter((l) => l.trim())
+    .slice(0, 8);
 }
 
 export async function generateInvoice(
@@ -161,7 +169,10 @@ Merci de votre confiance !`;
   return callGemini(prompt);
 }
 
-export async function chatWithAssistant(message: string, history: ChatMessage[] = []): Promise<string> {
+export async function chatWithAssistant(
+  message: string,
+  history: ChatMessage[] = []
+): Promise<string> {
   const prompt = `Tu es un assistant technique expert en réparation de smartphones, tablettes et ordinateurs.
 Tu travailles dans l'atelier MBX Réparations. Réponds de manière professionnelle, précise et utile.
 
@@ -180,10 +191,16 @@ export async function suggestParts(device: string, issue: string): Promise<strin
 Format : "Pièce - Prix estimé"`;
 
   const result = await callGemini(prompt);
-  return result.split('\n').filter(l => l.trim()).slice(0, 5);
+  return result
+    .split("\n")
+    .filter((l) => l.trim())
+    .slice(0, 5);
 }
 
-export async function analyzePhoto(photoUrl: string, deviceType: string = "smartphone"): Promise<string> {
+export async function analyzePhoto(
+  photoUrl: string,
+  deviceType: string = "smartphone"
+): Promise<string> {
   void photoUrl;
   void supabase;
   void deviceType;

@@ -7,6 +7,7 @@ const PUBLIC_PATHS = [
   "/client/repairs",
   "/client/code",
   "/client/soumettre-appareil",
+  "/api/assistant-public",
 ];
 
 function isPublic(pathname: string): boolean {

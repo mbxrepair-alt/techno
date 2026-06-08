@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { supabase } from "../lib/supabase";
 import Link from "next/link";
 import Layout from "../components/Layout";
+import AssistantPublic from "../components/AssistantPublic";
 
 export default function HomePage() {
   const router = useRouter();
@@ -843,6 +844,8 @@ export default function HomePage() {
           </div>
         )}
       </div>
+
+      <AssistantPublic />
     </Layout>
   );
 }

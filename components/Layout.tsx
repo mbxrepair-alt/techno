@@ -4,7 +4,7 @@ import { useState, useEffect } from "react";
 import { useRouter, usePathname } from "next/navigation";
 import { supabase } from "../lib/supabase";
 import Navigation from "./Navigation";
-import Chatbot from "./Chatbot";
+import AssistantPro from "./AssistantPro";
 import InstallPWA from "./InstallPWA";
 
 interface LayoutProps {
@@ -33,7 +33,6 @@ export default function Layout({ children }: LayoutProps) {
   const [user, setUser] = useState<object | null>(null);
   const [loading, setLoading] = useState(true);
   const [permissions, setPermissions] = useState<Record<string, boolean> | null>(null);
-  const [showChatbot, setShowChatbot] = useState(false);
 
   useEffect(() => {
     const checkAuth = async () => {
@@ -78,17 +77,8 @@ export default function Layout({ children }: LayoutProps) {
     <div className="min-h-screen bg-gray-100">
       <Navigation user={user} permissions={permissions} />
       <main className="container mx-auto px-4 py-8">{children}</main>
-      <button
-        onClick={() => setShowChatbot(!showChatbot)}
-        className="fixed bottom-6 right-6 z-50 bg-gradient-to-r from-purple-600 to-pink-600 text-white p-4 rounded-full shadow-2xl hover:scale-110 transition-all duration-300 group animate-bounce-slow"
-      >
-        <div className="relative">
-          <span className="text-2xl group-hover:animate-pulse">🤖</span>
-          <span className="absolute -top-1 -right-1 w-3 h-3 bg-green-500 rounded-full animate-pulse"></span>
-        </div>
-      </button>
       <InstallPWA />
-      <Chatbot isOpen={showChatbot} onClose={() => setShowChatbot(false)} />
+      <AssistantPro />
     </div>
   );
 }

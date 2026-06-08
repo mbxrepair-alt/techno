@@ -8,7 +8,6 @@ import emailjs from "@emailjs/browser";
 import QRCode from "qrcode";
 import ReturnModal from "../../components/ReturnModal";
 import PatternLock from "../../components/PatternLock";
-import SmartChatbot from "../../components/SmartChatbot";
 
 export default function Dashboard() {
   const router = useRouter();
@@ -38,9 +37,6 @@ export default function Dashboard() {
   // RETOUR SAV
   const [showReturnModal, setShowReturnModal] = useState(false);
   const [selectedRepair, setSelectedRepair] = useState(null);
-
-  // SMART CHATBOT
-  const [showSmartChatbot, setShowSmartChatbot] = useState(false);
 
   // INFOS ATELIER
   const [companyInfo, setCompanyInfo] = useState({
@@ -520,42 +516,6 @@ export default function Dashboard() {
     setShowPhoneSuggestions(false);
     setShowClientSuggestions(false);
     setSelectedPhoneIndex(-1);
-  };
-
-  // ========== SMART CHATBOT - PRÉ-REMPLISSAGE ==========
-  const handlePreFillForm = (repairData) => {
-    setDesiredRepairCount(1);
-    setRepairsList([
-      {
-        device: repairData.device,
-        issue: repairData.issue,
-        imei: "",
-        code: "",
-        estimatedPrice: repairData.estimatedPrice?.toString() || "",
-        unlockPattern: "",
-        description: "",
-        id: Date.now(),
-      },
-    ]);
-    showMessage(`Formulaire pré-rempli : ${repairData.device} - ${repairData.issue}`, "success");
-  };
-
-  const handlePreFillMultiRepairs = (repairs) => {
-    const count = Math.min(repairs.length, 20);
-    setDesiredRepairCount(count);
-    const now = Date.now();
-    const newList = repairs.slice(0, count).map((repair, idx) => ({
-      device: repair.device,
-      issue: repair.issue,
-      imei: "",
-      code: "",
-      estimatedPrice: repair.estimatedPrice?.toString() || "",
-      unlockPattern: "",
-      description: "",
-      id: now + idx,
-    }));
-    setRepairsList(newList);
-    showMessage(`Formulaire pré-rempli avec ${count} appareil(s)`, "success");
   };
 
   const generateRepairSlots = () => {
@@ -1298,13 +1258,6 @@ export default function Dashboard() {
             </div>
           </div>
 
-          <button
-            onClick={() => setShowSmartChatbot(true)}
-            className="bg-gradient-to-r from-purple-500 to-pink-500 text-white px-4 py-3 rounded-xl font-medium hover:from-purple-600 hover:to-pink-600 transition shadow-md flex items-center gap-2 whitespace-nowrap"
-          >
-            <span className="text-xl">🤖</span>
-            Assistant
-          </button>
         </div>
       </div>
 
@@ -1801,13 +1754,6 @@ export default function Dashboard() {
         </div>
       )}
 
-      {/* SMART CHATBOT */}
-      <SmartChatbot
-        isOpen={showSmartChatbot}
-        onClose={() => setShowSmartChatbot(false)}
-        onPreFillForm={handlePreFillForm}
-        onPreFillMultiRepairs={handlePreFillMultiRepairs}
-      />
     </Layout>
   );
 }

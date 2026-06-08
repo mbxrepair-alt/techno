@@ -123,6 +123,42 @@ export async function generateRepairSummary(
 🔧 Garantie : 3 mois (6 mois batterie)`;
 }
 
+export interface ExtractedRepair {
+  device: string | null;
+  issue: string | null;
+  imei: string | null;
+  code: string | null;
+  estimatedPrice: number | null;
+  description: string | null;
+}
+
+export interface ExtractedFormData {
+  clientName: string | null;
+  clientPhone: string | null;
+  clientEmail: string | null;
+  clientType: "particulier" | "pro";
+  repairs: ExtractedRepair[];
+}
+
+export async function extractFormDataFromText(
+  text: string
+): Promise<ExtractedFormData | null> {
+  try {
+    const res = await fetch("/api/extract", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ text }),
+    });
+
+    if (!res.ok) return null;
+
+    const data = await res.json();
+    return (data?.data as ExtractedFormData) ?? null;
+  } catch {
+    return null;
+  }
+}
+
 export async function generateInvoice(
   repairData: RepairData,
   clientData: ClientData,

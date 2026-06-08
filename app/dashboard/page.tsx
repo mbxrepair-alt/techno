@@ -8,6 +8,7 @@ import emailjs from "@emailjs/browser";
 import QRCode from "qrcode";
 import ReturnModal from "../../components/ReturnModal";
 import PatternLock from "../../components/PatternLock";
+import type { ExtractedFormData } from "../../lib/ai";
 
 export default function Dashboard() {
   const router = useRouter();
@@ -17,6 +18,7 @@ export default function Dashboard() {
   const repairRefs = useRef([]);
   const searchInputRef = useRef(null);
   const searchContainerRef = useRef(null);
+  const formRef = useRef<HTMLDivElement>(null);
 
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState({ text: "", type: "" });
@@ -292,6 +294,64 @@ export default function Dashboard() {
   useEffect(() => {
     loadAllData();
   }, []);
+
+  // Listen for "assistant:fillForm" events dispatched by AssistantPro
+  useEffect(() => {
+    const handleFillForm = (e: Event) => {
+      const data = (e as CustomEvent<ExtractedFormData>).detail;
+      if (!data) return;
+
+      // Fill client fields
+      if (data.clientName) setIntakeClient(data.clientName);
+      if (data.clientPhone) setIntakePhone(data.clientPhone);
+      if (data.clientEmail) setIntakeEmail(data.clientEmail);
+
+      // Build pre-filled repair slots in one atomic update
+      // (equivalent to generateRepairSlots() followed by updateRepairField() for each field)
+      const incoming = Array.isArray(data.repairs) && data.repairs.length > 0
+        ? data.repairs.slice(0, 20)
+        : [];
+      const count = Math.max(incoming.length, 1);
+      setDesiredRepairCount(count);
+
+      const now = Date.now();
+      const newList = incoming.length > 0
+        ? incoming.map((r, i) => ({
+            id: now + i,
+            device: r.device ?? "",
+            issue: r.issue ?? "",
+            imei: r.imei ?? "",
+            code: r.code ?? "",
+            estimatedPrice: r.estimatedPrice !== null ? String(r.estimatedPrice) : "",
+            unlockPattern: "",
+            description: r.description ?? "",
+          }))
+        : [{ id: now, device: "", issue: "", imei: "", code: "", estimatedPrice: "", unlockPattern: "", description: "" }];
+
+      setRepairsList(newList);
+
+      // Reset all suggestion dropdowns
+      setDeviceSuggestionsMap({});
+      setIssueSuggestionsMap({});
+      setCodeSuggestionsMap({});
+      setShowDeviceSuggestionsMap({});
+      setShowIssueSuggestionsMap({});
+      setShowCodeSuggestionsMap({});
+      setDeviceCategoryMap({});
+      setDeviceSuggestionIndex({});
+      setIssueSuggestionIndex({});
+      setCodeSuggestionIndex({});
+
+      showMessage("✨ Formulaire rempli par l'assistant", "success");
+
+      setTimeout(() => {
+        formRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
+      }, 150);
+    };
+
+    window.addEventListener("assistant:fillForm", handleFillForm);
+    return () => window.removeEventListener("assistant:fillForm", handleFillForm);
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   const showMessage = (text, type = "success") => {
     setMessage({ text, type });
@@ -1343,7 +1403,7 @@ export default function Dashboard() {
       )}
 
       {/* ========== FORMULAIRE NOUVELLE RÉPARATION ========== */}
-      <div className="bg-white rounded-2xl border border-blue-200 overflow-hidden shadow-lg">
+      <div ref={formRef} className="bg-white rounded-2xl border border-blue-200 overflow-hidden shadow-lg">
         <div className="bg-gradient-to-r from-blue-600 to-cyan-600 px-6 py-4">
           <h2 className="text-white font-semibold text-lg">➕ Nouvelle réparation</h2>
           <p className="text-blue-100 text-sm">Multi-appareils supporté</p>

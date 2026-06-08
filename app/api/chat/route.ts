@@ -1,68 +1,56 @@
-import Anthropic from "@anthropic-ai/sdk";
+import { GoogleGenerativeAI } from "@google/generative-ai";
 import { NextRequest, NextResponse } from "next/server";
 
-const SYSTEM_PROMPT = `Tu es Max, l'assistant IA expert de MBX Mobilax, un atelier de réparation de smartphones, tablettes et consoles basé à Lyon.
+const SYSTEM_PROMPT = `Tu es Max, assistant IA expert pour MBX Mobilax, un atelier de réparation. Tu réponds en français, de façon professionnelle et concise.`;
 
-## Qui tu es
-Tu es un expert technique et commercial qui aide les équipes MBX à travailler plus efficacement. Tu connais parfaitement les réparations, les tarifs, les clients, les techniciens et les processus internes.
-
-## Ce que tu sais faire
-- **Réparations** : écrans, batteries, ports de charge, haut-parleurs, caméras, cartes mères, connecteurs
-- **Appareils** : iPhone (toutes générations), Samsung Galaxy (toutes séries), iPad, tablettes Android, PS5, Xbox Series, Nintendo Switch
-- **Tarifs MBX** :
-  - Diagnostic smartphone : 15€ (standard) / 40€ (complexe : iPhone 14/15 Pro, Samsung haut de gamme)
-  - Diagnostic tablette : 25€
-  - Diagnostic console : 40€
-  - Le montant du diagnostic est déduit si la réparation est effectuée chez MBX
-  - Écran iPhone : 79€ à 229€ selon le modèle
-  - Batterie iPhone : 49€ à 89€
-  - Écran Samsung : 89€ à 219€
-  - Réparation PS5 : 89€ à 199€
-- **Contact** : 04 72 60 16 13 — 8 Rue de l'Épée, 69003 Lyon
-
-## Comment tu réponds
-- Toujours en français
-- Professionnel mais chaleureux, comme un collègue expert
-- Réponses concises et actionnables (évite les longs pavés)
-- Utilise des emojis avec modération pour structurer les réponses
-- Si tu n'as pas l'information précise, oriente vers le numéro : 04 72 60 16 13
-- Tu peux aider à rédiger des devis, résumer des réparations, analyser des statistiques`;
-
-const client = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
+const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY ?? "");
 
 export async function POST(request: NextRequest) {
   try {
-    const { message, history } = await request.json();
-
-    if (!message || typeof message !== "string") {
-      return NextResponse.json({ response: "❌ Message invalide." }, { status: 400 });
+    const apiKey = process.env.GEMINI_API_KEY;
+    if (!apiKey) {
+      console.error("[chat] GEMINI_API_KEY is not set");
+      return NextResponse.json(
+        { response: "❌ Clé API manquante." },
+        { status: 500 }
+      );
     }
 
-    const messages: Anthropic.MessageParam[] = [
-      ...(history || [])
-        .filter((m: { role: string; content: string }) => m.role && m.content)
-        .map((m: { role: string; content: string }) => ({
-          role: m.role as "user" | "assistant",
-          content: m.content,
-        })),
-      { role: "user", content: message },
-    ];
+    const body = await request.json();
+    const messages: { role: string; content: string }[] = body.messages ?? [];
+    const context: string | undefined = body.context;
 
-    const response = await client.messages.create({
-      model: "claude-opus-4-8",
-      max_tokens: 1024,
-      thinking: { type: "adaptive" },
-      system: SYSTEM_PROMPT,
-      messages,
+    if (!Array.isArray(messages) || messages.length === 0) {
+      return NextResponse.json(
+        { response: "❌ Messages manquants." },
+        { status: 400 }
+      );
+    }
+
+    const systemInstruction = context
+      ? `${SYSTEM_PROMPT}\n\nContexte supplémentaire : ${context}`
+      : SYSTEM_PROMPT;
+
+    const model = genAI.getGenerativeModel({
+      model: "gemini-2.0-flash-exp",
+      systemInstruction,
     });
 
-    const textBlock = response.content.find((b) => b.type === "text");
-    const text = textBlock && textBlock.type === "text" ? textBlock.text : null;
+    // Split history (all but last) from the current user message (last)
+    const history = messages.slice(0, -1).map((m) => ({
+      role: m.role === "assistant" ? "model" : "user",
+      parts: [{ text: m.content }],
+    }));
 
-    return NextResponse.json({
-      response: text ?? "❌ Désolé, je n'ai pas pu générer de réponse.",
-    });
-  } catch {
+    const lastMessage = messages[messages.length - 1];
+
+    const chat = model.startChat({ history });
+    const result = await chat.sendMessage(lastMessage.content);
+    const text = result.response.text();
+
+    return NextResponse.json({ response: text });
+  } catch (error) {
+    console.error("[chat] Gemini API error:", error);
     return NextResponse.json(
       { response: "❌ Désolé, une erreur technique est survenue. Veuillez réessayer." },
       { status: 500 }

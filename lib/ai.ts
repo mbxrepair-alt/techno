@@ -144,17 +144,38 @@ export async function extractFormDataFromText(
   text: string
 ): Promise<ExtractedFormData | null> {
   try {
-    const res = await fetch("/api/extract", {
+    const res = await fetch("/api/ai-fill-form", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ text }),
     });
 
-    if (!res.ok) return null;
+    if (!res.ok) {
+      let rawText = "";
+      try { rawText = await res.text(); } catch { /* ignore */ }
+      console.error("[extractFormDataFromText] API error", {
+        status: res.status,
+        statusText: res.statusText,
+        rawResponse: rawText,
+      });
+      return null;
+    }
 
-    const data = await res.json();
-    return (data?.data as ExtractedFormData) ?? null;
-  } catch {
+    const rawText = await res.text();
+    console.log("[extractFormDataFromText] Raw API response:", rawText);
+
+    let parsed: ExtractedFormData | null = null;
+    try {
+      parsed = JSON.parse(rawText) as ExtractedFormData;
+    } catch (parseErr) {
+      console.error("[extractFormDataFromText] JSON parse error", parseErr, "raw:", rawText);
+      return null;
+    }
+
+    console.log("[extractFormDataFromText] Parsed result:", parsed);
+    return parsed;
+  } catch (err) {
+    console.error("[extractFormDataFromText] Network or unexpected error:", err);
     return null;
   }
 }

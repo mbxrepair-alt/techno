@@ -53,12 +53,11 @@ const RESPONSE_SCHEMA = {
 
 export async function POST(request: NextRequest) {
   try {
-    const apiKey = process.env.GOOGLE_AI_API_KEY;
+    const apiKey = process.env.GEMINI_API_KEY;
     if (!apiKey) {
-      console.error("[extract] GOOGLE_AI_API_KEY is not set");
+      console.error("[ai-fill-form] GEMINI_API_KEY is not set");
       return NextResponse.json({ error: "Clé API manquante" }, { status: 500 });
     }
-    console.log("[extract] API key present, length:", apiKey.length);
 
     const { text } = await request.json();
 
@@ -79,20 +78,18 @@ export async function POST(request: NextRequest) {
 
     const result = await model.generateContent(text.trim());
     const raw = result.response.text();
-    console.log("[extract] Gemini raw response:", raw);
 
     let parsed: unknown;
     try {
       parsed = JSON.parse(raw);
     } catch (parseErr) {
-      console.error("[extract] JSON parse failed:", parseErr, "raw:", raw);
+      console.error("[ai-fill-form] JSON parse failed:", parseErr, "raw:", raw);
       return NextResponse.json({ error: "Réponse Gemini invalide" }, { status: 500 });
     }
 
-    console.log("[extract] Parsed data:", JSON.stringify(parsed));
-    return NextResponse.json({ data: parsed });
+    return NextResponse.json(parsed);
   } catch (error) {
-    console.error("[extract] Gemini API error:", error);
+    console.error("[ai-fill-form] Gemini API error:", error);
     return NextResponse.json({ error: "Extraction échouée" }, { status: 500 });
   }
 }

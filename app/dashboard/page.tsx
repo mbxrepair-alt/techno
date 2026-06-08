@@ -249,7 +249,7 @@ export default function Dashboard() {
       if (user) {
         const { data: profile } = await supabase
           .from("profiles")
-          .select("company_name, contact_phone, contact_address, email, siret")
+          .select("company_name, contact_phone, contact_address, email")
           .eq("id", user.id)
           .single();
 

@@ -26,7 +26,7 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
 
   if (clientError) {
     console.error("[client-tracking] Supabase error:", clientError.code, clientError.message, clientError.details);
-    return NextResponse.json({ error: "Erreur serveur" }, { status: 500 });
+    return NextResponse.json({ error: "Erreur serveur", debug: { code: clientError.code, message: clientError.message } }, { status: 500 });
   }
 
   if (!clientData) {

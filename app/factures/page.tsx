@@ -410,8 +410,7 @@ export default function FacturesPage() {
       <!-- FOOTER -->
       <div class="footer">
         <div class="footer-left">
-          <strong>Conditions de paiement</strong> : à réception de facture<br>
-          <strong>Garantie</strong> : 3 mois pièces &amp; main d'œuvre · Merci pour votre confiance
+          <strong>Conditions de paiement</strong> : à réception de facture
         </div>
         <div class="footer-ref">${invoiceRef} · ${date}</div>
       </div>

@@ -59,6 +59,7 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
               <tr><td style="color:#64748b;padding:5px 0;width:40%">Client</td><td style="font-weight:700;color:#1e293b">${ticket.clients?.name || "—"}</td></tr>
               <tr><td style="color:#64748b;padding:5px 0">Appareil</td><td style="font-weight:700;color:#1e293b">${ticket.device}</td></tr>
               <tr><td style="color:#64748b;padding:5px 0">Panne déclarée</td><td style="font-weight:700;color:#1e293b">${ticket.issue}</td></tr>
+              ${ticket.estimated_price ? `<tr><td style="color:#64748b;padding:5px 0">Prix estimé</td><td style="font-weight:700;color:#1e293b">${Number(ticket.estimated_price).toFixed(2)} €</td></tr>` : ""}
               <tr><td style="color:#64748b;padding:5px 0">Date de dépôt</td><td style="color:#1e293b">${new Date().toLocaleDateString("fr-FR")}</td></tr>
             </table>
             ${noCodeWarning}

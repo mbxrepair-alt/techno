@@ -938,6 +938,7 @@ export default function Dashboard() {
           <div class="client-info-block">
             <div><span class="lbl">Client</span><br>${escapeHtml(client.name).substring(0, 28)}</div>
             <div style="margin-top:2mm"><span class="lbl">Panne déclarée</span><br>${escapeHtml(ticket.issue).substring(0, 30)}</div>
+            ${ticket.estimated_price ? `<div style="margin-top:2mm"><span class="lbl">Prix estimé</span><br><span style="font-size:12px;font-weight:900;color:#166534">${Number(ticket.estimated_price).toFixed(2)} €</span></div>` : ""}
             ${!codeValue ? `<div style="font-size:7.5px;background:#fef2f2;border-left:2px solid #ef4444;color:#991b1b;font-weight:700;padding:1.5mm 2mm;border-radius:2mm;margin-top:2mm">⚠️ Appareil non testé — pas pris en garantie (code non fourni)</div>` : ""}
             <div style="margin-top:2mm">
               <span class="lbl">Votre code de suivi</span>

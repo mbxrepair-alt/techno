@@ -1001,19 +1001,16 @@ export default function Dashboard() {
     }
     setSendingEmail(true);
     try {
+      const hasCode = (t) => t.unlock_code && t.unlock_code !== "NC" && t.unlock_code !== "Non fourni" && t.unlock_code.trim() !== "";
       const repairsHtml = tickets
-        .map(
-          (t) => `
-        <div style="border-bottom:1px solid #ccc; margin-bottom:10px; padding-bottom:8px;">
-          <strong>🔧 Ticket MBX-${t.id}</strong><br/>
-          📱 Appareil : ${escapeHtml(t.device)}<br/>
-          ⚠️ Panne : ${escapeHtml(t.issue)}<br/>
-          🔢 IMEI : ${escapeHtml(t.imei || "NC")}<br/>
-          🔑 Code : ${escapeHtml(t.unlock_code || "NC")}<br/>
-          📝 Notes : ${escapeHtml(t.description || "Aucune")}
-        </div>
-      `
-        )
+        .map((t) => `
+          <div style="background:#f8fafc;border-radius:8px;padding:14px 16px;margin-bottom:10px;border-left:3px solid #6c2bd9">
+            <div style="font-weight:700;font-size:15px;color:#1e293b">MBX-${t.id} · ${escapeHtml(t.device)}</div>
+            <div style="color:#64748b;font-size:13px;margin-top:4px">${escapeHtml(t.issue)}</div>
+            ${t.imei && t.imei !== "NC" ? `<div style="color:#94a3b8;font-size:12px;margin-top:4px">IMEI : ${escapeHtml(t.imei)}</div>` : ""}
+            ${!hasCode(t) ? `<div style="background:#fef2f2;border-left:3px solid #ef4444;padding:8px 10px;border-radius:4px;margin-top:8px;color:#991b1b;font-size:12px;font-weight:700">⚠️ Appareil non testé — pas pris en garantie (code non fourni)</div>` : ""}
+          </div>
+        `)
         .join("");
 
       const templateParams = {

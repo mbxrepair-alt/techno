@@ -46,26 +46,6 @@ export default function FacturesPage() {
   /* -------------------------------------------------------------
      1️⃣ Chargement du taux de TVA par client
      ------------------------------------------------------------- */
-  const loadClientTvaRates = async () => {
-    try {
-      const user = await getCurrentUser();
-      if (!user) return;
-
-      const { data, error } = await supabase
-        .from("clients")
-        .select("id, default_tva_rate")
-        .eq("user_id", user.id);
-
-      if (error) throw error;
-
-      const rates = {};
-      data?.forEach((c) => (rates[c.id] = c.default_tva_rate ?? 0));
-      setClientTvaRates(rates);
-    } catch (e) {
-      console.error("⚠️ Chargement TVA client:", e);
-    }
-  };
-
   /* -------------------------------------------------------------
      2️⃣ Chargement des réparations terminées
      ------------------------------------------------------------- */
@@ -78,27 +58,25 @@ export default function FacturesPage() {
         return;
       }
 
-      await loadClientTvaRates();
+      // Charger les TVA clients ET les réparations en parallèle
+      const [tvaResult, repairsResult, clientsResult] = await Promise.all([
+        supabase.from("clients").select("id, default_tva_rate").eq("user_id", user.id),
+        supabase.from("repairs").select("*, clients(*)").eq("user_id", user.id).eq("status", "✅ Terminé").order("created_at", { ascending: false }),
+        supabase.from("clients").select("*").eq("user_id", user.id),
+      ]);
 
-      const { data: repairsData, error: repairsError } = await supabase
-        .from("repairs")
-        .select("*, clients(*)")
-        .eq("user_id", user.id)
-        .eq("status", "✅ Terminé")
-        .order("created_at", { ascending: false });
+      // Construire le map TVA directement (pas via state = pas de stale closure)
+      const rates: Record<string, number> = {};
+      tvaResult.data?.forEach((c) => (rates[c.id] = c.default_tva_rate ?? 0));
+      setClientTvaRates(rates);
 
-      if (repairsError) throw repairsError;
+      if (clientsResult.data) setClients(clientsResult.data);
+      if (repairsResult.error) throw repairsResult.error;
 
-      const { data: clientsData } = await supabase
-        .from("clients")
-        .select("*")
-        .eq("user_id", user.id);
-      if (clientsData) setClients(clientsData);
-
-      const repairsWithDetails = (repairsData || []).map((r) => {
+      const repairsWithDetails = (repairsResult.data || []).map((r) => {
         const priceHt = r.final_price ?? r.estimated_price ?? 0;
-        const clientTva = clientTvaRates[r.client_id] ?? 0;
-        const tvaRate = r.tva_rate ?? clientTva;
+        // Priorité : tva_rate de la réparation, sinon tva du client (depuis rates frais, pas state)
+        const tvaRate = r.tva_rate ?? rates[r.client_id] ?? 0;
         const totalTtc = tvaRate === 0 ? priceHt : priceHt * (1 + tvaRate / 100);
         const paid = r.paid_amount ?? 0;
         const remaining = Math.max(0, totalTtc - paid);
@@ -131,37 +109,16 @@ export default function FacturesPage() {
   const updateClientTva = async (clientId, newTvaRate) => {
     setIsSending(true);
     try {
+      // Mise à jour client + toutes ses réparations terminées
       await supabase.from("clients").update({ default_tva_rate: newTvaRate }).eq("id", clientId);
-
-      setClientTvaRates((prev) => ({ ...prev, [clientId]: newTvaRate }));
-
-      const updatedRepairs = repairs.map((r) => {
-        if (r.client_id !== clientId) return r;
-        const totalTtc = newTvaRate === 0 ? r.priceHt : r.priceHt * (1 + newTvaRate / 100);
-        const remaining = Math.max(0, totalTtc - r.paidTtc);
-
-        // Sauvegarder seulement tva_rate — ne jamais écraser final_price (HT) avec le TTC
-        supabase
-          .from("repairs")
-          .update({ tva_rate: newTvaRate })
-          .eq("id", r.id)
-          .then((res) => {
-            if (res.error) console.error("Update error:", res.error);
-          });
-
-        return {
-          ...r,
-          tvaRate: newTvaRate,
-          totalTtc,
-          remainingTtc: remaining,
-          isFullyPaid: remaining <= 0,
-        };
-      });
-
-      setRepairs(updatedRepairs);
-      alert(`✅ TVA ${newTvaRate}% appliquée`);
+      const clientRepairIds = repairs.filter((r) => r.client_id === clientId).map((r) => r.id);
+      if (clientRepairIds.length > 0) {
+        await supabase.from("repairs").update({ tva_rate: newTvaRate }).in("id", clientRepairIds);
+      }
+      // Recharger depuis la DB — garantit un état cohérent, sans stale closure
+      await loadData();
     } catch (e) {
-      alert("❌ Erreur");
+      console.error("updateClientTva error:", e);
     } finally {
       setIsSending(false);
     }

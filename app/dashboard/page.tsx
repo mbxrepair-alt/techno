@@ -829,15 +829,13 @@ export default function Dashboard() {
       } catch (err) { console.error("QR client:", err); }
     }
 
-    let codeValue = ticket.unlock_code || ticket.code || "NC";
-    if (!codeValue || codeValue === "NC" || codeValue === "Non fourni") {
-      codeValue = "⚠️ NON FOURNI — pas pris en garantie";
-    }
+    const rawCode = ticket.unlock_code || ticket.code || "";
+    const hasCode = rawCode && rawCode !== "NC" && rawCode !== "Non fourni" && rawCode.trim() !== "";
+    const codeValue = hasCode ? rawCode : null;
     const notesValue = ticket.description || ticket.notes || "";
     const note = notesValue && notesValue !== "NC" ? escapeHtml(notesValue) : "—";
     const dateStr = new Date().toLocaleDateString("fr-FR");
     const timeStr = new Date().toLocaleTimeString("fr-FR", { hour: "2-digit", minute: "2-digit" });
-    const noGarantie = codeValue.includes("NON FOURNI");
 
     return `<!DOCTYPE html>
     <html><head><meta charset="UTF-8"><title>Ticket MBX-${ticket.id}</title>
@@ -857,7 +855,7 @@ export default function Dashboard() {
       .info-block{flex:1;font-size:8.5px;line-height:1.55}
       .lbl{font-weight:700;color:#334155;font-size:7.5px;text-transform:uppercase;letter-spacing:.5px}
       .val{color:#1e293b}
-      .code-box{font-size:8px;padding:1.5mm 2mm;border-radius:2mm;margin-top:2mm;border-left:2.5px solid ${noGarantie ? "#ef4444" : "#22c55e"};background:${noGarantie ? "#fef2f2" : "#f0fdf4"};color:${noGarantie ? "#991b1b" : "#166534"};font-weight:${noGarantie ? "700" : "normal"}}
+      .code-box{font-size:8px;padding:1.5mm 2mm;border-radius:2mm;margin-top:2mm;border-left:2.5px solid #22c55e;background:#f0fdf4;color:#166534}
       .note-box{font-size:8px;background:#fffbeb;border-left:2.5px solid #f59e0b;padding:1.5mm 2mm;border-radius:2mm;margin-top:2mm;color:#78350f}
       .qr-tech-area{text-align:center;min-width:28mm}
       .qr-tech-area img{width:28mm;height:28mm;display:block}
@@ -909,7 +907,7 @@ export default function Dashboard() {
             <div style="margin-top:2mm"><span class="lbl">Appareil</span><br><span class="val">${escapeHtml(ticket.device).substring(0, 28)}</span></div>
             <div style="margin-top:2mm"><span class="lbl">Panne</span><br><span class="val">${escapeHtml(ticket.issue).substring(0, 32)}</span></div>
             ${ticket.imei && ticket.imei !== "NC" ? `<div style="margin-top:2mm"><span class="lbl">IMEI</span><br><span class="val">${ticket.imei}</span></div>` : ""}
-            <div class="code-box">🔑 Code : ${codeValue}</div>
+            ${codeValue ? `<div class="code-box">🔑 Code : ${escapeHtml(codeValue)}</div>` : ""}
             <div class="note-box">📝 ${note}</div>
           </div>
           <div class="qr-tech-area">

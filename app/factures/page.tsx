@@ -140,9 +140,10 @@ export default function FacturesPage() {
         const totalTtc = newTvaRate === 0 ? r.priceHt : r.priceHt * (1 + newTvaRate / 100);
         const remaining = Math.max(0, totalTtc - r.paidTtc);
 
+        // Sauvegarder seulement tva_rate — ne jamais écraser final_price (HT) avec le TTC
         supabase
           .from("repairs")
-          .update({ tva_rate: newTvaRate, final_price: totalTtc })
+          .update({ tva_rate: newTvaRate })
           .eq("id", r.id)
           .then((res) => {
             if (res.error) console.error("Update error:", res.error);
@@ -255,41 +256,127 @@ export default function FacturesPage() {
      6️⃣ Impression PDF
      ------------------------------------------------------------- */
   const printInvoice = (group) => {
-    const win = window.open("", "_blank", "height=700,width=900");
-    if (!win) {
-      alert("Autorisez les pop-ups pour imprimer.");
-      return;
-    }
+    const win = window.open("", "_blank", "height=800,width=900");
+    if (!win) { alert("Autorisez les pop-ups pour imprimer."); return; }
 
-    win.document.write(`
-      <!DOCTYPE html>
-      <html>
-      <head><meta charset="UTF-8"><title>Facture ${group.client?.name}</title>
-      <style>
-        body{font-family:Arial,sans-serif;padding:20px;background:#f5f5f5}
-        .wrapper{max-width:800px;margin:auto;background:#fff;padding:30px;border-radius:8px}
-        .header{background:#2a5298;color:#fff;padding:20px;text-align:center}
-        table{width:100%;border-collapse:collapse;margin-top:15px}
-        th,td{border:1px solid #ddd;padding:10px;text-align:left}
-        .totals{text-align:right;margin-top:20px}
-        button{padding:10px 20px;background:#2a5298;color:#fff;border:none;border-radius:5px;margin:20px;cursor:pointer}
-      </style>
-      </head>
-      <body>
-      <div class="wrapper">
-        <div class="header"><h1>MBX Réparations</h1></div>
-        <p><strong>Client:</strong> ${group.client?.name}</p>
-        <p><strong>Date:</strong> ${new Date().toLocaleDateString()}</p>
-        <table><thead><tr><th>Ticket</th><th>Appareil</th><th>Panne</th><th>Montant TTC</th></tr></thead>
-        <tbody>${group.repairs.map((r) => `<tr><td>MBX-${r.id}</td><td>${r.device}</td><td>${r.issue}</td><td>${r.totalTtc.toFixed(2)}€</td></tr>`).join("")}</tbody>
-      </table>
-        <div class="totals"><strong>Total TTC: ${group.totalTtc.toFixed(2)}€</strong><br/>
-        Payé: ${group.totalPaid.toFixed(2)}€<br/>
-        Reste: ${group.totalRemaining.toFixed(2)}€</div>
+    const invoiceRef = `FACT-${String(group.client?.id || "").slice(0, 6).toUpperCase()}-${Date.now().toString().slice(-5)}`;
+    const totalHt = group.repairs.reduce((s, r) => s + r.priceHt, 0);
+    const totalTva = group.totalTtc - totalHt;
+    const date = new Date().toLocaleDateString("fr-FR");
+
+    win.document.write(`<!DOCTYPE html><html><head><meta charset="UTF-8">
+    <title>Facture ${invoiceRef}</title>
+    <style>
+      *{box-sizing:border-box;margin:0;padding:0}
+      body{font-family:'Segoe UI',Arial,sans-serif;background:#f0f2f5;padding:30px;color:#1a1a2e}
+      .page{max-width:800px;margin:auto;background:#fff;border-radius:12px;overflow:hidden;box-shadow:0 4px 24px rgba(0,0,0,.12)}
+      .header{background:linear-gradient(135deg,#6c2bd9,#4f46e5);color:#fff;padding:32px 36px;display:flex;justify-content:space-between;align-items:flex-start}
+      .logo{font-size:26px;font-weight:900;letter-spacing:-1px}
+      .logo span{color:#c4b5fd}
+      .invoice-meta{text-align:right}
+      .invoice-meta h2{font-size:18px;font-weight:700;color:#c4b5fd;text-transform:uppercase;letter-spacing:2px}
+      .invoice-meta p{font-size:13px;opacity:.85;margin-top:4px}
+      .body{padding:32px 36px}
+      .info-grid{display:grid;grid-template-columns:1fr 1fr;gap:24px;margin-bottom:28px}
+      .info-box h3{font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:1.5px;color:#6c2bd9;margin-bottom:8px;border-bottom:2px solid #e0d7ff;padding-bottom:4px}
+      .info-box p{font-size:13px;color:#444;line-height:1.7}
+      .info-box .name{font-size:15px;font-weight:700;color:#1a1a2e}
+      table{width:100%;border-collapse:collapse;margin-bottom:24px}
+      thead tr{background:#f5f3ff}
+      th{padding:10px 12px;text-align:left;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:1px;color:#6c2bd9;border-bottom:2px solid #e0d7ff}
+      th.right,td.right{text-align:right}
+      td{padding:11px 12px;font-size:13px;color:#333;border-bottom:1px solid #f0f0f0}
+      tr:last-child td{border-bottom:none}
+      tr:hover td{background:#faf8ff}
+      .ticket{font-family:monospace;font-weight:700;color:#6c2bd9}
+      .totals{display:flex;justify-content:flex-end;margin-bottom:28px}
+      .totals-box{width:280px;background:#f9f7ff;border-radius:10px;padding:16px;border:1px solid #e0d7ff}
+      .totals-row{display:flex;justify-content:space-between;font-size:13px;padding:4px 0;color:#555}
+      .totals-row.tva{border-top:1px solid #e0d7ff;margin-top:4px;padding-top:8px}
+      .totals-row.ttc{border-top:2px solid #6c2bd9;margin-top:6px;padding-top:10px;font-weight:700;font-size:16px;color:#1a1a2e}
+      .totals-row.paid{color:#16a34a;font-weight:600}
+      .totals-row.due{color:#dc2626;font-weight:700;font-size:14px;border-top:1px dashed #fca5a5;margin-top:6px;padding-top:8px}
+      .badge{display:inline-block;padding:3px 10px;border-radius:20px;font-size:11px;font-weight:700}
+      .badge-paid{background:#dcfce7;color:#16a34a}
+      .badge-due{background:#fef2f2;color:#dc2626}
+      .footer{background:#f9f7ff;border-top:1px solid #e0d7ff;padding:18px 36px;font-size:11px;color:#888;display:flex;justify-content:space-between}
+      @media print{body{padding:0;background:#fff}.page{box-shadow:none}.no-print{display:none!important}}
+      .print-btn{display:block;text-align:center;margin:20px auto;padding:12px 32px;background:linear-gradient(135deg,#6c2bd9,#4f46e5);color:#fff;border:none;border-radius:8px;font-size:14px;font-weight:700;cursor:pointer;letter-spacing:.5px}
+    </style></head><body>
+    <div class="page">
+      <div class="header">
+        <div>
+          <div class="logo">MBX <span>Réparations</span></div>
+          <p style="margin-top:6px;font-size:12px;opacity:.8">Atelier de réparation mobile &amp; électronique</p>
+        </div>
+        <div class="invoice-meta">
+          <h2>Facture</h2>
+          <p>${invoiceRef}</p>
+          <p>Date : ${date}</p>
+        </div>
       </div>
-      <button onclick="window.print();window.close()">🖨️ Imprimer</button>
-      </body></html>
-    `);
+      <div class="body">
+        <div class="info-grid">
+          <div class="info-box">
+            <h3>Émetteur</h3>
+            <p class="name">MBX Réparations</p>
+            <p>8 Rue de l'Épée, 69003 Lyon</p>
+            <p>contact@mbx-reparations.fr</p>
+            <p>04 72 60 16 13</p>
+          </div>
+          <div class="info-box">
+            <h3>Client</h3>
+            <p class="name">${group.client?.name || "—"}</p>
+            ${group.client?.phone ? `<p>📞 ${group.client.phone}</p>` : ""}
+            ${group.client?.email ? `<p>✉️ ${group.client.email}</p>` : ""}
+            ${group.client?.client_code ? `<p>Code : <strong>${group.client.client_code}</strong></p>` : ""}
+          </div>
+        </div>
+        <table>
+          <thead>
+            <tr>
+              <th>Ticket</th>
+              <th>Appareil</th>
+              <th>Désignation</th>
+              <th class="right">Prix HT</th>
+              <th class="right">TVA</th>
+              <th class="right">Total TTC</th>
+            </tr>
+          </thead>
+          <tbody>
+            ${group.repairs.map((r) => `
+              <tr>
+                <td><span class="ticket">MBX-${r.id}</span></td>
+                <td>${r.device}</td>
+                <td style="color:#555">${r.issue}</td>
+                <td class="right">${r.priceHt.toFixed(2)} €</td>
+                <td class="right">${r.tvaRate > 0 ? r.tvaRate + "%" : "—"}</td>
+                <td class="right" style="font-weight:600">${r.totalTtc.toFixed(2)} €</td>
+              </tr>`).join("")}
+          </tbody>
+        </table>
+        <div class="totals">
+          <div class="totals-box">
+            <div class="totals-row"><span>Total HT</span><span>${totalHt.toFixed(2)} €</span></div>
+            ${totalTva > 0 ? `<div class="totals-row tva"><span>TVA</span><span>${totalTva.toFixed(2)} €</span></div>` : ""}
+            <div class="totals-row ttc"><span>Total TTC</span><span>${group.totalTtc.toFixed(2)} €</span></div>
+            ${group.totalPaid > 0 ? `<div class="totals-row paid"><span>Déjà réglé</span><span>− ${group.totalPaid.toFixed(2)} €</span></div>` : ""}
+            <div class="totals-row due">
+              <span>Reste à payer</span>
+              <span>${group.totalRemaining.toFixed(2)} €
+                <span class="badge ${group.totalRemaining <= 0 ? "badge-paid" : "badge-due"}">${group.totalRemaining <= 0 ? "SOLDÉ" : "DÛ"}</span>
+              </span>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="footer">
+        <span>Merci pour votre confiance · MBX Réparations</span>
+        <span>Garantie : 3 mois pièces &amp; main d'œuvre</span>
+      </div>
+    </div>
+    <button class="print-btn no-print" onclick="window.print()">🖨️ Imprimer / Sauvegarder en PDF</button>
+    </body></html>`);
     win.document.close();
   };
 
@@ -531,8 +618,9 @@ export default function FacturesPage() {
                           <th className="px-4 py-2.5 text-left text-xs font-bold text-purple-400 uppercase tracking-widest">Ticket</th>
                           <th className="px-4 py-2.5 text-left text-xs font-bold text-purple-400 uppercase tracking-widest">Appareil</th>
                           <th className="px-4 py-2.5 text-left text-xs font-bold text-purple-400 uppercase tracking-widest">Panne</th>
+                          <th className="px-4 py-2.5 text-center text-xs font-bold text-purple-400 uppercase tracking-widest">HT</th>
+                          <th className="px-4 py-2.5 text-center text-xs font-bold text-purple-400 uppercase tracking-widest">TVA</th>
                           <th className="px-4 py-2.5 text-center text-xs font-bold text-purple-400 uppercase tracking-widest">TTC</th>
-                          <th className="px-4 py-2.5 text-center text-xs font-bold text-purple-400 uppercase tracking-widest">Payé</th>
                           <th className="px-4 py-2.5 text-center text-xs font-bold text-purple-400 uppercase tracking-widest">Reste</th>
                           <th className="px-4 py-2.5 text-center text-xs font-bold text-purple-400 uppercase tracking-widest">Actions</th>
                         </tr>
@@ -543,9 +631,10 @@ export default function FacturesPage() {
                             <td className="px-4 py-3 font-mono text-purple-400 text-sm font-bold">MBX-{r.id}</td>
                             <td className="px-4 py-3 text-sm text-white">{r.device}</td>
                             <td className="px-4 py-3 text-sm text-gray-400">{r.issue}</td>
-                            <td className="px-4 py-3 text-center text-white text-sm">{r.totalTtc.toFixed(2)}€</td>
-                            <td className="px-4 py-3 text-center text-green-400 text-sm">{r.paidTtc.toFixed(2)}€</td>
-                            <td className="px-4 py-3 text-center text-red-400 text-sm">{r.remainingTtc.toFixed(2)}€</td>
+                            <td className="px-4 py-3 text-center text-white text-sm font-semibold">{r.priceHt.toFixed(2)}€</td>
+                            <td className="px-4 py-3 text-center text-gray-400 text-sm">{r.tvaRate}%</td>
+                            <td className="px-4 py-3 text-center text-gray-300 text-sm">{r.totalTtc.toFixed(2)}€</td>
+                            <td className="px-4 py-3 text-center text-red-400 text-sm font-bold">{r.remainingTtc.toFixed(2)}€</td>
                             <td className="px-4 py-3 text-center">
                               <button
                                 onClick={() => { setSelectedGroup({ ...group, repairs: [r], totalRemaining: r.remainingTtc }); setPaymentAmount(r.remainingTtc.toString()); setShowPaymentModal(true); }}
@@ -611,7 +700,9 @@ export default function FacturesPage() {
                             <th className="px-4 py-2.5 text-left text-xs font-bold text-green-400 uppercase tracking-widest">Ticket</th>
                             <th className="px-4 py-2.5 text-left text-xs font-bold text-green-400 uppercase tracking-widest">Appareil</th>
                             <th className="px-4 py-2.5 text-left text-xs font-bold text-green-400 uppercase tracking-widest">Panne</th>
-                            <th className="px-4 py-2.5 text-center text-xs font-bold text-green-400 uppercase tracking-widest">Montant TTC</th>
+                            <th className="px-4 py-2.5 text-center text-xs font-bold text-green-400 uppercase tracking-widest">HT</th>
+                            <th className="px-4 py-2.5 text-center text-xs font-bold text-green-400 uppercase tracking-widest">TVA</th>
+                            <th className="px-4 py-2.5 text-center text-xs font-bold text-green-400 uppercase tracking-widest">TTC</th>
                             <th className="px-4 py-2.5 text-center text-xs font-bold text-green-400 uppercase tracking-widest">Actions</th>
                           </tr>
                         </thead>
@@ -621,7 +712,9 @@ export default function FacturesPage() {
                               <td className="px-4 py-3 font-mono text-purple-400 text-sm font-bold">MBX-{r.id}</td>
                               <td className="px-4 py-3 text-sm text-white">{r.device}</td>
                               <td className="px-4 py-3 text-sm text-gray-400">{r.issue}</td>
-                              <td className="px-4 py-3 text-center text-white text-sm">{r.totalTtc.toFixed(2)}€</td>
+                              <td className="px-4 py-3 text-center text-white text-sm font-semibold">{r.priceHt.toFixed(2)}€</td>
+                              <td className="px-4 py-3 text-center text-gray-400 text-sm">{r.tvaRate}%</td>
+                              <td className="px-4 py-3 text-center text-green-400 text-sm font-bold">{r.totalTtc.toFixed(2)}€</td>
                               <td className="px-4 py-3 text-center">
                                 <button onClick={() => printInvoice({ ...group, repairs: [r] })} className="px-3 py-1 bg-purple-600 hover:bg-purple-500 text-white rounded-lg text-xs transition-all font-medium">
                                   🧾 Facture

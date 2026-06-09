@@ -803,112 +803,160 @@ export default function Dashboard() {
     }
   };
 
-  // Générer TICKET
+  // Générer TICKET (2 parties : technicien + client)
   const generateCreditCardTicket = async (ticket, client, trackingUrl = null) => {
-    let qrCodeDataUrl = null;
-    if (client && client.client_code) {
+    const BASE_URL = "https://technophone.vercel.app";
+
+    // QR 1 — Technicien : accès direct à la fiche réparation (scan zipette)
+    let qrTechUrl = null;
+    try {
+      qrTechUrl = await QRCode.toDataURL(`${BASE_URL}/repairs/${ticket.id}`, {
+        width: 140, margin: 1,
+        color: { dark: "#1e3a8a", light: "#ffffff" },
+        errorCorrectionLevel: "M",
+      });
+    } catch (err) { console.error("QR tech:", err); }
+
+    // QR 2 — Client : suivi de réparation
+    let qrClientUrl = null;
+    if (client?.client_code) {
       try {
-        const suiviClientUrl = `https://technophone.vercel.app/suivi-client?code=${client.client_code}`;
-        qrCodeDataUrl = await QRCode.toDataURL(suiviClientUrl, {
-          width: 120,
-          margin: 2,
-          color: { dark: "#000000", light: "#ffffff" },
+        qrClientUrl = await QRCode.toDataURL(`${BASE_URL}/suivi-client?code=${client.client_code}`, {
+          width: 140, margin: 1,
+          color: { dark: "#166534", light: "#ffffff" },
           errorCorrectionLevel: "H",
         });
-      } catch (err) {
-        console.error("Erreur génération QR Code:", err);
-      }
+      } catch (err) { console.error("QR client:", err); }
     }
 
     let codeValue = ticket.unlock_code || ticket.code || "NC";
-    if (
-      codeValue === "" ||
-      codeValue === "NC" ||
-      codeValue === null ||
-      codeValue === "Non fourni"
-    ) {
-      codeValue = "⚠️ NON FOURNI - Test impossible, pas pris en garantie";
+    if (!codeValue || codeValue === "NC" || codeValue === "Non fourni") {
+      codeValue = "⚠️ NON FOURNI — pas pris en garantie";
     }
-
     const notesValue = ticket.description || ticket.notes || "";
-    const descriptionFinale =
-      notesValue && notesValue !== "" && notesValue !== "NC"
-        ? `📝 ${notesValue}`
-        : "📝 Aucune note spécifique";
+    const note = notesValue && notesValue !== "NC" ? escapeHtml(notesValue) : "—";
+    const dateStr = new Date().toLocaleDateString("fr-FR");
+    const timeStr = new Date().toLocaleTimeString("fr-FR", { hour: "2-digit", minute: "2-digit" });
+    const noGarantie = codeValue.includes("NON FOURNI");
 
     return `<!DOCTYPE html>
-    <html>
-    <head>
-      <meta charset="UTF-8">
-      <title>Ticket suivi - ${companyInfo.name}</title>
-      <style>
-        * { margin: 0; padding: 0; box-sizing: border-box; }
-        body { font-family: 'Courier New', monospace; background: #f0f0f0; display: flex; justify-content: center; align-items: center; min-height: 100vh; padding: 20px; }
-        .card { width: 90mm; min-height: 64mm; background: white; border-radius: 5mm; padding: 4mm; box-shadow: 0 2px 5px rgba(0,0,0,0.1); display: flex; flex-direction: column; justify-content: space-between; }
-        .cut-line { text-align: center; font-size: 8px; color: #ccc; margin-bottom: 2mm; letter-spacing: 2px; }
-        .header { text-align: center; border-bottom: 1px solid #ddd; padding-bottom: 2mm; margin-bottom: 2mm; }
-        .header h2 { font-size: 12px; font-weight: bold; margin: 0; }
-        .header p { font-size: 9px; color: #666; margin: 2px 0; }
-        .ticket-number { text-align: center; background: #f5f5f5; padding: 3mm; border-radius: 3mm; margin-bottom: 3mm; font-size: 11px; font-weight: bold; }
-        .client-info { font-size: 9px; margin-bottom: 3mm; line-height: 1.4; background: #fafafa; padding: 3mm; border-radius: 2mm; }
-        .client-info .label { font-weight: bold; background: #e0e0e0; padding: 1px 3px; border-radius: 2px; display: inline-block; margin-bottom: 2px; }
-        .client-info .code-value { font-size: 12px; font-weight: bold; color: #2563eb; }
-        .device-info { font-size: 9px; margin-bottom: 3mm; background: #fafafa; padding: 3mm; border-radius: 2mm; }
-        .device-info .label { font-weight: bold; background: #e0e0e0; padding: 1px 3px; border-radius: 2px; display: inline-block; }
-        .middle-section { display: flex; gap: 4mm; align-items: flex-start; justify-content: space-between; margin-bottom: 3mm; }
-        .left-info { flex: 1; }
-        .qr-area { text-align: center; min-width: 35mm; }
-        .qr-area img { width: 30mm; height: 30mm; }
-        .qr-text { font-size: 7px; color: #2563eb; text-align: center; margin-top: 1mm; font-weight: bold; }
-        .notes { font-size: 8px; background: #fff8e1; padding: 2mm; border-radius: 2mm; margin-bottom: 3mm; border-left: 2px solid #ffc107; white-space: pre-line; }
-        .code-info { font-size: 8px; background: ${codeValue.includes("NON FOURNI") ? "#ffebee" : "#e8f5e9"}; padding: 2mm; border-radius: 2mm; margin-bottom: 3mm; border-left: 2px solid ${codeValue.includes("NON FOURNI") ? "#f44336" : "#4caf50"}; font-weight: ${codeValue.includes("NON FOURNI") ? "bold" : "normal"}; }
-        .footer { display: flex; justify-content: space-between; align-items: center; border-top: 1px solid #ddd; padding-top: 2mm; font-size: 8px; color: #666; }
-        @media print { body { background: white; margin: 0; padding: 0; } .card { box-shadow: none; page-break-after: avoid; page-break-inside: avoid; } .no-print { display: none; } }
-        .no-print { text-align: center; margin-top: 5mm; }
-        button { padding: 4mm 6mm; margin: 0 2mm; background: #333; color: white; border: none; border-radius: 3mm; font-size: 10px; cursor: pointer; }
-      </style>
-    </head>
-    <body>
-      <div>
-        <div class="cut-line">----- Ticket à découper -----</div>
-        <div class="card">
-          <div class="header">
-            <h2>🔧 ${companyInfo.name.substring(0, 22)}</h2>
-            <p>${companyInfo.phone ? `📞 ${companyInfo.phone}` : ""}</p>
-            <p>${companyInfo.address ? `${companyInfo.address.substring(0, 30)}` : ""}</p>
+    <html><head><meta charset="UTF-8"><title>Ticket MBX-${ticket.id}</title>
+    <style>
+      *{margin:0;padding:0;box-sizing:border-box}
+      body{font-family:'Courier New',monospace;background:#e5e7eb;display:flex;justify-content:center;padding:16px}
+      .wrapper{display:flex;flex-direction:column;align-items:center;gap:0;width:90mm}
+
+      /* ── PARTIE TECHNICIEN ── */
+      .tech-card{width:90mm;background:#fff;border-radius:4mm 4mm 0 0;padding:4mm;border:1px solid #c7d2fe;border-bottom:none}
+      .tech-header{display:flex;justify-content:space-between;align-items:flex-start;border-bottom:1px solid #e0e7ff;padding-bottom:2mm;margin-bottom:2mm}
+      .tech-header-left h2{font-size:11px;font-weight:900;color:#1e3a8a;letter-spacing:.5px}
+      .tech-header-left p{font-size:8px;color:#64748b}
+      .badge-tech{background:#1e3a8a;color:#fff;font-size:8px;font-weight:700;padding:1mm 2.5mm;border-radius:2mm}
+      .ticket-id{text-align:center;font-size:20px;font-weight:900;color:#1e3a8a;letter-spacing:1px;padding:2mm 0;border-bottom:1px dashed #c7d2fe;margin-bottom:2mm}
+      .row{display:flex;justify-content:space-between;align-items:flex-start;gap:3mm}
+      .info-block{flex:1;font-size:8.5px;line-height:1.55}
+      .lbl{font-weight:700;color:#334155;font-size:7.5px;text-transform:uppercase;letter-spacing:.5px}
+      .val{color:#1e293b}
+      .code-box{font-size:8px;padding:1.5mm 2mm;border-radius:2mm;margin-top:2mm;border-left:2.5px solid ${noGarantie ? "#ef4444" : "#22c55e"};background:${noGarantie ? "#fef2f2" : "#f0fdf4"};color:${noGarantie ? "#991b1b" : "#166534"};font-weight:${noGarantie ? "700" : "normal"}}
+      .note-box{font-size:8px;background:#fffbeb;border-left:2.5px solid #f59e0b;padding:1.5mm 2mm;border-radius:2mm;margin-top:2mm;color:#78350f}
+      .qr-tech-area{text-align:center;min-width:28mm}
+      .qr-tech-area img{width:28mm;height:28mm;display:block}
+      .qr-tech-label{font-size:6.5px;color:#1e3a8a;font-weight:700;text-align:center;margin-top:1mm;line-height:1.2}
+      .tech-footer{display:flex;justify-content:space-between;font-size:7.5px;color:#94a3b8;border-top:1px solid #e2e8f0;padding-top:1.5mm;margin-top:2mm}
+
+      /* ── LIGNE DE DÉCOUPE ── */
+      .cut{width:90mm;text-align:center;font-size:8px;color:#9ca3af;letter-spacing:3px;padding:2mm 0;border-top:1px dashed #9ca3af;border-bottom:1px dashed #9ca3af;background:#f9fafb}
+
+      /* ── PARTIE CLIENT ── */
+      .client-card{width:90mm;background:#fff;border-radius:0 0 4mm 4mm;padding:3mm 4mm;border:1px solid #bbf7d0;border-top:none}
+      .client-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:2mm}
+      .client-header-title{font-size:10px;font-weight:900;color:#166534}
+      .client-header-title span{font-size:8px;font-weight:normal;color:#64748b;display:block}
+      .badge-client{background:#166534;color:#fff;font-size:8px;font-weight:700;padding:1mm 2.5mm;border-radius:2mm}
+      .client-info-row{display:flex;justify-content:space-between;align-items:flex-start;gap:3mm}
+      .client-info-block{flex:1;font-size:8.5px;line-height:1.6}
+      .client-code-big{font-size:15px;font-weight:900;color:#166534;letter-spacing:1px;margin:1mm 0}
+      .qr-client-area{text-align:center;min-width:28mm}
+      .qr-client-area img{width:28mm;height:28mm;display:block}
+      .qr-client-label{font-size:6.5px;color:#166534;font-weight:700;text-align:center;margin-top:1mm;line-height:1.2}
+
+      @media print{
+        body{background:#fff;padding:0}
+        .wrapper{gap:0}
+        .no-print{display:none!important}
+        .tech-card,.client-card,.cut{page-break-inside:avoid}
+      }
+      .no-print{text-align:center;margin-top:6mm;display:flex;gap:3mm;justify-content:center}
+      button{padding:3mm 6mm;background:#1e3a8a;color:#fff;border:none;border-radius:3mm;font-size:10px;cursor:pointer}
+      button.close{background:#64748b}
+    </style></head>
+    <body><div class="wrapper">
+
+      <!-- PARTIE TECHNICIEN -->
+      <div class="tech-card">
+        <div class="tech-header">
+          <div class="tech-header-left">
+            <h2>🔧 ${escapeHtml(companyInfo.name).substring(0, 22)}</h2>
+            <p>${companyInfo.phone ? `📞 ${companyInfo.phone}` : ""} ${companyInfo.address ? `· ${companyInfo.address.substring(0, 25)}` : ""}</p>
           </div>
-          <div class="ticket-number">🎫 MBX-${ticket.id}</div>
-          <div class="client-info">
-            <span class="label">👤 Client</span> ${escapeHtml(client.name).substring(0, 30)}<br>
-            <span class="label">📞 Téléphone</span> ${escapeHtml(client.phone) || "---"}<br>
-            <span class="label">🔑 Code client</span> <span class="code-value">${client.client_code || "----"}</span><br>
-            ${client.email && client.email !== "NC" ? `<span class="label">✉️ Email</span> ${escapeHtml(client.email).substring(0, 30)}` : ""}
+          <span class="badge-tech">ATELIER</span>
+        </div>
+        <div class="ticket-id">MBX-${ticket.id}</div>
+        <div class="row">
+          <div class="info-block">
+            <div><span class="lbl">Client</span><br><span class="val">${escapeHtml(client.name).substring(0, 30)}</span></div>
+            <div style="margin-top:2mm"><span class="lbl">Téléphone</span><br><span class="val">${escapeHtml(client.phone) || "—"}</span></div>
+            <div style="margin-top:2mm"><span class="lbl">Appareil</span><br><span class="val">${escapeHtml(ticket.device).substring(0, 28)}</span></div>
+            <div style="margin-top:2mm"><span class="lbl">Panne</span><br><span class="val">${escapeHtml(ticket.issue).substring(0, 32)}</span></div>
+            ${ticket.imei && ticket.imei !== "NC" ? `<div style="margin-top:2mm"><span class="lbl">IMEI</span><br><span class="val">${ticket.imei}</span></div>` : ""}
+            <div class="code-box">🔑 Code : ${codeValue}</div>
+            <div class="note-box">📝 ${note}</div>
           </div>
-          <div class="middle-section">
-            <div class="left-info">
-              <div class="device-info">
-                <div><span class="label">📱 Modèle</span><br>${escapeHtml(ticket.device).substring(0, 28)}</div>
-                <div style="margin-top: 2mm;"><span class="label">🔧 Panne</span><br>${escapeHtml(ticket.issue).substring(0, 32)}</div>
-                ${ticket.imei && ticket.imei !== "NC" ? `<div style="margin-top: 2mm;"><span class="label">🔢 IMEI</span><br>${ticket.imei}</div>` : ""}
-              </div>
-            </div>
-            ${qrCodeDataUrl ? `<div class="qr-area"><img src="${qrCodeDataUrl}" /><div class="qr-text">🔗 Scannez pour suivre</div></div>` : ""}
-          </div>
-          <div class="code-info">🔑 <strong>Code:</strong> ${codeValue}</div>
-          <div class="notes">${descriptionFinale}</div>
-          <div class="footer">
-            <span>⏱ ${new Date().toLocaleDateString("fr-FR")} ${new Date().toLocaleTimeString("fr-FR", { hour: "2-digit", minute: "2-digit" })}</span>
-            <span>🔧 ${companyInfo.name.substring(0, 15)}</span>
+          <div class="qr-tech-area">
+            ${qrTechUrl ? `<img src="${qrTechUrl}"/>` : ""}
+            <div class="qr-tech-label">📲 Scanner pour<br>ouvrir la fiche</div>
           </div>
         </div>
-        <div class="cut-line">----- Découpez ici -----</div>
-        <div class="no-print">
-          <button onclick="window.print();">🖨️ IMPRIMER</button>
-          <button onclick="window.close();">❌ FERMER</button>
+        <div class="tech-footer">
+          <span>⏱ ${dateStr} ${timeStr}</span>
+          <span>Réparation · ${escapeHtml(companyInfo.name).substring(0, 15)}</span>
         </div>
       </div>
-    </body>
-    </html>`;
+
+      <!-- LIGNE DE DÉCOUPE -->
+      <div class="cut">✂ &nbsp; &nbsp; À remettre au client &nbsp; &nbsp; ✂</div>
+
+      <!-- PARTIE CLIENT -->
+      <div class="client-card">
+        <div class="client-header">
+          <div class="client-header-title">
+            🎫 MBX-${ticket.id}
+            <span>${escapeHtml(ticket.device).substring(0, 30)} · ${dateStr}</span>
+          </div>
+          <span class="badge-client">CLIENT</span>
+        </div>
+        <div class="client-info-row">
+          <div class="client-info-block">
+            <div><span class="lbl">Client</span><br>${escapeHtml(client.name).substring(0, 28)}</div>
+            <div style="margin-top:2mm"><span class="lbl">Panne déclarée</span><br>${escapeHtml(ticket.issue).substring(0, 30)}</div>
+            <div style="margin-top:2mm">
+              <span class="lbl">Votre code de suivi</span>
+              <div class="client-code-big">${client.client_code || "—"}</div>
+              <span style="font-size:7px;color:#64748b">→ technophone.vercel.app/suivi-client</span>
+            </div>
+          </div>
+          <div class="qr-client-area">
+            ${qrClientUrl ? `<img src="${qrClientUrl}"/>` : ""}
+            <div class="qr-client-label">🔍 Suivre votre<br>réparation</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="no-print">
+        <button onclick="window.print()">🖨️ Imprimer</button>
+        <button class="close" onclick="window.close()">✕ Fermer</button>
+      </div>
+    </div></body></html>`;
   };
 
   const printTicket = async (ticket, client, trackingUrl = null) => {

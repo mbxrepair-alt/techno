@@ -856,6 +856,7 @@ export default function Dashboard() {
       .lbl{font-weight:700;color:#334155;font-size:7.5px;text-transform:uppercase;letter-spacing:.5px}
       .val{color:#1e293b}
       .code-box{font-size:8px;padding:1.5mm 2mm;border-radius:2mm;margin-top:2mm;border-left:2.5px solid #22c55e;background:#f0fdf4;color:#166534}
+      .code-box.no-code{border-left-color:#ef4444;background:#fef2f2;color:#991b1b;font-weight:700}
       .note-box{font-size:8px;background:#fffbeb;border-left:2.5px solid #f59e0b;padding:1.5mm 2mm;border-radius:2mm;margin-top:2mm;color:#78350f}
       .qr-tech-area{text-align:center;min-width:28mm}
       .qr-tech-area img{width:28mm;height:28mm;display:block}
@@ -907,7 +908,10 @@ export default function Dashboard() {
             <div style="margin-top:2mm"><span class="lbl">Appareil</span><br><span class="val">${escapeHtml(ticket.device).substring(0, 28)}</span></div>
             <div style="margin-top:2mm"><span class="lbl">Panne</span><br><span class="val">${escapeHtml(ticket.issue).substring(0, 32)}</span></div>
             ${ticket.imei && ticket.imei !== "NC" ? `<div style="margin-top:2mm"><span class="lbl">IMEI</span><br><span class="val">${ticket.imei}</span></div>` : ""}
-            ${codeValue ? `<div class="code-box">🔑 Code : ${escapeHtml(codeValue)}</div>` : ""}
+            ${codeValue
+              ? `<div class="code-box">🔑 Code : ${escapeHtml(codeValue)}</div>`
+              : `<div class="code-box no-code">⚠️ NON FOURNI — test impossible, pas pris en garantie</div>`
+            }
             <div class="note-box">📝 ${note}</div>
           </div>
           <div class="qr-tech-area">

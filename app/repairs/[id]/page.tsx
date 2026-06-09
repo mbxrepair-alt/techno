@@ -1006,6 +1006,7 @@ export default function RepairDetailPage() {
                   className="w-full border-0 focus:ring-0 text-gray-700 resize-none text-sm font-mono"
                   rows={6}
                   type="diagnostic"
+                  repairData={{ device: repair?.device, issue: repair?.issue }}
                 />
                 <p className="text-xs text-gray-400 mt-1">🔒 Ce texte est INTERNE</p>
               </div>
@@ -1061,6 +1062,25 @@ export default function RepairDetailPage() {
                 <h2 className="font-semibold text-gray-700 text-sm">⚠️ Risques & Préconisations</h2>
               </div>
               <div className="p-3">
+                <div className="flex flex-wrap gap-1.5 mb-2">
+                  {[
+                    "⚠️ Risque qu'il ne se rallume plus",
+                    "⚠️ Données non garanties",
+                    "⚠️ Écran peut se détériorer davantage",
+                    "⚠️ Batterie peut gonfler",
+                    "⚠️ Micro/haut-parleur peut rester défaillant",
+                    "⚠️ Prise en charge non couverte par la garantie",
+                  ].map((chip) => (
+                    <button
+                      key={chip}
+                      type="button"
+                      onClick={() => setRisks((prev) => prev ? prev + "\n" + chip : chip)}
+                      className="text-xs bg-orange-50 border border-orange-200 text-orange-700 px-2 py-1 rounded-full hover:bg-orange-100 transition"
+                    >
+                      {chip}
+                    </button>
+                  ))}
+                </div>
                 <textarea
                   rows={3}
                   value={risks}

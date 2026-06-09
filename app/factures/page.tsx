@@ -42,6 +42,7 @@ export default function FacturesPage() {
   const [showEmailModal, setShowEmailModal] = useState(false);
   const [emailTo, setEmailTo] = useState("");
   const [selectedGroupForEmail, setSelectedGroupForEmail] = useState(null);
+  const [companyProfile, setCompanyProfile] = useState<{ name: string; address: string; phone: string; email: string; siret: string; logo_url: string }>({ name: "MBX", address: "", phone: "", email: "", siret: "", logo_url: "" });
 
   /* -------------------------------------------------------------
      1️⃣ Chargement du taux de TVA par client
@@ -58,12 +59,17 @@ export default function FacturesPage() {
         return;
       }
 
-      // Charger les TVA clients ET les réparations en parallèle
-      const [tvaResult, repairsResult, clientsResult] = await Promise.all([
+      // Charger le profil entreprise + TVA + réparations en parallèle
+      const [profileResult, tvaResult, repairsResult, clientsResult] = await Promise.all([
+        supabase.from("profiles").select("company_name, contact_phone, contact_address, email, siret, logo_url").eq("id", user.id).single(),
         supabase.from("clients").select("id, default_tva_rate").eq("user_id", user.id),
         supabase.from("repairs").select("*, clients(*)").eq("user_id", user.id).in("status", ["✅ Terminé", "📦 Rendu", "🚫 Refus client"]).order("created_at", { ascending: false }),
         supabase.from("clients").select("*").eq("user_id", user.id),
       ]);
+      if (profileResult.data) {
+        const p = profileResult.data;
+        setCompanyProfile({ name: p.company_name?.replace(/\s*réparations?\s*/i, "").trim() || "MBX", address: p.contact_address || "", phone: p.contact_phone || "", email: p.email || "", siret: p.siret || "", logo_url: p.logo_url || "" });
+      }
 
       // Construire le map TVA directement (pas via state = pas de stale closure)
       const rates: Record<string, number> = {};
@@ -211,126 +217,182 @@ export default function FacturesPage() {
      6️⃣ Impression PDF
      ------------------------------------------------------------- */
   const printInvoice = (group) => {
-    const win = window.open("", "_blank", "height=800,width=900");
+    const win = window.open("", "_blank", "height=900,width=1000");
     if (!win) { alert("Autorisez les pop-ups pour imprimer."); return; }
 
-    const invoiceRef = `FACT-${String(group.client?.id || "").slice(0, 6).toUpperCase()}-${Date.now().toString().slice(-5)}`;
+    const cp = companyProfile;
+    const shortName = cp.name || "MBX";
+    const invoiceRef = `FACT-${String(group.client?.id || "").padStart(4, "0")}-${Date.now().toString().slice(-5)}`;
     const totalHt = group.repairs.reduce((s, r) => s + r.priceHt, 0);
     const totalTva = group.totalTtc - totalHt;
     const date = new Date().toLocaleDateString("fr-FR");
+    const isSolde = group.totalRemaining <= 0;
+
+    const logoHtml = cp.logo_url
+      ? `<img src="${cp.logo_url}" style="height:52px;max-width:160px;object-fit:contain;display:block" alt="logo"/>`
+      : `<div style="font-size:32px;font-weight:900;letter-spacing:-2px;color:#fff;line-height:1">${shortName}<span style="font-size:13px;font-weight:400;opacity:.7;margin-left:4px;letter-spacing:1px">RÉPARATIONS</span></div>`;
 
     win.document.write(`<!DOCTYPE html><html><head><meta charset="UTF-8">
     <title>Facture ${invoiceRef}</title>
     <style>
       *{box-sizing:border-box;margin:0;padding:0}
-      body{font-family:'Segoe UI',Arial,sans-serif;background:#f0f2f5;padding:30px;color:#1a1a2e}
-      .page{max-width:800px;margin:auto;background:#fff;border-radius:12px;overflow:hidden;box-shadow:0 4px 24px rgba(0,0,0,.12)}
-      .header{background:linear-gradient(135deg,#6c2bd9,#4f46e5);color:#fff;padding:32px 36px;display:flex;justify-content:space-between;align-items:flex-start}
-      .logo{font-size:26px;font-weight:900;letter-spacing:-1px}
-      .logo span{color:#c4b5fd}
-      .invoice-meta{text-align:right}
-      .invoice-meta h2{font-size:18px;font-weight:700;color:#c4b5fd;text-transform:uppercase;letter-spacing:2px}
-      .invoice-meta p{font-size:13px;opacity:.85;margin-top:4px}
+      @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;900&display=swap');
+      body{font-family:'Inter','Segoe UI',Arial,sans-serif;background:#eef0f6;min-height:100vh;padding:28px 20px;color:#111827}
+      .page{max-width:820px;margin:auto;background:#fff;border-radius:16px;overflow:hidden;box-shadow:0 8px 40px rgba(0,0,0,.13)}
+
+      /* ── HEADER ── */
+      .header{background:linear-gradient(135deg,#1e1b4b 0%,#312e81 45%,#4c1d95 100%);padding:0;display:flex;min-height:120px}
+      .header-left{flex:1;padding:28px 36px;display:flex;flex-direction:column;justify-content:space-between}
+      .header-right{width:220px;background:rgba(255,255,255,.06);padding:24px 28px;display:flex;flex-direction:column;justify-content:center;align-items:flex-end;border-left:1px solid rgba(255,255,255,.1)}
+      .invoice-label{font-size:11px;font-weight:600;letter-spacing:3px;text-transform:uppercase;color:rgba(255,255,255,.5);margin-bottom:4px}
+      .invoice-number{font-size:17px;font-weight:700;color:#fff;font-family:monospace;letter-spacing:1px}
+      .invoice-date{font-size:12px;color:rgba(255,255,255,.6);margin-top:6px}
+      .status-badge{display:inline-flex;align-items:center;gap:6px;padding:6px 14px;border-radius:20px;font-size:12px;font-weight:700;margin-top:10px;letter-spacing:.3px}
+      .status-due{background:#fef2f2;color:#dc2626}
+      .status-paid{background:#dcfce7;color:#16a34a}
+
+      /* ── BODY ── */
       .body{padding:32px 36px}
-      .info-grid{display:grid;grid-template-columns:1fr 1fr;gap:24px;margin-bottom:28px}
-      .info-box h3{font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:1.5px;color:#6c2bd9;margin-bottom:8px;border-bottom:2px solid #e0d7ff;padding-bottom:4px}
-      .info-box p{font-size:13px;color:#444;line-height:1.7}
-      .info-box .name{font-size:15px;font-weight:700;color:#1a1a2e}
-      table{width:100%;border-collapse:collapse;margin-bottom:24px}
-      thead tr{background:#f5f3ff}
-      th{padding:10px 12px;text-align:left;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:1px;color:#6c2bd9;border-bottom:2px solid #e0d7ff}
-      th.right,td.right{text-align:right}
-      td{padding:11px 12px;font-size:13px;color:#333;border-bottom:1px solid #f0f0f0}
+
+      /* ── PARTIES ── */
+      .parties{display:grid;grid-template-columns:1fr 1fr;gap:20px;margin-bottom:32px}
+      .party-box{border-radius:12px;padding:18px 20px}
+      .party-box.emetteur{background:#f5f3ff;border:1px solid #e0d7ff}
+      .party-box.client{background:#f0fdf4;border:1px solid #bbf7d0}
+      .party-label{font-size:9px;font-weight:700;letter-spacing:2px;text-transform:uppercase;margin-bottom:10px;padding-bottom:6px;border-bottom:1px solid rgba(0,0,0,.08)}
+      .party-box.emetteur .party-label{color:#6c2bd9}
+      .party-box.client .party-label{color:#16a34a}
+      .party-name{font-size:16px;font-weight:800;color:#111827;margin-bottom:6px}
+      .party-info{font-size:12.5px;color:#6b7280;line-height:1.75}
+      .party-info strong{color:#374151;font-weight:600}
+
+      /* ── TABLE ── */
+      table{width:100%;border-collapse:collapse;margin-bottom:28px;border-radius:12px;overflow:hidden;border:1px solid #e5e7eb}
+      thead{background:linear-gradient(to right,#1e1b4b,#312e81)}
+      th{padding:12px 14px;text-align:left;font-size:10px;font-weight:600;text-transform:uppercase;letter-spacing:1.2px;color:rgba(255,255,255,.85)}
+      th.r{text-align:right}
+      td{padding:13px 14px;font-size:13px;color:#374151;border-bottom:1px solid #f3f4f6}
       tr:last-child td{border-bottom:none}
-      tr:hover td{background:#faf8ff}
-      .ticket{font-family:monospace;font-weight:700;color:#6c2bd9}
-      .totals{display:flex;justify-content:flex-end;margin-bottom:28px}
-      .totals-box{width:280px;background:#f9f7ff;border-radius:10px;padding:16px;border:1px solid #e0d7ff}
-      .totals-row{display:flex;justify-content:space-between;font-size:13px;padding:4px 0;color:#555}
-      .totals-row.tva{border-top:1px solid #e0d7ff;margin-top:4px;padding-top:8px}
-      .totals-row.ttc{border-top:2px solid #6c2bd9;margin-top:6px;padding-top:10px;font-weight:700;font-size:16px;color:#1a1a2e}
-      .totals-row.paid{color:#16a34a;font-weight:600}
-      .totals-row.due{color:#dc2626;font-weight:700;font-size:14px;border-top:1px dashed #fca5a5;margin-top:6px;padding-top:8px}
-      .badge{display:inline-block;padding:3px 10px;border-radius:20px;font-size:11px;font-weight:700}
-      .badge-paid{background:#dcfce7;color:#16a34a}
-      .badge-due{background:#fef2f2;color:#dc2626}
-      .footer{background:#f9f7ff;border-top:1px solid #e0d7ff;padding:18px 36px;font-size:11px;color:#888;display:flex;justify-content:space-between}
-      @media print{body{padding:0;background:#fff}.page{box-shadow:none}.no-print{display:none!important}}
-      .print-btn{display:block;text-align:center;margin:20px auto;padding:12px 32px;background:linear-gradient(135deg,#6c2bd9,#4f46e5);color:#fff;border:none;border-radius:8px;font-size:14px;font-weight:700;cursor:pointer;letter-spacing:.5px}
+      tr:nth-child(even) td{background:#fafafa}
+      .ticket-ref{font-family:'Courier New',monospace;font-weight:700;color:#4c1d95;background:#f5f3ff;padding:2px 7px;border-radius:5px;font-size:12px}
+      .device-name{font-weight:600;color:#111827}
+      .issue-text{color:#6b7280;font-size:12px}
+      td.r{text-align:right}
+      td.price{font-weight:600;color:#111827}
+
+      /* ── TOTAUX ── */
+      .totals-wrap{display:flex;justify-content:flex-end;margin-bottom:28px}
+      .totals-box{width:300px;border:1px solid #e5e7eb;border-radius:12px;overflow:hidden}
+      .totals-row{display:flex;justify-content:space-between;align-items:center;padding:10px 16px;font-size:13px;color:#6b7280;border-bottom:1px solid #f3f4f6}
+      .totals-row:last-child{border-bottom:none}
+      .totals-row.head{background:#f9fafb;font-weight:600;color:#374151}
+      .totals-row.ttc-row{background:#1e1b4b;color:#fff;font-size:15px;font-weight:700}
+      .totals-row.paid-row{background:#f0fdf4;color:#16a34a;font-weight:600}
+      .totals-row.due-row{background:${isSolde ? "#f0fdf4" : "#fef2f2"};color:${isSolde ? "#16a34a" : "#dc2626"};font-weight:800;font-size:15px}
+
+      /* ── FOOTER ── */
+      .footer{background:#f8f9ff;border-top:1px solid #e5e7eb;padding:16px 36px;display:grid;grid-template-columns:1fr auto;gap:12px;align-items:center}
+      .footer-left{font-size:11.5px;color:#9ca3af;line-height:1.6}
+      .footer-left strong{color:#6b7280}
+      .footer-ref{font-family:monospace;font-size:10px;color:#c4b5fd;background:#1e1b4b;padding:4px 10px;border-radius:6px;white-space:nowrap}
+
+      @media print{body{padding:0;background:#fff}.page{box-shadow:none;border-radius:0}.no-print{display:none!important}}
+      .print-btn{display:flex;align-items:center;justify-content:center;gap:8px;margin:24px auto;padding:13px 40px;background:linear-gradient(135deg,#312e81,#4c1d95);color:#fff;border:none;border-radius:10px;font-size:14px;font-weight:700;cursor:pointer;letter-spacing:.3px;width:fit-content}
     </style></head><body>
     <div class="page">
+
+      <!-- HEADER -->
       <div class="header">
-        <div>
-          <div class="logo">MBX <span>Réparations</span></div>
-          <p style="margin-top:6px;font-size:12px;opacity:.8">Atelier de réparation mobile &amp; électronique</p>
+        <div class="header-left">
+          ${logoHtml}
+          ${cp.address || cp.phone ? `<div style="margin-top:12px;font-size:11.5px;color:rgba(255,255,255,.55);line-height:1.7">${cp.address ? `${cp.address}<br>` : ""}${cp.phone ? `${cp.phone}` : ""}${cp.email ? ` · ${cp.email}` : ""}</div>` : ""}
         </div>
-        <div class="invoice-meta">
-          <h2>Facture</h2>
-          <p>${invoiceRef}</p>
-          <p>Date : ${date}</p>
+        <div class="header-right">
+          <div>
+            <div class="invoice-label">Facture</div>
+            <div class="invoice-number">${invoiceRef}</div>
+            <div class="invoice-date">Émise le ${date}</div>
+          </div>
+          <div class="status-badge ${isSolde ? "status-paid" : "status-due"}">${isSolde ? "✓ SOLDÉE" : "⚠ À RÉGLER"}</div>
         </div>
       </div>
+
+      <!-- BODY -->
       <div class="body">
-        <div class="info-grid">
-          <div class="info-box">
-            <h3>Émetteur</h3>
-            <p class="name">MBX Réparations</p>
-            <p>8 Rue de l'Épée, 69003 Lyon</p>
-            <p>contact@mbx-reparations.fr</p>
-            <p>04 72 60 16 13</p>
+
+        <!-- PARTIES -->
+        <div class="parties">
+          <div class="party-box emetteur">
+            <div class="party-label">Prestataire</div>
+            <div class="party-name">${shortName}</div>
+            <div class="party-info">
+              ${cp.address ? `${cp.address}<br>` : ""}
+              ${cp.phone ? `<strong>Tél</strong> ${cp.phone}<br>` : ""}
+              ${cp.email ? `<strong>Email</strong> ${cp.email}<br>` : ""}
+              ${cp.siret ? `<strong>SIRET</strong> ${cp.siret}` : "Atelier de réparation mobile"}
+            </div>
           </div>
-          <div class="info-box">
-            <h3>Client</h3>
-            <p class="name">${group.client?.name || "—"}</p>
-            ${group.client?.phone ? `<p>📞 ${group.client.phone}</p>` : ""}
-            ${group.client?.email ? `<p>✉️ ${group.client.email}</p>` : ""}
-            ${group.client?.client_code ? `<p>Code : <strong>${group.client.client_code}</strong></p>` : ""}
+          <div class="party-box client">
+            <div class="party-label">Client</div>
+            <div class="party-name">${group.client?.name || "—"}</div>
+            <div class="party-info">
+              ${group.client?.phone && group.client.phone !== "NC" ? `<strong>Tél</strong> ${group.client.phone}<br>` : ""}
+              ${group.client?.email && group.client.email !== "NC" ? `<strong>Email</strong> ${group.client.email}<br>` : ""}
+              ${group.client?.client_code ? `<strong>Réf client</strong> ${group.client.client_code}` : ""}
+            </div>
           </div>
         </div>
+
+        <!-- TABLE -->
         <table>
           <thead>
             <tr>
-              <th>Ticket</th>
-              <th>Appareil</th>
-              <th>Désignation</th>
-              <th class="right">Prix HT</th>
-              <th class="right">TVA</th>
-              <th class="right">Total TTC</th>
+              <th style="width:100px">Réf.</th>
+              <th>Appareil &amp; Prestation</th>
+              <th class="r" style="width:90px">Prix HT</th>
+              <th class="r" style="width:70px">TVA</th>
+              <th class="r" style="width:100px">Total TTC</th>
             </tr>
           </thead>
           <tbody>
             ${group.repairs.map((r) => `
               <tr>
-                <td><span class="ticket">MBX-${r.id}</span></td>
-                <td>${r.device}</td>
-                <td style="color:#555">${r.issue}</td>
-                <td class="right">${r.priceHt.toFixed(2)} €</td>
-                <td class="right">${r.tvaRate > 0 ? r.tvaRate + "%" : "—"}</td>
-                <td class="right" style="font-weight:600">${r.totalTtc.toFixed(2)} €</td>
+                <td><span class="ticket-ref">MBX-${r.id}</span></td>
+                <td>
+                  <div class="device-name">${r.device}</div>
+                  <div class="issue-text">${r.issue}</div>
+                </td>
+                <td class="r">${r.priceHt.toFixed(2)} €</td>
+                <td class="r">${r.tvaRate > 0 ? r.tvaRate + "%" : "<span style='color:#9ca3af'>—</span>"}</td>
+                <td class="r price">${r.totalTtc.toFixed(2)} €</td>
               </tr>`).join("")}
           </tbody>
         </table>
-        <div class="totals">
+
+        <!-- TOTAUX -->
+        <div class="totals-wrap">
           <div class="totals-box">
-            <div class="totals-row"><span>Total HT</span><span>${totalHt.toFixed(2)} €</span></div>
-            ${totalTva > 0 ? `<div class="totals-row tva"><span>TVA</span><span>${totalTva.toFixed(2)} €</span></div>` : ""}
-            <div class="totals-row ttc"><span>Total TTC</span><span>${group.totalTtc.toFixed(2)} €</span></div>
-            ${group.totalPaid > 0 ? `<div class="totals-row paid"><span>Déjà réglé</span><span>− ${group.totalPaid.toFixed(2)} €</span></div>` : ""}
-            <div class="totals-row due">
-              <span>Reste à payer</span>
-              <span>${group.totalRemaining.toFixed(2)} €
-                <span class="badge ${group.totalRemaining <= 0 ? "badge-paid" : "badge-due"}">${group.totalRemaining <= 0 ? "SOLDÉ" : "DÛ"}</span>
-              </span>
-            </div>
+            <div class="totals-row head"><span>Sous-total HT</span><span>${totalHt.toFixed(2)} €</span></div>
+            ${totalTva > 0.01 ? `<div class="totals-row"><span>TVA</span><span>${totalTva.toFixed(2)} €</span></div>` : `<div class="totals-row"><span>TVA</span><span style="color:#9ca3af">Non applicable</span></div>`}
+            <div class="totals-row ttc-row"><span>Total TTC</span><span>${group.totalTtc.toFixed(2)} €</span></div>
+            ${group.totalPaid > 0 ? `<div class="totals-row paid-row"><span>Déjà réglé</span><span>− ${group.totalPaid.toFixed(2)} €</span></div>` : ""}
+            <div class="totals-row due-row"><span>${isSolde ? "✓ Soldée" : "Reste à payer"}</span><span>${group.totalRemaining.toFixed(2)} €</span></div>
           </div>
         </div>
-      </div>
+
+      </div><!-- /body -->
+
+      <!-- FOOTER -->
       <div class="footer">
-        <span>Merci pour votre confiance · MBX Réparations</span>
-        <span>Garantie : 3 mois pièces &amp; main d'œuvre</span>
+        <div class="footer-left">
+          <strong>Conditions de paiement</strong> : à réception de facture<br>
+          <strong>Garantie</strong> : 3 mois pièces &amp; main d'œuvre · Merci pour votre confiance
+        </div>
+        <div class="footer-ref">${invoiceRef} · ${date}</div>
       </div>
-    </div>
-    <button class="print-btn no-print" onclick="window.print()">🖨️ Imprimer / Sauvegarder en PDF</button>
+
+    </div><!-- /page -->
+    <button class="print-btn no-print" onclick="window.print()">🖨️ Imprimer / Enregistrer en PDF</button>
     </body></html>`);
     win.document.close();
   };

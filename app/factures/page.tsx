@@ -259,13 +259,16 @@ export default function FacturesPage() {
       .page{max-width:820px;margin:auto;background:#fff;border-radius:16px;overflow:hidden;box-shadow:0 8px 40px rgba(0,0,0,.13)}
 
       /* ── HEADER ── */
-      .header{background:linear-gradient(135deg,#1e1b4b 0%,#312e81 45%,#4c1d95 100%);padding:0;display:flex;min-height:120px}
-      .header-left{flex:1;padding:28px 36px;display:flex;flex-direction:column;justify-content:space-between}
-      .header-right{width:220px;background:rgba(255,255,255,.06);padding:24px 28px;display:flex;flex-direction:column;justify-content:center;align-items:flex-end;border-left:1px solid rgba(255,255,255,.1)}
-      .invoice-label{font-size:11px;font-weight:600;letter-spacing:3px;text-transform:uppercase;color:rgba(255,255,255,.5);margin-bottom:4px}
-      .invoice-number{font-size:17px;font-weight:700;color:#fff;font-family:monospace;letter-spacing:1px}
-      .invoice-date{font-size:12px;color:rgba(255,255,255,.6);margin-top:6px}
-      .status-badge{display:inline-flex;align-items:center;gap:6px;padding:6px 14px;border-radius:20px;font-size:12px;font-weight:700;margin-top:10px;letter-spacing:.3px}
+      .header{display:flex;min-height:110px;border-bottom:3px solid #312e81}
+      .header-left{flex:1;background:#fff;padding:24px 32px;display:flex;align-items:center;gap:18px}
+      .header-logo-wrap{display:flex;flex-direction:column;gap:6px}
+      .header-name{font-size:22px;font-weight:900;color:#1e1b4b;letter-spacing:-0.5px;line-height:1}
+      .header-subtitle{font-size:10px;color:#9ca3af;text-transform:uppercase;letter-spacing:2px}
+      .header-right{width:240px;background:linear-gradient(135deg,#1e1b4b 0%,#312e81 60%,#4c1d95 100%);padding:22px 28px;display:flex;flex-direction:column;justify-content:center;align-items:flex-end;gap:8px}
+      .invoice-label{font-size:10px;font-weight:600;letter-spacing:3px;text-transform:uppercase;color:rgba(255,255,255,.45)}
+      .invoice-number{font-size:16px;font-weight:700;color:#fff;font-family:monospace;letter-spacing:1px}
+      .invoice-date{font-size:11px;color:rgba(255,255,255,.55)}
+      .status-badge{display:inline-flex;align-items:center;gap:5px;padding:5px 12px;border-radius:20px;font-size:11px;font-weight:700;letter-spacing:.3px}
       .status-due{background:#fef2f2;color:#dc2626}
       .status-paid{background:#dcfce7;color:#16a34a}
 
@@ -322,15 +325,19 @@ export default function FacturesPage() {
       <!-- HEADER -->
       <div class="header">
         <div class="header-left">
-          ${logoHtml}
-          ${cp.address || cp.phone ? `<div style="margin-top:12px;font-size:11.5px;color:rgba(255,255,255,.55);line-height:1.7">${cp.address ? `${cp.address}<br>` : ""}${cp.phone ? `${cp.phone}` : ""}${cp.email ? ` · ${cp.email}` : ""}</div>` : ""}
+          <div class="header-logo-wrap">
+            ${logoHtml}
+          </div>
+          <div>
+            <div class="header-name">${shortName}</div>
+            <div class="header-subtitle">Atelier de réparation</div>
+            ${cp.address || cp.phone ? `<div style="margin-top:6px;font-size:11px;color:#6b7280;line-height:1.6">${cp.address ? `${cp.address}<br>` : ""}${cp.phone ? cp.phone : ""}${cp.email ? ` · ${cp.email}` : ""}</div>` : ""}
+          </div>
         </div>
         <div class="header-right">
-          <div>
-            <div class="invoice-label">Facture</div>
-            <div class="invoice-number">${invoiceRef}</div>
-            <div class="invoice-date">Émise le ${date}</div>
-          </div>
+          <div class="invoice-label">Facture</div>
+          <div class="invoice-number">${invoiceRef}</div>
+          <div class="invoice-date">Émise le ${date}</div>
           <div class="status-badge ${isSolde ? "status-paid" : "status-due"}">${isSolde ? "✓ SOLDÉE" : "⚠ À RÉGLER"}</div>
         </div>
       </div>

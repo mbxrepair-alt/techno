@@ -64,18 +64,18 @@ const STATUS_ORDER = {
 };
 
 const STATUS_STYLE = {
-  "📥 Réceptionné": "bg-orange-500/15 text-orange-300 border-orange-500/30",
-  "🔬 Diagnostic": "bg-orange-500/15 text-orange-300 border-orange-500/30",
-  "✅ Validé client": "bg-orange-500/15 text-orange-300 border-orange-500/30",
-  "🔧 En réparation": "bg-orange-500 text-white border-orange-600",
-  "✅ Terminé": "bg-orange-600 text-white border-orange-700",
-  "📦 Rendu": "bg-gray-700 text-gray-400 border-gray-600",
-  "❌ KO": "bg-red-500 text-white border-red-600",
-  "🚫 Refus client": "bg-red-500 text-white border-red-600",
-  "📤 Envoyé à l'atelier": "bg-orange-500/15 text-orange-300 border-orange-500/30",
-  "⏳ Attente validation client": "bg-amber-500/15 text-amber-400 border-amber-500/30",
-  "🔐 Mot de passe incorrect": "bg-red-500 text-white border-red-600",
-  "📦 Attente pièce": "bg-purple-500/15 text-purple-400 border-purple-500/30",
+  "📥 Réceptionné":              "bg-blue-500/15 text-blue-300 border-blue-500/30",
+  "🔬 Diagnostic":               "bg-cyan-500/15 text-cyan-300 border-cyan-500/30",
+  "✅ Validé client":             "bg-emerald-500/15 text-emerald-300 border-emerald-500/30",
+  "🔧 En réparation":            "bg-orange-500/80 text-white border-orange-500",
+  "✅ Terminé":                   "bg-green-600 text-white border-green-700",
+  "📦 Rendu":                    "bg-gray-700/60 text-gray-400 border-gray-600",
+  "❌ KO":                        "bg-red-600 text-white border-red-700",
+  "🚫 Refus client":             "bg-red-500/20 text-red-300 border-red-500/30",
+  "📤 Envoyé à l'atelier":       "bg-indigo-500/15 text-indigo-300 border-indigo-500/30",
+  "⏳ Attente validation client": "bg-amber-500/20 text-amber-300 border-amber-500/40",
+  "🔐 Mot de passe incorrect":   "bg-rose-500/20 text-rose-300 border-rose-500/30",
+  "📦 Attente pièce":            "bg-purple-500/20 text-purple-300 border-purple-500/30",
 };
 
 const PERIOD_OPTIONS = [
@@ -123,7 +123,6 @@ export default function RepairsPage() {
     try {
       const tech = getCurrentTechnician();
       setCurrentTechnician(tech);
-      console.log("Technicien connecté:", tech);
     } catch (error) {
       console.error("Erreur chargement technicien:", error);
     }
@@ -151,7 +150,8 @@ export default function RepairsPage() {
     const { data: repairsData } = await supabase
       .from("repairs")
       .select("*, clients(*)")
-      .eq("user_id", user.id);
+      .eq("user_id", user.id)
+      .order("created_at", { ascending: false });
 
     const normalizedRepairs = (repairsData || []).map((repair) => ({
       ...repair,
@@ -406,11 +406,12 @@ export default function RepairsPage() {
         {/* TABLEAU */}
         <div className="bg-[#16161d] rounded-2xl border border-white/5 overflow-hidden">
           <div className="grid grid-cols-12 bg-orange-500/10 px-4 py-3 text-xs font-bold text-orange-400 uppercase tracking-widest border-b border-white/5">
-            <div className="col-span-2">Ticket</div>
-            <div className="col-span-4">Client / Appareil</div>
-            <div className="col-span-2">Date</div>
+            <div className="col-span-1">Ticket</div>
+            <div className="col-span-3">Client / Appareil</div>
+            <div className="col-span-2">Panne</div>
+            <div className="col-span-1">Âge</div>
             <div className="col-span-2">Technicien</div>
-            <div className="col-span-1">Statut</div>
+            <div className="col-span-2">Statut</div>
             <div className="col-span-1 text-right">Prix</div>
           </div>
 
@@ -421,56 +422,60 @@ export default function RepairsPage() {
               sortedRepairs.map((repair) => {
                 const dateObj = new Date(repair.created_at);
                 const formattedDate = dateObj.toLocaleDateString("fr-FR", { day: "2-digit", month: "2-digit" });
+                const ageMs = Date.now() - dateObj.getTime();
+                const ageDays = Math.floor(ageMs / 86400000);
+                const ageLabel = ageDays === 0 ? "Auj." : ageDays === 1 ? "1j" : `${ageDays}j`;
+                const ageColor = ageDays >= 7 ? "text-red-400" : ageDays >= 3 ? "text-amber-400" : "text-gray-400";
+                const isActive = !["✅ Terminé","📦 Rendu","🚫 Refus client","❌ KO"].includes(repair.status);
                 return (
                   <div
                     key={repair.id}
                     onClick={() => handleRowClick(repair)}
-                    className={`grid grid-cols-12 items-center px-4 py-3 cursor-pointer hover:bg-white/5 transition-colors duration-150 ${!repair.technician ? "bg-amber-500/5" : ""}`}
+                    className={`grid grid-cols-12 items-center px-4 py-3 cursor-pointer hover:bg-white/5 transition-colors duration-150 ${!repair.technician && isActive ? "bg-amber-500/5" : ""}`}
                   >
-                    <div className="col-span-2">
+                    <div className="col-span-1">
                       <span className="font-mono font-bold text-orange-400 text-sm bg-orange-500/10 px-2 py-1 rounded-lg">
                         #{repair.id}
                       </span>
                     </div>
 
-                    <div className="col-span-4">
-                      <div className="font-semibold text-white text-sm">{repair.clients?.name || "Client inconnu"}</div>
-                      <div className="text-xs text-gray-500">{repair.device || "?"}</div>
+                    <div className="col-span-3 min-w-0">
+                      <div className="font-semibold text-white text-sm truncate">{repair.clients?.name || "Client inconnu"}</div>
+                      <div className="text-xs text-blue-300 truncate">{repair.device || "?"}</div>
                     </div>
 
-                    <div className="col-span-2 text-sm text-gray-400">{formattedDate}</div>
-
-                    <div className="col-span-2">
-                      {repair.technician ? (
-                        <div className="flex items-center gap-2">
-                          <div className="w-6 h-6 rounded-full bg-orange-500/20 flex items-center justify-center text-orange-400 text-xs font-bold">
-                            {repair.technician.charAt(0)}
-                          </div>
-                          <span className="text-xs font-medium text-gray-300">{repair.technician}</span>
-                          {currentTechnician?.is_gerant && (
-                            <button onClick={(e) => openChangeTechModal(repair, e)} className="text-gray-500 hover:text-orange-400 transition-colors">
-                              ✏️
-                            </button>
-                          )}
-                        </div>
-                      ) : (
-                        <div className="flex items-center gap-1">
-                          <span className="text-xs text-amber-400 bg-amber-500/10 px-2 py-1 rounded-full">⚠️ Non assigné</span>
-                          {currentTechnician && !currentTechnician.is_gerant && (
-                            <span className="text-xs text-orange-400/70">(Cliquez)</span>
-                          )}
-                        </div>
-                      )}
+                    <div className="col-span-2 min-w-0">
+                      <div className="text-xs text-gray-400 truncate">{repair.issue || "—"}</div>
                     </div>
 
                     <div className="col-span-1">
-                      <span className={`inline-block px-2 py-1 rounded-lg text-[10px] font-bold border ${STATUS_STYLE[repair.status] || "bg-gray-700 text-gray-300 border-gray-600"}`}>
+                      <span className={`text-xs font-semibold ${ageColor}`} title={formattedDate}>{ageLabel}</span>
+                    </div>
+
+                    <div className="col-span-2">
+                      {repair.technician ? (
+                        <div className="flex items-center gap-1.5 min-w-0">
+                          <div className="w-5 h-5 shrink-0 rounded-full bg-orange-500/20 flex items-center justify-center text-orange-400 text-xs font-bold">
+                            {repair.technician.charAt(0)}
+                          </div>
+                          <span className="text-xs font-medium text-gray-300 truncate">{repair.technician}</span>
+                          {currentTechnician?.is_gerant && (
+                            <button onClick={(e) => openChangeTechModal(repair, e)} className="shrink-0 text-gray-600 hover:text-orange-400 transition-colors text-xs">✏️</button>
+                          )}
+                        </div>
+                      ) : (
+                        <span className="text-xs text-amber-400 bg-amber-500/10 px-2 py-0.5 rounded-full">⚠️ Non assigné</span>
+                      )}
+                    </div>
+
+                    <div className="col-span-2">
+                      <span className={`inline-block px-2 py-1 rounded-lg text-[10px] font-bold border truncate max-w-full ${STATUS_STYLE[repair.status] || "bg-gray-700 text-gray-300 border-gray-600"}`}>
                         {repair.status}
                       </span>
                     </div>
 
                     <div className="col-span-1 text-right font-bold text-orange-400 text-sm">
-                      {repair.final_price || repair.estimated_price || 0}€
+                      {repair.final_price ? `${Number(repair.final_price).toFixed(0)}€` : repair.estimated_price ? `~${Number(repair.estimated_price).toFixed(0)}€` : "—"}
                     </div>
                   </div>
                 );

@@ -119,16 +119,35 @@ function SuiviClientContent() {
       return;
     }
     setSending(true);
+
+    const hasDiagnosticFee = selectedRepair.diagnostic_price > 0;
+    const updatePayload: Record<string, unknown> = {
+      client_response: clientResponse,
+      client_response_type: "refuse",
+      status: "🚫 Refus client",
+    };
+
+    if (hasDiagnosticFee) {
+      // Diagnostic payant → on facture directement
+      updatePayload.final_price = selectedRepair.diagnostic_price;
+      updatePayload.status = "✅ Terminé";
+    }
+
     const { error } = await supabase
       .from("repairs")
-      .update({ client_response: clientResponse, client_response_type: "refuse" })
+      .update(updatePayload)
       .eq("id", selectedRepair.id);
+
     if (!error) {
-      const updated = { ...selectedRepair, client_response: clientResponse, client_response_type: "refuse" };
+      const updated = { ...selectedRepair, ...updatePayload };
       setRepairs(repairs.map((r) => (r.id === selectedRepair.id ? updated : r)));
       setSelectedRepair(updated);
       setClientResponse("");
-      alert("Votre réponse a été envoyée à l'atelier !");
+      if (hasDiagnosticFee) {
+        alert(`Refus enregistré. Un forfait diagnostic de ${selectedRepair.diagnostic_price}€ vous sera facturé à la récupération de l'appareil.`);
+      } else {
+        alert("Votre refus a été enregistré. Vous pouvez venir récupérer votre appareil.");
+      }
     } else {
       alert("❌ Erreur lors de l'envoi. Réessayez.");
     }

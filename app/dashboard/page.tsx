@@ -1627,7 +1627,7 @@ export default function Dashboard() {
                   <div className="px-4 py-3 text-white text-sm">{selectedRepairDetail.issue}</div>
                 </div>
               </div>
-              <div className="flex gap-2">
+              <div className="flex gap-2 flex-wrap">
                 <button onClick={async () => {
                   const { data: clientData } = await supabase.from("clients").select("*").eq("id", selectedRepairDetail.client_id).single();
                   if (clientData) {
@@ -1637,6 +1637,18 @@ export default function Dashboard() {
                 }} className="flex-1 bg-gradient-to-r from-blue-600 to-blue-500 text-white py-2.5 rounded-xl font-semibold text-sm hover:from-blue-500 hover:to-blue-400 transition-all duration-200">
                   🖨️ Imprimer ticket
                 </button>
+                {selectedRepairDetail.status === "✅ Terminé" && (
+                  <button onClick={async () => {
+                    const { error } = await supabase.from("repairs").update({ status: "📦 Rendu" }).eq("id", selectedRepairDetail.id);
+                    if (!error) {
+                      setSelectedRepairDetail({ ...selectedRepairDetail, status: "📦 Rendu" });
+                      setAllRepairs((prev) => prev.map((r) => r.id === selectedRepairDetail.id ? { ...r, status: "📦 Rendu" } : r));
+                      showMessage("✅ Statut mis à jour : Rendu", "success");
+                    }
+                  }} className="flex-1 bg-gray-600 hover:bg-gray-500 text-white py-2.5 rounded-xl font-semibold text-sm transition-all duration-200">
+                    📦 Marquer Rendu
+                  </button>
+                )}
                 <button onClick={() => setShowDetailModal(false)}
                   className="flex-1 bg-white/5 hover:bg-white/10 text-gray-300 py-2.5 rounded-xl font-semibold text-sm border border-white/10 transition-all duration-200">
                   Fermer

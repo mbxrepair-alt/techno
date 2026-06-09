@@ -6,6 +6,7 @@ import { useRouter, useParams } from "next/navigation";
 import Layout from "../../../components/Layout";
 import emailjs from "@emailjs/browser";
 import SmartTextarea from "../../../components/SmartTextarea";
+import QRCode from "qrcode";
 
 export default function RepairDetailPage() {
   const router = useRouter();
@@ -99,6 +100,7 @@ export default function RepairDetailPage() {
       textColor: "text-white",
     },
     { label: "✅ Terminé", status: "✅ Terminé", color: "bg-purple-500", textColor: "text-white" },
+    { label: "📦 Rendu au client", status: "📦 Rendu", color: "bg-gray-600", textColor: "text-white" },
     { label: "❌ KO - Irréparable", status: "❌ KO", color: "bg-red-600", textColor: "text-white" },
     {
       label: "🚫 Refus client",
@@ -425,6 +427,64 @@ export default function RepairDetailPage() {
       showMessage(`Statut: ${newStatus}`);
       loadRepair();
     }
+  };
+
+  const escapeHtml = (str: string) =>
+    String(str || "").replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
+
+  const printRepairTicket = async () => {
+    if (!repair || !client) return;
+    const BASE_URL = "https://technophone.vercel.app";
+
+    let qrTechUrl: string | null = null;
+    try {
+      qrTechUrl = await QRCode.toDataURL(`${BASE_URL}/repairs/${repair.id}`, {
+        width: 140, margin: 1,
+        color: { dark: "#1e3a8a", light: "#ffffff" },
+        errorCorrectionLevel: "M" as const,
+      });
+    } catch (_) { /* ignore */ }
+
+    let qrClientUrl: string | null = null;
+    if (client.client_code) {
+      try {
+        qrClientUrl = await QRCode.toDataURL(`${BASE_URL}/suivi-client?code=${client.client_code}`, {
+          width: 140, margin: 1,
+          color: { dark: "#166534", light: "#ffffff" },
+          errorCorrectionLevel: "H" as const,
+        });
+      } catch (_) { /* ignore */ }
+    }
+
+    const rawCode = repair.unlock_code || repair.code || "";
+    const hasCode = rawCode && rawCode !== "NC" && rawCode !== "Non fourni" && rawCode.trim() !== "";
+    const codeValue = hasCode ? rawCode : null;
+    const dateStr = new Date().toLocaleDateString("fr-FR");
+    const timeStr = new Date().toLocaleTimeString("fr-FR", { hour: "2-digit", minute: "2-digit" });
+
+    const html = `<!DOCTYPE html><html><head><meta charset="UTF-8"><title>Ticket MBX-${repair.id}</title>
+    <style>*{margin:0;padding:0;box-sizing:border-box}body{font-family:'Courier New',monospace;background:#e5e7eb;display:flex;justify-content:center;padding:16px}.wrapper{display:flex;flex-direction:column;align-items:center;width:90mm}.tech-card{width:90mm;background:#fff;border-radius:4mm 4mm 0 0;padding:4mm;border:1px solid #c7d2fe;border-bottom:none}.tech-header{display:flex;justify-content:space-between;align-items:flex-start;border-bottom:1px solid #e0e7ff;padding-bottom:2mm;margin-bottom:2mm}.tech-header-left h2{font-size:11px;font-weight:900;color:#1e3a8a}.tech-header-left p{font-size:8px;color:#64748b}.badge-tech{background:#1e3a8a;color:#fff;font-size:8px;font-weight:700;padding:1mm 2.5mm;border-radius:2mm}.ticket-id{text-align:center;font-size:20px;font-weight:900;color:#1e3a8a;padding:2mm 0;border-bottom:1px dashed #c7d2fe;margin-bottom:2mm}.row{display:flex;justify-content:space-between;gap:3mm}.info-block{flex:1;font-size:8.5px;line-height:1.55}.lbl{font-weight:700;color:#334155;font-size:7.5px;text-transform:uppercase}.code-box{font-size:8px;padding:1.5mm 2mm;border-radius:2mm;margin-top:2mm;border-left:2.5px solid #22c55e;background:#f0fdf4;color:#166534}.qr-tech-area{text-align:center;min-width:28mm}.qr-tech-area img{width:28mm;height:28mm;display:block}.qr-tech-label{font-size:6.5px;color:#1e3a8a;font-weight:700;text-align:center;margin-top:1mm}.tech-footer{display:flex;justify-content:space-between;font-size:7.5px;color:#94a3b8;border-top:1px solid #e2e8f0;padding-top:1.5mm;margin-top:2mm}.cut{width:90mm;text-align:center;font-size:8px;color:#9ca3af;letter-spacing:3px;padding:2mm 0;border-top:1px dashed #9ca3af;border-bottom:1px dashed #9ca3af;background:#f9fafb}.client-card{width:90mm;background:#fff;border-radius:0 0 4mm 4mm;padding:3mm 4mm;border:1px solid #bbf7d0;border-top:none}.client-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:2mm}.client-header-title{font-size:10px;font-weight:900;color:#166534}.badge-client{background:#166534;color:#fff;font-size:8px;font-weight:700;padding:1mm 2.5mm;border-radius:2mm}.client-info-row{display:flex;justify-content:space-between;gap:3mm}.client-info-block{flex:1;font-size:8.5px;line-height:1.6}.client-code-big{font-size:15px;font-weight:900;color:#166534;letter-spacing:1px;margin:1mm 0}.qr-client-area{text-align:center;min-width:28mm}.qr-client-area img{width:28mm;height:28mm;display:block}.qr-client-label{font-size:6.5px;color:#166534;font-weight:700;text-align:center;margin-top:1mm}@media print{body{background:#fff;padding:0}.no-print{display:none!important}}.no-print{text-align:center;margin-top:6mm;display:flex;gap:3mm;justify-content:center}button{padding:3mm 6mm;background:#1e3a8a;color:#fff;border:none;border-radius:3mm;font-size:10px;cursor:pointer}button.close{background:#64748b}</style></head><body><div class="wrapper">
+    <div class="tech-card"><div class="tech-header"><div class="tech-header-left"><h2>🔧 MBX Réparations</h2><p>Ticket technicien</p></div><span class="badge-tech">ATELIER</span></div><div class="ticket-id">MBX-${repair.id}</div>
+    <div class="row"><div class="info-block"><div style="font-size:11px;font-weight:900;color:#1e293b">${escapeHtml(client.name)}</div><div style="font-size:10px;font-weight:800;color:#1e3a8a;margin-top:1.5mm">${escapeHtml(repair.device)}</div><div style="font-size:9.5px;font-weight:700;color:#374151;margin-top:1mm;margin-bottom:2mm">${escapeHtml(repair.issue)}</div><div style="font-size:8px;color:#64748b">${escapeHtml(client.phone || "")}</div>${codeValue ? `<div class="code-box">🔑 Code : ${escapeHtml(codeValue)}</div>` : ""}</div>
+    <div class="qr-tech-area">${qrTechUrl ? `<img src="${qrTechUrl}"/>` : ""}<div class="qr-tech-label">📲 Scanner pour<br>ouvrir la fiche</div></div></div>
+    <div class="tech-footer"><span>⏱ ${dateStr} ${timeStr}</span><span>MBX Réparations</span></div></div>
+    <div class="cut">✂ &nbsp; À remettre au client &nbsp; ✂</div>
+    <div class="client-card"><div class="client-header"><div class="client-header-title">🎫 MBX-${repair.id}<span style="font-size:8px;font-weight:normal;color:#64748b;display:block">${escapeHtml(repair.device)} · ${dateStr}</span></div><span class="badge-client">CLIENT</span></div>
+    <div class="client-info-row"><div class="client-info-block"><div><span class="lbl">Client</span><br>${escapeHtml(client.name)}</div><div style="margin-top:2mm"><span class="lbl">Panne déclarée</span><br>${escapeHtml(repair.issue)}</div>${repair.estimated_price ? `<div style="margin-top:2mm"><span class="lbl">Prix estimé</span><br><span style="font-size:12px;font-weight:900;color:#166534">${Number(repair.estimated_price).toFixed(2)} €</span></div>` : ""}${!codeValue ? `<div style="font-size:7.5px;background:#fef2f2;border-left:2px solid #ef4444;color:#991b1b;font-weight:700;padding:1.5mm 2mm;border-radius:2mm;margin-top:2mm">⚠️ Appareil non testé — pas pris en garantie</div>` : ""}<div style="margin-top:2mm"><span class="lbl">Code de suivi</span><div class="client-code-big">${client.client_code || "—"}</div><span style="font-size:7px;color:#64748b">→ technophone.vercel.app/suivi-client</span></div></div>
+    <div class="qr-client-area">${qrClientUrl ? `<img src="${qrClientUrl}"/>` : ""}<div class="qr-client-label">🔍 Suivre votre<br>réparation</div></div></div></div>
+    <div class="no-print"><button onclick="window.print()">🖨️ Imprimer</button><button class="close" onclick="window.close()">✕ Fermer</button></div>
+    </div></body></html>`;
+
+    const iframe = document.createElement("iframe");
+    iframe.style.cssText = "position:fixed;right:0;bottom:0;width:0;height:0;border:0";
+    document.body.appendChild(iframe);
+    const doc = iframe.contentWindow!.document;
+    doc.open(); doc.write(html); doc.close();
+    setTimeout(() => {
+      iframe.contentWindow!.focus();
+      iframe.contentWindow!.print();
+      setTimeout(() => { if (document.body.contains(iframe)) document.body.removeChild(iframe); }, 1000);
+    }, 500);
   };
 
   const addPart = async () => {
@@ -766,25 +826,45 @@ export default function RepairDetailPage() {
                   className={`px-3 py-1 rounded-full text-sm font-semibold ${
                     repair?.status === "✅ Terminé"
                       ? "bg-green-500 text-white"
-                      : repair?.status === "🔧 En réparation"
-                        ? "bg-orange-500 text-white"
-                        : repair?.status === "🔬 Diagnostic"
-                          ? "bg-blue-500 text-white"
-                          : repair?.status === "📥 Réceptionné"
-                            ? "bg-amber-500 text-white"
-                            : "bg-gray-500 text-white"
+                      : repair?.status === "📦 Rendu"
+                        ? "bg-gray-600 text-white"
+                        : repair?.status === "🔧 En réparation"
+                          ? "bg-orange-500 text-white"
+                          : repair?.status === "🔬 Diagnostic"
+                            ? "bg-blue-500 text-white"
+                            : repair?.status === "📥 Réceptionné"
+                              ? "bg-amber-500 text-white"
+                              : repair?.status === "❌ KO"
+                                ? "bg-red-600 text-white"
+                                : repair?.status === "🚫 Refus client"
+                                  ? "bg-pink-600 text-white"
+                                  : "bg-gray-500 text-white"
                   }`}
                 >
                   {repair?.status || "📥 Réceptionné"}
                 </span>
               </div>
-              <div className="flex gap-2">
+              <div className="flex gap-2 flex-wrap">
+                <button
+                  onClick={printRepairTicket}
+                  className="bg-white/20 hover:bg-white/30 text-white px-3 py-2 rounded-lg text-sm font-medium transition"
+                >
+                  🖨️ Ticket
+                </button>
                 <button
                   onClick={() => setShowEmailModal(true)}
-                  className="bg-white/20 hover:bg-white/30 text-white px-4 py-2 rounded-lg text-sm font-medium transition"
+                  className="bg-white/20 hover:bg-white/30 text-white px-3 py-2 rounded-lg text-sm font-medium transition"
                 >
                   ✉️ Email
                 </button>
+                {repair?.status === "✅ Terminé" && (
+                  <button
+                    onClick={() => updateStatus("📦 Rendu")}
+                    className="bg-gray-600 hover:bg-gray-500 text-white px-3 py-2 rounded-lg text-sm font-bold transition"
+                  >
+                    📦 Rendu
+                  </button>
+                )}
                 <button
                   onClick={() => setShowQuickActions(true)}
                   className="bg-white/20 hover:bg-white/30 text-white w-10 h-10 rounded-lg text-xl font-bold transition"
@@ -1164,11 +1244,15 @@ export default function RepairDetailPage() {
                         ? "bg-orange-500"
                         : repair?.status === "🔬 Diagnostic"
                           ? "bg-blue-500"
-                          : repair?.status === "📥 Réceptionné"
-                            ? "bg-amber-500"
-                            : repair?.status === "🚫 Refus client"
-                              ? "bg-pink-500"
-                              : "bg-gray-500"
+                          : repair?.status === "📦 Rendu"
+                            ? "bg-gray-600"
+                            : repair?.status === "📥 Réceptionné"
+                              ? "bg-amber-500"
+                              : repair?.status === "🚫 Refus client"
+                                ? "bg-pink-500"
+                                : repair?.status === "❌ KO"
+                                  ? "bg-red-600"
+                                  : "bg-gray-500"
                   }`}
                 >
                   {repair?.status || "📥 Réceptionné"}

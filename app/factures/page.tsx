@@ -61,7 +61,7 @@ export default function FacturesPage() {
       // Charger les TVA clients ET les réparations en parallèle
       const [tvaResult, repairsResult, clientsResult] = await Promise.all([
         supabase.from("clients").select("id, default_tva_rate").eq("user_id", user.id),
-        supabase.from("repairs").select("*, clients(*)").eq("user_id", user.id).eq("status", "✅ Terminé").order("created_at", { ascending: false }),
+        supabase.from("repairs").select("*, clients(*)").eq("user_id", user.id).in("status", ["✅ Terminé", "📦 Rendu"]).order("created_at", { ascending: false }),
         supabase.from("clients").select("*").eq("user_id", user.id),
       ]);
 

@@ -32,6 +32,7 @@ export default function RepairDetailPage() {
   const [diagnosticTechnicien, setDiagnosticTechnicien] = useState("");
   const [repairDescription, setRepairDescription] = useState("");
   const [finalPrice, setFinalPrice] = useState("");
+  const [diagnosticPrice, setDiagnosticPrice] = useState("");
   const [risks, setRisks] = useState("");
   const [testsPassed, setTestsPassed] = useState("");
 
@@ -167,6 +168,7 @@ export default function RepairDetailPage() {
       setDiagnosticTechnicien(data.diagnostic_technicien || "");
       setRepairDescription(data.repair_description || "");
       setFinalPrice(data.final_price || data.estimated_price || "");
+      setDiagnosticPrice(data.diagnostic_price || "");
       setRisks(data.risks || "");
       setTestsPassed(data.tests_passed || "");
       setPhotos(data.photos || []);
@@ -261,6 +263,7 @@ export default function RepairDetailPage() {
       risks,
       repair_description: repairDescription,
       final_price: parseFloat(String(finalPrice || 0)),
+      diagnostic_price: parseFloat(String(diagnosticPrice || 0)),
       tests_passed: testsPassed,
       parts_used: JSON.stringify(parts),
       photos: photos,
@@ -1096,7 +1099,7 @@ export default function RepairDetailPage() {
               </div>
               <div className="p-3">
                 <div className="flex items-center justify-between">
-                  <span className="text-sm text-gray-600">Montant :</span>
+                  <span className="text-sm text-gray-600">Montant réparation :</span>
                   <input
                     type="number"
                     value={finalPrice}
@@ -1110,6 +1113,20 @@ export default function RepairDetailPage() {
                     Prix estimé: {repair.estimated_price}€
                   </p>
                 )}
+                <div className="flex items-center justify-between mt-3 pt-3 border-t">
+                  <div>
+                    <span className="text-sm text-gray-600">Forfait diagnostic :</span>
+                    <p className="text-xs text-gray-400">Facturé si client refuse la réparation</p>
+                  </div>
+                  <input
+                    type="number"
+                    value={diagnosticPrice}
+                    onChange={(e) => setDiagnosticPrice(e.target.value)}
+                    className="w-28 text-right text-base font-semibold border rounded-lg p-2 text-center"
+                    step="1"
+                    placeholder="0"
+                  />
+                </div>
               </div>
             </div>
 

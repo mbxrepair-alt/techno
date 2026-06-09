@@ -476,25 +476,12 @@ function SuiviClientContent() {
                         </div>
                       )}
 
-                      {/* Bandeau diagnostic payant */}
-                      {selectedRepair.estimated_price > 0 && selectedRepair.status === "🔬 Diagnostic" && (
-                        <div className="bg-amber-500/10 border border-amber-500/30 rounded-xl p-4 flex items-start gap-3">
-                          <span className="text-2xl">💳</span>
-                          <div>
-                            <p className="text-amber-300 font-semibold text-sm">Diagnostic payant</p>
-                            <p className="text-amber-200/70 text-xs mt-1">
-                              Le diagnostic de votre appareil est facturé <strong className="text-amber-300">{selectedRepair.estimated_price}€</strong>. Ce montant est à régler directement à l&apos;atelier. Il sera déduit du prix de la réparation si vous acceptez le devis.
-                            </p>
-                          </div>
-                        </div>
-                      )}
-
                       {/* 🔍 Diagnostic technicien */}
-                      {cleanNotes(selectedRepair.diagnosis) && (
+                      {cleanNotes(selectedRepair.diagnostic_technicien) && (
                         <div className="bg-purple-500/10 border border-purple-500/20 rounded-xl p-4">
                           <p className="text-xs text-purple-400 uppercase tracking-wider font-bold mb-2">🔍 Diagnostic technicien</p>
                           <p className="text-gray-300 text-sm whitespace-pre-wrap leading-relaxed">
-                            {cleanNotes(selectedRepair.diagnosis)}
+                            {cleanNotes(selectedRepair.diagnostic_technicien)}
                           </p>
                         </div>
                       )}
@@ -510,11 +497,11 @@ function SuiviClientContent() {
                       )}
 
                       {/* ⚠️ Risques & Préconisations */}
-                      {cleanNotes(selectedRepair.description) && (
+                      {cleanNotes(selectedRepair.risks) && (
                         <div className="bg-orange-500/10 border border-orange-500/20 rounded-xl p-4">
                           <p className="text-xs text-orange-400 uppercase tracking-wider font-bold mb-2">⚠️ Risques & Préconisations</p>
                           <p className="text-gray-300 text-sm whitespace-pre-wrap leading-relaxed">
-                            {cleanNotes(selectedRepair.description)}
+                            {cleanNotes(selectedRepair.risks)}
                           </p>
                         </div>
                       )}
@@ -567,6 +554,11 @@ function SuiviClientContent() {
                                 ? "Le technicien attend votre validation pour poursuivre la réparation."
                                 : "Le technicien a besoin de votre code pour accéder à l'appareil."}
                             </p>
+                            {selectedRepair.status === "⏳ Attente validation client" && selectedRepair.diagnostic_price > 0 && (
+                              <div className="bg-red-500/10 border border-red-500/20 rounded-lg px-3 py-2 mb-3 text-xs text-red-300">
+                                ⚠️ <strong>Forfait diagnostic : {selectedRepair.diagnostic_price}€</strong> — Ce montant sera facturé si vous refusez la réparation.
+                              </div>
+                            )}
                             <textarea
                               className="w-full bg-[#0f0f13] border border-white/15 rounded-xl px-4 py-3 text-white placeholder-gray-600 text-sm outline-none focus:border-amber-500/60 focus:ring-2 focus:ring-amber-500/15 transition-all resize-none"
                               rows={3}

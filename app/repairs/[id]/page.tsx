@@ -263,7 +263,7 @@ export default function RepairDetailPage() {
       risks,
       repair_description: repairDescription,
       final_price: parseFloat(String(finalPrice || 0)),
-      diagnostic_price: parseFloat(String(diagnosticPrice || 0)),
+      ...(diagnosticPrice !== "" && { diagnostic_price: parseFloat(String(diagnosticPrice)) }),
       tests_passed: testsPassed,
       parts_used: JSON.stringify(parts),
       photos: photos,
@@ -329,7 +329,7 @@ export default function RepairDetailPage() {
       const timer = setTimeout(() => autoSave(), 2000);
       return () => clearTimeout(timer);
     }
-  }, [diagnosticTechnicien, risks, repairDescription, finalPrice, testsPassed, parts, photos]);
+  }, [diagnosticTechnicien, risks, repairDescription, finalPrice, diagnosticPrice, testsPassed, parts, photos]);
 
   const showMessage = (text, type = "success") => {
     setMessage({ text, type });

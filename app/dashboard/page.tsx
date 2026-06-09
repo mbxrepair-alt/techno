@@ -1154,14 +1154,6 @@ export default function Dashboard() {
     }
   };
 
-  // Calcul des statistiques
-  const stats = {
-    received: allRepairs.filter((r) => r.status === "🟡 Réceptionné").length,
-    inProgress: allRepairs.filter((r) => r.status === "🔧 En réparation").length,
-    done: allRepairs.filter((r) => r.status === "✅ Terminé").length,
-    delivered: allRepairs.filter((r) => r.status === "📦 Rendu").length,
-  };
-
   const statusColors = {
     "🟡 Réceptionné": "bg-yellow-500",
     "🔬 Diagnostic": "bg-blue-500",
@@ -1176,636 +1168,431 @@ export default function Dashboard() {
     "⏳ Attente validation client": "bg-orange-500",
   };
 
+  const inputCls ="w-full bg-[#1a1d2e] border border-white/10 rounded-xl px-4 py-3.5 text-white placeholder-gray-600 text-sm outline-none focus:border-blue-500/50 focus:ring-2 focus:ring-blue-500/15 transition-all duration-200";
+
   return (
     <Layout>
+      {/* ── KEYFRAMES ── */}
+      <style>{`
+        @keyframes shimmer { 0% { transform: translateX(-150%); } 100% { transform: translateX(150%); } }
+        @keyframes count-in { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }
+        .animate-shimmer { animation: shimmer 2.4s ease-in-out infinite; }
+        .animate-count-in { animation: count-in 0.45s ease-out forwards; }
+      `}</style>
+
+      {/* ── TOAST ── */}
       {message.text && (
-        <div
-          className={`fixed bottom-5 right-5 px-5 py-3 rounded-xl shadow-lg z-50 text-white ${message.type === "error" ? "bg-red-500" : "bg-green-500"}`}
-        >
+        <div className={`fixed bottom-5 right-5 px-5 py-3.5 rounded-xl shadow-2xl z-50 border text-sm font-semibold tracking-tight flex items-center gap-2 ${
+          message.type === "error" ? "bg-red-500/20 border-red-500/30 text-red-400" : "bg-green-500/20 border-green-500/30 text-green-400"
+        }`}>
           {message.text}
         </div>
       )}
 
       {showReturnModal && selectedRepair && (
-        <ReturnModal
-          repair={selectedRepair}
-          onClose={() => setShowReturnModal(false)}
-          onSuccess={() => {
-            setShowReturnModal(false);
-            setSelectedRepair(null);
-            loadAllData();
-          }}
-        />
+        <ReturnModal repair={selectedRepair} onClose={() => setShowReturnModal(false)}
+          onSuccess={() => { setShowReturnModal(false); setSelectedRepair(null); loadAllData(); }} />
       )}
 
-      {/* MODAL SUCCÈS */}
+      {/* ── SUCCESS MODAL ── */}
       {showSuccessModal && recentTickets.length > 0 && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50">
-          <div className="bg-white rounded-2xl shadow-2xl p-6 max-w-md w-full">
-            <div className="text-center mb-4">
-              <div className="text-5xl mb-3">🎉</div>
-              <h2 className="text-2xl font-bold text-gray-800">Succès !</h2>
-              <p className="text-gray-500 mt-1">{recentTickets.length} ticket(s) créé(s)</p>
+        <div className="fixed inset-0 bg-black/70 backdrop-blur-sm flex items-center justify-center p-4 z-50">
+          <div className="bg-[#232742] border-t-2 border-t-blue-500 border border-white/10 rounded-2xl shadow-2xl p-6 max-w-md w-full">
+            <div className="text-center mb-5">
+              <div className="w-16 h-16 bg-green-500/20 rounded-full flex items-center justify-center text-4xl mx-auto mb-3 border border-green-500/30 animate-pulse">🎉</div>
+              <h2 className="text-xl font-black text-white tracking-tight">{recentTickets.length} ticket(s) créé(s)</h2>
+              <p className="text-gray-400 text-sm mt-1">Impression ou envoi par email</p>
             </div>
-
-            <div className="bg-gray-50 rounded-xl p-3 mb-5 max-h-40 overflow-auto">
+            <div className="bg-black/20 rounded-xl border border-white/5 p-3 mb-5 max-h-40 overflow-auto space-y-0.5">
               {recentTickets.map((ticket) => (
-                <div
-                  key={ticket.id}
-                  className="text-sm py-2 border-b last:border-0 flex justify-between"
-                >
-                  <span className="font-mono font-bold text-blue-600">MBX-{ticket.id}</span>
-                  <span className="text-gray-600">{ticket.device}</span>
+                <div key={ticket.id} className="flex justify-between items-center py-1.5 px-2 rounded-lg hover:bg-white/5">
+                  <span className="font-mono font-bold text-blue-400 text-sm">MBX-{ticket.id}</span>
+                  <span className="text-gray-400 text-sm">{ticket.device}</span>
                 </div>
               ))}
             </div>
-
-            <div className="space-y-3">
-              <button
-                onClick={async () => {
-                  const clientId = recentTickets[0]?.client_id;
-                  if (clientId) {
-                    const { data: clientData } = await supabase
-                      .from("clients")
-                      .select("*")
-                      .eq("id", clientId)
-                      .single();
-                    if (clientData) {
-                      for (const ticket of recentTickets) {
-                        const trackingUrl = await genererLienSuivi(ticket, clientData);
-                        await printTicket(ticket, clientData, trackingUrl);
-                        await new Promise((r) => setTimeout(r, 1000));
-                      }
-                      showMessage(`${recentTickets.length} ticket(s) imprimé(s)`, "success");
+            <div className="space-y-2.5">
+              <button onClick={async () => {
+                const clientId = recentTickets[0]?.client_id;
+                if (clientId) {
+                  const { data: clientData } = await supabase.from("clients").select("*").eq("id", clientId).single();
+                  if (clientData) {
+                    for (const ticket of recentTickets) {
+                      const trackingUrl = await genererLienSuivi(ticket, clientData);
+                      await printTicket(ticket, clientData, trackingUrl);
+                      await new Promise((r) => setTimeout(r, 1000));
                     }
+                    showMessage(`${recentTickets.length} ticket(s) imprimé(s)`, "success");
                   }
-                }}
-                className="w-full bg-blue-600 text-white py-3 rounded-xl font-bold hover:bg-blue-700 transition text-base flex items-center justify-center gap-2"
-              >
-                🖨️ IMPRIMER ({recentTickets.length})
+                }
+              }} className="w-full bg-gradient-to-r from-blue-600 to-blue-500 text-white py-3 rounded-xl font-bold hover:from-blue-500 hover:to-blue-400 transition-all duration-200 text-sm flex items-center justify-center gap-2">
+                🖨️ Imprimer ({recentTickets.length})
               </button>
-
-              <button
-                onClick={async () => {
-                  const clientId = recentTickets[0]?.client_id;
-                  if (clientId) {
-                    const { data: clientData } = await supabase
-                      .from("clients")
-                      .select("*")
-                      .eq("id", clientId)
-                      .single();
-                    if (clientData) {
-                      let email = emailTo;
-                      if (!email || email === "NC") {
-                        email = prompt(
-                          "Entrez l'email du client:",
-                          clientData.email !== "NC" ? clientData.email : ""
-                        );
-                        if (!email) return;
-                      }
-                      const trackingUrl = await genererLienSuivi(recentTickets[0], clientData);
-                      await sendEmailReceipt(recentTickets, clientData, email, trackingUrl);
+              <button onClick={async () => {
+                const clientId = recentTickets[0]?.client_id;
+                if (clientId) {
+                  const { data: clientData } = await supabase.from("clients").select("*").eq("id", clientId).single();
+                  if (clientData) {
+                    let email = emailTo;
+                    if (!email || email === "NC") {
+                      email = prompt("Entrez l'email du client:", clientData.email !== "NC" ? clientData.email : "");
+                      if (!email) return;
                     }
+                    const trackingUrl = await genererLienSuivi(recentTickets[0], clientData);
+                    await sendEmailReceipt(recentTickets, clientData, email, trackingUrl);
                   }
-                }}
-                className="w-full bg-green-600 text-white py-3 rounded-xl font-bold hover:bg-green-700 transition text-base flex items-center justify-center gap-2"
-              >
-                ✉️ ENVOYER EMAIL
+                }
+              }} className="w-full bg-gradient-to-r from-green-600 to-green-500 text-white py-3 rounded-xl font-bold hover:from-green-500 hover:to-green-400 transition-all duration-200 text-sm flex items-center justify-center gap-2">
+                ✉️ Envoyer par email
               </button>
-
-              <button
-                onClick={() => {
-                  setShowSuccessModal(false);
-                  setRecentTickets([]);
-                }}
-                className="w-full bg-gray-200 text-gray-700 py-3 rounded-xl font-bold hover:bg-gray-300 transition text-base"
-              >
-                ✕ FERMER
+              <button onClick={() => { setShowSuccessModal(false); setRecentTickets([]); }}
+                className="w-full bg-white/5 hover:bg-white/10 text-gray-300 py-3 rounded-xl font-semibold border border-white/10 transition-all duration-200 text-sm">
+                ✕ Fermer
               </button>
             </div>
           </div>
         </div>
       )}
 
-      {/* ========== HEADER DASHBOARD AVEC BARRE DE RECHERCHE ========== */}
+      {/* ════════════════ HEADER ════════════════ */}
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-8">
-        <h1 className="text-3xl font-black text-white drop-shadow-[0_0_15px_rgba(59,130,246,0.5)]">
-          📊 Dashboard
-        </h1>
-
-        <div className="flex gap-3 w-full sm:w-auto">
-          <div ref={searchContainerRef} className="relative flex-1 sm:w-96">
-            <div className="relative group">
-              <div className="absolute -inset-0.5 bg-gradient-to-r from-blue-500 to-cyan-500 rounded-xl blur opacity-0 group-focus-within:opacity-100 transition duration-300"></div>
-              <input
-                ref={searchInputRef}
-                className="relative w-full p-3 pl-12 bg-white border border-blue-200 rounded-xl focus:outline-none focus:border-blue-500 text-gray-800 placeholder-gray-400 shadow-[0_0_10px_rgba(59,130,246,0.1)] focus:shadow-[0_0_20px_rgba(59,130,246,0.3)] transition-all duration-300"
-                placeholder="🔍 Rechercher par ticket, nom, modèle ou panne..."
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-              />
-              <div className="absolute left-4 top-1/2 -translate-y-1/2 text-blue-500 text-lg">
-                🔍
-              </div>
-              {searchQuery && (
-                <button
-                  className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-400 hover:text-blue-500 transition"
-                  onClick={() => setSearchQuery("")}
-                >
-                  ✕
-                </button>
-              )}
-            </div>
+        <div>
+          {companyInfo.phone && (
+            <span className="text-xs text-gray-400 bg-white/5 border border-white/10 rounded-full px-3 py-1">📞 {companyInfo.phone}</span>
+          )}
+        </div>
+        <div ref={searchContainerRef} className="relative w-full sm:w-96">
+          <div className="flex items-center gap-3 bg-[#232742] border border-white/10 rounded-xl px-4 py-3 focus-within:border-blue-500/50 focus-within:ring-2 focus-within:ring-blue-500/10 transition-all duration-200">
+            <input ref={searchInputRef} className="flex-1 bg-transparent text-white placeholder-gray-600 text-sm outline-none"
+              placeholder="Rechercher client, appareil, ticket..." value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} />
+            {searchQuery && <button className="text-gray-500 hover:text-gray-300 transition flex-shrink-0" onClick={() => setSearchQuery("")}>✕</button>}
           </div>
-
+          {showResults && searchResults.length > 0 && (
+            <div className="absolute top-full left-0 right-0 mt-2 bg-[#232742] border border-white/10 rounded-2xl shadow-2xl z-30 max-h-80 overflow-y-auto">
+              <div className="px-4 py-2.5 border-b border-white/5">
+                <span className="text-xs text-gray-500 font-semibold uppercase tracking-widest">{searchResults.length} résultat(s)</span>
+              </div>
+              <div className="divide-y divide-white/5">
+                {searchResults.map((r) => (
+                  <div key={r.id} className="px-4 py-3 hover:bg-white/5 cursor-pointer transition-all duration-150" onClick={() => showTicketDetails(r)}>
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-2">
+                        <span className="font-mono font-bold text-blue-400 text-sm">MBX-{r.id}</span>
+                        <span className={`text-[10px] px-2 py-0.5 rounded-full text-white ${statusColors[r.status] || "bg-yellow-500"}`}>{r.status || "🟡 Réceptionné"}</span>
+                      </div>
+                      <span className="text-gray-500 text-xs">→</span>
+                    </div>
+                    <div className="text-gray-300 text-xs mt-0.5">{r.client?.name}</div>
+                    <div className="text-gray-500 text-xs mt-0.5">📱 {r.device} · 🔧 {r.issue}</div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
         </div>
       </div>
 
-      {/* ========== STATS CARTES ========== */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-5 mb-8">
-        <div className="relative group">
-          <div className="absolute -inset-0.5 bg-gradient-to-r from-blue-500 to-cyan-500 rounded-2xl blur opacity-0 group-hover:opacity-75 transition duration-500"></div>
-          <div className="relative bg-white rounded-2xl p-5 border border-blue-200 text-center shadow-lg">
-            <div className="flex items-center justify-between mb-2">
-              <span className="text-3xl">🟡</span>
-            </div>
-            <div className="text-3xl font-black text-blue-600">{stats.received}</div>
-            <div className="text-xs text-gray-500 mt-1">Réceptionnés</div>
-          </div>
-        </div>
-
-        <div className="relative group">
-          <div className="absolute -inset-0.5 bg-gradient-to-r from-blue-500 to-cyan-500 rounded-2xl blur opacity-0 group-hover:opacity-75 transition duration-500"></div>
-          <div className="relative bg-white rounded-2xl p-5 border border-blue-200 text-center shadow-lg">
-            <div className="flex items-center justify-between mb-2">
-              <span className="text-3xl">🔧</span>
-            </div>
-            <div className="text-3xl font-black text-blue-600">{stats.inProgress}</div>
-            <div className="text-xs text-gray-500 mt-1">En réparation</div>
-          </div>
-        </div>
-
-        <div className="relative group">
-          <div className="absolute -inset-0.5 bg-gradient-to-r from-blue-500 to-cyan-500 rounded-2xl blur opacity-0 group-hover:opacity-75 transition duration-500"></div>
-          <div className="relative bg-white rounded-2xl p-5 border border-blue-200 text-center shadow-lg">
-            <div className="flex items-center justify-between mb-2">
-              <span className="text-3xl">✅</span>
-            </div>
-            <div className="text-3xl font-black text-blue-600">{stats.done}</div>
-            <div className="text-xs text-gray-500 mt-1">Terminés</div>
-          </div>
-        </div>
-
-        <div className="relative group">
-          <div className="absolute -inset-0.5 bg-gradient-to-r from-blue-500 to-cyan-500 rounded-2xl blur opacity-0 group-hover:opacity-75 transition duration-500"></div>
-          <div className="relative bg-white rounded-2xl p-5 border border-blue-200 text-center shadow-lg">
-            <div className="flex items-center justify-between mb-2">
-              <span className="text-3xl">📦</span>
-            </div>
-            <div className="text-3xl font-black text-blue-600">{stats.delivered}</div>
-            <div className="text-xs text-gray-500 mt-1">Rendus</div>
-          </div>
-        </div>
+      {/* ════════════════ SECTION LABEL ════════════════ */}
+      <div className="flex items-center gap-2 mb-4">
+        <span className="w-2 h-2 rounded-full bg-green-400 shrink-0" />
+        <h2 className="text-xs font-semibold text-gray-300 uppercase tracking-wider">Nouvelle réparation</h2>
       </div>
 
-      {/* ========== RÉSULTATS RECHERCHE ========== */}
-      {showResults && searchResults.length > 0 && (
-        <div className="space-y-3 mb-6">
-          <h2 className="text-lg font-semibold text-blue-600">📋 Résultats de recherche</h2>
-          {searchResults.map((r) => (
-            <div
-              key={r.id}
-              className="group relative bg-white rounded-xl border border-blue-200 p-4 cursor-pointer hover:border-blue-500 transition-all duration-300 hover:shadow-[0_0_20px_rgba(59,130,246,0.2)] shadow-sm"
-              onClick={() => showTicketDetails(r)}
-            >
-              <div className="relative flex justify-between items-center">
-                <div>
-                  <div className="flex items-center gap-2">
-                    <span className="font-mono font-bold text-blue-600 text-lg">MBX-{r.id}</span>
-                    <span
-                      className={`text-xs px-2 py-0.5 rounded-full text-white shadow-md ${statusColors[r.status] || "bg-yellow-500"}`}
-                    >
-                      {r.status || "🟡 Réceptionné"}
-                    </span>
-                  </div>
-                  <div className="text-sm text-gray-600 mt-1">{r.client?.name}</div>
-                  <div className="text-xs text-gray-400 mt-0.5">
-                    📱 {r.device} • 🔧 {r.issue}
-                  </div>
-                </div>
-                <div className="text-blue-500 group-hover:translate-x-1 transition-transform duration-200">
-                  →
-                </div>
-              </div>
-            </div>
-          ))}
-        </div>
-      )}
+      {/* ════════════════ FORM ════════════════ */}
+      <div ref={formRef} className="bg-[#232742] border border-white/5 rounded-2xl overflow-hidden shadow-xl mb-6">
 
-      {/* ========== FORMULAIRE NOUVELLE RÉPARATION ========== */}
-      <div ref={formRef} className="bg-white rounded-2xl border border-blue-200 overflow-hidden shadow-lg">
-        <div className="bg-gradient-to-r from-blue-600 to-cyan-600 px-6 py-4">
-          <h2 className="text-white font-semibold text-lg">➕ Nouvelle réparation</h2>
-          <p className="text-blue-100 text-sm">Multi-appareils supporté</p>
+        {/* FORM HEADER */}
+        <div className="relative overflow-hidden bg-gradient-to-r from-blue-600 via-purple-600 to-blue-600 px-6 py-5">
+          <div className="absolute inset-0 opacity-[0.08]" style={{ backgroundImage: "radial-gradient(circle, white 1px, transparent 1px)", backgroundSize: "18px 18px" }} />
+          <h2 className="relative text-white font-black text-xl tracking-tight">✨ Nouvelle Réparation</h2>
+          <p className="relative text-white/60 text-sm mt-0.5">Multi-appareils supporté</p>
         </div>
-        <div className="p-6">
-          <div className="space-y-5">
-            <div className="bg-gray-50 p-4 rounded-xl border border-gray-100">
-              <h3 className="font-medium mb-3 text-blue-600">👤 Client</h3>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                <div className="relative">
-                  <input
-                    ref={clientInputRef}
-                    className="border border-gray-200 p-3 rounded-xl w-full focus:border-blue-400 focus:outline-none focus:ring-1 focus:ring-blue-400 transition"
-                    placeholder="Nom du client *"
-                    value={intakeClient}
-                    onChange={(e) => handleClientSearch(e.target.value)}
-                    onKeyDown={handleClientKeyDown}
-                    autoComplete="off"
-                  />
-                  {showClientSuggestions && clientSuggestions.length > 0 && (
-                    <div className="absolute z-10 bg-white border border-blue-200 rounded-xl shadow-lg max-h-48 overflow-auto w-full mt-1">
+
+        <div className="p-6 space-y-6">
+
+          {/* CLIENT */}
+          <div>
+            <h3 className="text-xs font-semibold text-gray-400 uppercase tracking-widest mb-3">👤 Client</h3>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+
+              <div className="relative">
+                <label className="block text-xs font-semibold text-gray-400 uppercase tracking-widest mb-1.5">Nom *</label>
+                <input ref={clientInputRef} className={inputCls} placeholder="Nom du client"
+                  value={intakeClient} onChange={(e) => handleClientSearch(e.target.value)}
+                  onKeyDown={handleClientKeyDown} autoComplete="off" />
+                {showClientSuggestions && clientSuggestions.length > 0 && (
+                  <div className="absolute z-20 top-full left-0 right-0 mt-1 bg-[#2d3159] border border-white/10 rounded-xl shadow-2xl max-h-48 overflow-auto">
+                    <div className="divide-y divide-white/5 p-1">
                       {clientSuggestions.map((c, idx) => (
-                        <div
-                          key={c.id}
-                          className={`p-2 cursor-pointer hover:bg-blue-50 ${selectedClientIndex === idx ? "bg-blue-50" : ""}`}
-                          onMouseDown={() => selectClient(c)}
-                        >
+                        <div key={c.id}
+                          className={`py-2.5 px-4 rounded-lg cursor-pointer text-sm transition-colors duration-150 ${selectedClientIndex === idx ? "bg-blue-500/20 text-blue-300" : "hover:bg-blue-500/10 hover:text-blue-400 text-gray-300"}`}
+                          onMouseDown={() => selectClient(c)}>
                           <div className="font-medium">{c.name}</div>
-                          <div className="text-xs text-gray-500">
-                            {c.phone !== "NC" ? c.phone : ""}
-                          </div>
+                          {c.phone !== "NC" && <div className="text-xs text-gray-500">{c.phone}</div>}
                         </div>
                       ))}
                     </div>
-                  )}
-                </div>
-                <div className="relative">
-                  <input
-                    ref={phoneInputRef}
-                    className="border border-gray-200 p-3 rounded-xl w-full focus:border-blue-400 focus:outline-none focus:ring-1 focus:ring-blue-400 transition"
-                    placeholder="Téléphone"
-                    value={intakePhone}
-                    onChange={(e) => handlePhoneSearch(e.target.value)}
-                    onKeyDown={handlePhoneKeyDown}
-                    autoComplete="off"
-                  />
-                  {showPhoneSuggestions && phoneSuggestions.length > 0 && (
-                    <div className="absolute z-10 bg-white border border-blue-200 rounded-xl shadow-lg max-h-48 overflow-auto w-full mt-1">
+                  </div>
+                )}
+              </div>
+
+              <div className="relative">
+                <label className="block text-xs font-semibold text-gray-400 uppercase tracking-widest mb-1.5">Téléphone</label>
+                <input ref={phoneInputRef} className={inputCls} placeholder="06 12 34 56 78"
+                  value={intakePhone} onChange={(e) => handlePhoneSearch(e.target.value)}
+                  onKeyDown={handlePhoneKeyDown} autoComplete="off" />
+                {showPhoneSuggestions && phoneSuggestions.length > 0 && (
+                  <div className="absolute z-20 top-full left-0 right-0 mt-1 bg-[#2d3159] border border-white/10 rounded-xl shadow-2xl max-h-48 overflow-auto">
+                    <div className="divide-y divide-white/5 p-1">
                       {phoneSuggestions.map((c, idx) => (
-                        <div
-                          key={c.id}
-                          className={`p-2 cursor-pointer hover:bg-blue-50 ${selectedPhoneIndex === idx ? "bg-blue-50" : ""}`}
-                          onMouseDown={() => selectPhoneSuggestion(c)}
-                        >
+                        <div key={c.id}
+                          className={`py-2.5 px-4 rounded-lg cursor-pointer text-sm transition-colors duration-150 ${selectedPhoneIndex === idx ? "bg-blue-500/20 text-blue-300" : "hover:bg-blue-500/10 hover:text-blue-400 text-gray-300"}`}
+                          onMouseDown={() => selectPhoneSuggestion(c)}>
                           <div className="font-medium">{c.phone}</div>
                           <div className="text-xs text-gray-500">{c.name}</div>
                         </div>
                       ))}
                     </div>
+                  </div>
+                )}
+              </div>
+
+              <div>
+                <label className="block text-xs font-semibold text-gray-400 uppercase tracking-widest mb-1.5">Email</label>
+                <input ref={emailInputRef} className={inputCls} placeholder="client@email.com"
+                  value={intakeEmail} onChange={(e) => setIntakeEmail(e.target.value)} onKeyDown={handleEmailKeyDown} />
+              </div>
+            </div>
+          </div>
+
+          {/* DEVICE COUNT */}
+          <div>
+            <h3 className="text-xs font-semibold text-gray-400 uppercase tracking-widest mb-3">📱 Appareils</h3>
+            <div className="flex flex-wrap items-center gap-3">
+              <div className="flex items-center gap-2 bg-black/20 border border-white/10 rounded-xl px-4 py-2.5">
+                <span className="text-xs font-semibold text-gray-400 uppercase tracking-widest">Nombre :</span>
+                <input type="number" min={1} max={20} value={desiredRepairCount}
+                  onChange={(e) => setDesiredRepairCount(Number(e.target.value))}
+                  className="w-12 bg-transparent text-white text-sm text-center outline-none font-bold"
+                  onKeyDown={handleNumberKeyDown} />
+              </div>
+              <button type="button" onClick={generateRepairSlots}
+                className="bg-gradient-to-r from-blue-600 to-purple-600 text-white px-5 py-2.5 rounded-xl text-sm font-semibold hover:from-blue-500 hover:to-purple-500 transition-all duration-200 active:scale-95 flex items-center gap-1.5">
+                ✨ Générer
+              </button>
+              <span className="text-xs text-gray-500">{repairsList.length} appareil(s)</span>
+            </div>
+          </div>
+
+          {/* REPAIR CARDS */}
+          <div className="space-y-4">
+            {repairsList.map((repair, idx) => (
+              <div key={repair.id} className="bg-[#1a1d2e] border border-white/5 hover:border-blue-500/20 rounded-2xl overflow-hidden transition-all duration-200">
+
+                <div className="bg-gradient-to-r from-blue-500/10 to-purple-500/5 px-5 pt-4 pb-3 flex items-center justify-between">
+                  <span className="text-xs font-black bg-gradient-to-r from-blue-400 to-purple-400 bg-clip-text text-transparent tracking-tight">
+                    Appareil #{idx + 1}
+                  </span>
+                  {repairsList.length > 1 && (
+                    <button onClick={() => removeRepair(repair.id)} className="text-xs text-gray-500 hover:text-red-400 transition-colors duration-150">
+                      🗑 Supprimer
+                    </button>
                   )}
                 </div>
-                <input
-                  ref={emailInputRef}
-                  className="border border-gray-200 p-3 rounded-xl md:col-span-2 focus:border-blue-400 focus:outline-none focus:ring-1 focus:ring-blue-400 transition"
-                  placeholder="Email"
-                  value={intakeEmail}
-                  onChange={(e) => setIntakeEmail(e.target.value)}
-                  onKeyDown={handleEmailKeyDown}
-                />
-              </div>
-            </div>
 
-            <div className="bg-gray-50 p-4 rounded-xl border border-gray-100">
-              <div className="flex flex-wrap items-end justify-between gap-3 mb-4">
-                <div className="flex gap-2 items-end">
-                  <div>
-                    <label className="block text-xs text-gray-500 mb-1">Nombre d'appareils</label>
-                    <input
-                      type="number"
-                      min={1}
-                      max={20}
-                      value={desiredRepairCount}
-                      onChange={(e) => setDesiredRepairCount(Number(e.target.value))}
-                      className="border border-gray-200 p-2 rounded-lg w-24 text-center focus:border-blue-400 focus:outline-none"
-                      onKeyDown={handleNumberKeyDown}
-                    />
-                  </div>
-                  <button
-                    type="button"
-                    onClick={generateRepairSlots}
-                    className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition text-sm"
-                  >
-                    Générer
-                  </button>
-                </div>
-                <span className="text-xs text-gray-400">{repairsList.length} appareil(s)</span>
-              </div>
-
-              <div className="space-y-4">
-                {repairsList.map((repair, idx) => (
-                  <div key={repair.id} className="border border-gray-200 rounded-xl p-3 bg-white">
-                    <div className="flex justify-between items-start mb-2">
-                      <span className="text-xs font-semibold text-blue-600">
-                        Appareil #{idx + 1}
-                      </span>
-                      {repairsList.length > 1 && (
-                        <button
-                          onClick={() => removeRepair(repair.id)}
-                          className="text-red-500 text-xs hover:text-red-700 transition"
-                        >
-                          🗑 Supprimer
-                        </button>
-                      )}
-                    </div>
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                <div className="px-5 pb-5 space-y-3">
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                    <div>
+                      <label className="block text-xs font-semibold text-gray-400 uppercase tracking-widest mb-1.5">Modèle *</label>
                       <div className="relative">
-                        <input
-                          className="border border-gray-200 p-2 rounded-lg w-full focus:border-blue-400 focus:outline-none"
-                          placeholder="📱 Modèle *"
-                          value={repair.device}
-                          onChange={(e) => handleDeviceSearch(repair.id, e.target.value)}
-                        />
-                        {showDeviceSuggestionsMap[repair.id] &&
-                          deviceSuggestionsMap[repair.id]?.length > 0 && (
-                            <div className="absolute z-10 bg-white border border-blue-200 rounded-lg shadow-lg max-h-36 overflow-auto w-full mt-1">
+                        <input className={inputCls} placeholder="iPhone 15 Pro Max..." value={repair.device}
+                          onChange={(e) => handleDeviceSearch(repair.id, e.target.value)} />
+                        {showDeviceSuggestionsMap[repair.id] && deviceSuggestionsMap[repair.id]?.length > 0 && (
+                          <div className="absolute z-20 top-full left-0 right-0 mt-1 bg-[#2d3159] border border-white/10 rounded-xl shadow-2xl max-h-40 overflow-auto">
+                            <div className="divide-y divide-white/5 p-1">
                               {deviceSuggestionsMap[repair.id].map((d, i) => (
-                                <div
-                                  key={i}
-                                  className="p-2 cursor-pointer hover:bg-blue-50 text-sm"
-                                  onMouseDown={() => selectDevice(repair.id, d)}
-                                >
-                                  📱 {d}
-                                </div>
+                                <div key={i} className="py-2.5 px-4 rounded-lg cursor-pointer hover:bg-blue-500/10 hover:text-blue-400 text-gray-300 text-sm transition-colors duration-150"
+                                  onMouseDown={() => selectDevice(repair.id, d)}>📱 {d}</div>
                               ))}
                             </div>
-                          )}
+                          </div>
+                        )}
                       </div>
+                    </div>
+                    <div>
+                      <label className="block text-xs font-semibold text-gray-400 uppercase tracking-widest mb-1.5">Panne *</label>
                       <div className="relative">
-                        <input
-                          className="border border-gray-200 p-2 rounded-lg w-full focus:border-blue-400 focus:outline-none"
-                          placeholder="🔧 Panne *"
-                          value={repair.issue}
-                          onChange={(e) => handleIssueSearch(repair.id, e.target.value)}
-                        />
-                        {showIssueSuggestionsMap[repair.id] &&
-                          issueSuggestionsMap[repair.id]?.length > 0 && (
-                            <div className="absolute z-10 bg-white border border-blue-200 rounded-lg shadow-lg max-h-36 overflow-auto w-full mt-1">
+                        <input className={inputCls} placeholder="Écran cassé, batterie..." value={repair.issue}
+                          onChange={(e) => handleIssueSearch(repair.id, e.target.value)} />
+                        {showIssueSuggestionsMap[repair.id] && issueSuggestionsMap[repair.id]?.length > 0 && (
+                          <div className="absolute z-20 top-full left-0 right-0 mt-1 bg-[#2d3159] border border-white/10 rounded-xl shadow-2xl max-h-40 overflow-auto">
+                            <div className="divide-y divide-white/5 p-1">
                               {issueSuggestionsMap[repair.id].map((iss, i) => (
-                                <div
-                                  key={i}
-                                  className="p-2 cursor-pointer hover:bg-blue-50 text-sm"
-                                  onMouseDown={() => selectIssue(repair.id, iss)}
-                                >
-                                  🔧 {iss}
-                                </div>
+                                <div key={i} className="py-2.5 px-4 rounded-lg cursor-pointer hover:bg-blue-500/10 hover:text-blue-400 text-gray-300 text-sm transition-colors duration-150"
+                                  onMouseDown={() => selectIssue(repair.id, iss)}>🔧 {iss}</div>
                               ))}
                             </div>
-                          )}
-                      </div>
-                      <textarea
-                        rows={2}
-                        className="border border-gray-200 p-2 rounded-lg text-sm focus:border-blue-400 focus:outline-none"
-                        placeholder="📝 Description (optionnel)"
-                        value={repair.description || ""}
-                        onChange={(e) =>
-                          updateRepairField(repair.id, "description", e.target.value)
-                        }
-                      />
-                      <input
-                        className="border border-gray-200 p-2 rounded-lg focus:border-blue-400 focus:outline-none"
-                        placeholder="💰 Prix estimé (€)"
-                        type="number"
-                        value={repair.estimatedPrice}
-                        onChange={(e) =>
-                          updateRepairField(repair.id, "estimatedPrice", e.target.value)
-                        }
-                      />
-                      <div className="flex gap-2">
-                        <input
-                          className="border border-gray-200 p-2 rounded-lg flex-1 focus:border-blue-400 focus:outline-none"
-                          placeholder="🔢 IMEI"
-                          value={repair.imei}
-                          onChange={(e) => updateRepairField(repair.id, "imei", e.target.value)}
-                          maxLength={15}
-                        />
-                        <div className="relative flex-1">
-                          <input
-                            className="border border-gray-200 p-2 rounded-lg w-full focus:border-blue-400 focus:outline-none"
-                            placeholder="🔑 Code"
-                            value={repair.code}
-                            onChange={(e) => {
-                              updateRepairField(repair.id, "code", e.target.value);
-                              searchCodeSuggestions(e.target.value, repair.id);
-                            }}
-                          />
-                          {showCodeSuggestionsMap[repair.id] &&
-                            codeSuggestionsMap[repair.id]?.length > 0 && (
-                              <div className="absolute z-10 bg-white border border-blue-200 rounded-lg shadow-lg max-h-36 overflow-auto w-full mt-1">
-                                {codeSuggestionsMap[repair.id].map((code, i) => (
-                                  <div
-                                    key={i}
-                                    className="p-2 cursor-pointer hover:bg-blue-50 text-sm"
-                                    onMouseDown={() => selectCodeForRepair(repair.id, code)}
-                                  >
-                                    🔑 {code}
-                                  </div>
-                                ))}
-                              </div>
-                            )}
-                        </div>
-                      </div>
-                      <div className="md:col-span-2">
-                        <PatternLock
-                          onComplete={(pattern) =>
-                            updateRepairField(repair.id, "unlockPattern", pattern.join("-"))
-                          }
-                          onClear={() => updateRepairField(repair.id, "unlockPattern", "")}
-                        />
-                        <p className="text-[10px] text-gray-400 mt-1">
-                          ⚠️ NON FOURNI - Test impossible, pas pris en garantie
-                        </p>
+                          </div>
+                        )}
                       </div>
                     </div>
                   </div>
-                ))}
-              </div>
-            </div>
 
-            <button
-              onClick={createIntake}
-              disabled={loading}
-              className="w-full bg-gradient-to-r from-blue-600 to-cyan-600 text-white py-3 rounded-xl font-bold hover:from-blue-700 hover:to-cyan-700 transition-all duration-300 shadow-md hover:shadow-lg disabled:opacity-50"
-            >
-              {loading ? "⏳ Création..." : `📦 Créer ${repairsList.length} ticket(s)`}
-            </button>
+                  <div>
+                    <label className="block text-xs font-semibold text-gray-400 uppercase tracking-widest mb-1.5">Notes</label>
+                    <textarea rows={3} className={`${inputCls} resize-none`} placeholder="Description / observations..."
+                      value={repair.description || ""} onChange={(e) => updateRepairField(repair.id, "description", e.target.value)} />
+                  </div>
+
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                    <div>
+                      <label className="block text-xs font-semibold text-gray-400 uppercase tracking-widest mb-1.5">Prix (€)</label>
+                      <input className={inputCls} placeholder="0" type="number" value={repair.estimatedPrice}
+                        onChange={(e) => updateRepairField(repair.id, "estimatedPrice", e.target.value)} />
+                    </div>
+                    <div>
+                      <label className="block text-xs font-semibold text-gray-400 uppercase tracking-widest mb-1.5">IMEI</label>
+                      <input className={inputCls} placeholder="15 chiffres" value={repair.imei}
+                        onChange={(e) => updateRepairField(repair.id, "imei", e.target.value)} maxLength={15} />
+                    </div>
+                    <div>
+                      <label className="block text-xs font-semibold text-gray-400 uppercase tracking-widest mb-1.5">Code</label>
+                      <div className="relative">
+                        <input className={inputCls} placeholder="PIN..." value={repair.code}
+                          onChange={(e) => { updateRepairField(repair.id, "code", e.target.value); searchCodeSuggestions(e.target.value, repair.id); }} />
+                        {showCodeSuggestionsMap[repair.id] && codeSuggestionsMap[repair.id]?.length > 0 && (
+                          <div className="absolute z-20 top-full left-0 right-0 mt-1 bg-[#2d3159] border border-white/10 rounded-xl shadow-2xl max-h-40 overflow-auto">
+                            <div className="divide-y divide-white/5 p-1">
+                              {codeSuggestionsMap[repair.id].map((code, i) => (
+                                <div key={i} className="py-2.5 px-4 rounded-lg cursor-pointer hover:bg-blue-500/10 hover:text-blue-400 text-gray-300 text-sm transition-colors duration-150"
+                                  onMouseDown={() => selectCodeForRepair(repair.id, code)}>🔑 {code}</div>
+                              ))}
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="border-t border-white/5 pt-4">
+                    <PatternLock
+                      onComplete={(pattern) => updateRepairField(repair.id, "unlockPattern", pattern.join("-"))}
+                      onClear={() => updateRepairField(repair.id, "unlockPattern", "")} />
+                    <p className="text-[10px] text-blue-400/60 mt-1.5">⚠️ NON FOURNI — Test impossible, pas pris en garantie</p>
+                  </div>
+                </div>
+              </div>
+            ))}
           </div>
+
+          {/* SUBMIT */}
+          <button onClick={createIntake} disabled={loading}
+            className="relative w-full overflow-hidden bg-gradient-to-r from-blue-600 via-purple-600 to-blue-600 text-white py-4 rounded-xl font-bold text-lg hover:opacity-90 hover:scale-[1.01] hover:shadow-lg hover:shadow-purple-500/30 active:scale-[0.99] transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2">
+            <span className="absolute inset-0 -translate-x-full animate-shimmer bg-gradient-to-r from-transparent via-white/15 to-transparent pointer-events-none" />
+            <span className="relative">{loading ? "⏳ Création en cours..." : `🎫 Créer ${repairsList.length} ticket(s)  →`}</span>
+          </button>
         </div>
       </div>
 
-      {/* MODALS AJOUT */}
+      {/* ── ADD MODALS ── */}
       {showAddDevice && (
-        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50">
-          <div className="bg-white rounded-xl p-6 w-96 border border-blue-200 shadow-xl">
-            <h3 className="text-lg font-bold text-gray-800 mb-4">➕ Ajouter un modèle</h3>
-            <input
-              type="text"
-              className="border border-gray-200 p-2 rounded w-full mb-4 focus:border-blue-400 focus:outline-none"
-              placeholder="Nom du modèle"
-              value={newDeviceInput}
-              onChange={(e) => setNewDeviceInput(e.target.value)}
-              onKeyDown={(e) => e.key === "Enter" && addCustomDevice()}
-            />
+        <div className="fixed inset-0 bg-black/70 backdrop-blur-sm flex items-center justify-center z-50">
+          <div className="bg-[#232742] border-t-2 border-t-blue-500 border border-white/10 rounded-2xl p-6 w-96 shadow-2xl">
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="text-base font-bold text-white tracking-tight">➕ Ajouter un modèle</h3>
+              <button onClick={() => setShowAddDevice(false)} className="w-7 h-7 bg-white/10 hover:bg-white/20 rounded-full flex items-center justify-center text-gray-400 transition text-xs">✕</button>
+            </div>
+            <label className="block text-xs font-semibold text-gray-400 uppercase tracking-widest mb-1.5">Nom du modèle</label>
+            <input type="text" className={`${inputCls} mb-4`} placeholder="Ex: Samsung Galaxy S25"
+              value={newDeviceInput} onChange={(e) => setNewDeviceInput(e.target.value)}
+              onKeyDown={(e) => e.key === "Enter" && addCustomDevice()} />
             <div className="flex gap-2">
-              <button
-                onClick={addCustomDevice}
-                className="bg-blue-600 text-white px-4 py-2 rounded flex-1 hover:bg-blue-700"
-              >
-                Ajouter
-              </button>
-              <button
-                onClick={() => setShowAddDevice(false)}
-                className="bg-gray-200 text-gray-700 px-4 py-2 rounded flex-1 hover:bg-gray-300"
-              >
-                Annuler
-              </button>
+              <button onClick={addCustomDevice} className="flex-1 bg-gradient-to-r from-blue-600 to-purple-600 text-white py-2.5 rounded-xl font-semibold text-sm hover:from-blue-500 hover:to-purple-500 transition-all duration-200">Ajouter</button>
+              <button onClick={() => setShowAddDevice(false)} className="flex-1 bg-white/5 hover:bg-white/10 text-gray-300 py-2.5 rounded-xl font-semibold text-sm border border-white/10 transition-all duration-200">Annuler</button>
             </div>
           </div>
         </div>
       )}
 
       {showAddIssue && (
-        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50">
-          <div className="bg-white rounded-xl p-6 w-96 border border-blue-200 shadow-xl">
-            <h3 className="text-lg font-bold text-gray-800 mb-4">➕ Ajouter une panne</h3>
-            <input
-              type="text"
-              className="border border-gray-200 p-2 rounded w-full mb-4 focus:border-blue-400 focus:outline-none"
-              placeholder="Nom de la panne"
-              value={newIssueInput}
-              onChange={(e) => setNewIssueInput(e.target.value)}
-              onKeyDown={(e) => e.key === "Enter" && addCustomIssue()}
-            />
+        <div className="fixed inset-0 bg-black/70 backdrop-blur-sm flex items-center justify-center z-50">
+          <div className="bg-[#232742] border-t-2 border-t-blue-500 border border-white/10 rounded-2xl p-6 w-96 shadow-2xl">
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="text-base font-bold text-white tracking-tight">➕ Ajouter une panne</h3>
+              <button onClick={() => setShowAddIssue(false)} className="w-7 h-7 bg-white/10 hover:bg-white/20 rounded-full flex items-center justify-center text-gray-400 transition text-xs">✕</button>
+            </div>
+            <label className="block text-xs font-semibold text-gray-400 uppercase tracking-widest mb-1.5">Nom de la panne</label>
+            <input type="text" className={`${inputCls} mb-4`} placeholder="Ex: Circuit audio HS"
+              value={newIssueInput} onChange={(e) => setNewIssueInput(e.target.value)}
+              onKeyDown={(e) => e.key === "Enter" && addCustomIssue()} />
             <div className="flex gap-2">
-              <button
-                onClick={addCustomIssue}
-                className="bg-blue-600 text-white px-4 py-2 rounded flex-1 hover:bg-blue-700"
-              >
-                Ajouter
-              </button>
-              <button
-                onClick={() => setShowAddIssue(false)}
-                className="bg-gray-200 text-gray-700 px-4 py-2 rounded flex-1 hover:bg-gray-300"
-              >
-                Annuler
-              </button>
+              <button onClick={addCustomIssue} className="flex-1 bg-gradient-to-r from-blue-600 to-purple-600 text-white py-2.5 rounded-xl font-semibold text-sm hover:from-blue-500 hover:to-purple-500 transition-all duration-200">Ajouter</button>
+              <button onClick={() => setShowAddIssue(false)} className="flex-1 bg-white/5 hover:bg-white/10 text-gray-300 py-2.5 rounded-xl font-semibold text-sm border border-white/10 transition-all duration-200">Annuler</button>
             </div>
           </div>
         </div>
       )}
 
       {showAddCode && (
-        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50">
-          <div className="bg-white rounded-xl p-6 w-96 border border-blue-200 shadow-xl">
-            <h3 className="text-lg font-bold text-gray-800 mb-4">➕ Ajouter un code</h3>
-            <input
-              type="text"
-              className="border border-gray-200 p-2 rounded w-full mb-4 focus:border-blue-400 focus:outline-none"
-              placeholder="Code téléphone"
-              value={newCodeInput}
-              onChange={(e) => setNewCodeInput(e.target.value)}
-              onKeyDown={(e) => e.key === "Enter" && addCustomCode()}
-            />
+        <div className="fixed inset-0 bg-black/70 backdrop-blur-sm flex items-center justify-center z-50">
+          <div className="bg-[#232742] border-t-2 border-t-blue-500 border border-white/10 rounded-2xl p-6 w-96 shadow-2xl">
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="text-base font-bold text-white tracking-tight">➕ Ajouter un code</h3>
+              <button onClick={() => setShowAddCode(false)} className="w-7 h-7 bg-white/10 hover:bg-white/20 rounded-full flex items-center justify-center text-gray-400 transition text-xs">✕</button>
+            </div>
+            <label className="block text-xs font-semibold text-gray-400 uppercase tracking-widest mb-1.5">Code téléphone</label>
+            <input type="text" className={`${inputCls} mb-4`} placeholder="Ex: 2580"
+              value={newCodeInput} onChange={(e) => setNewCodeInput(e.target.value)}
+              onKeyDown={(e) => e.key === "Enter" && addCustomCode()} />
             <div className="flex gap-2">
-              <button
-                onClick={addCustomCode}
-                className="bg-blue-600 text-white px-4 py-2 rounded flex-1 hover:bg-blue-700"
-              >
-                Ajouter
-              </button>
-              <button
-                onClick={() => setShowAddCode(false)}
-                className="bg-gray-200 text-gray-700 px-4 py-2 rounded flex-1 hover:bg-gray-300"
-              >
-                Annuler
-              </button>
+              <button onClick={addCustomCode} className="flex-1 bg-gradient-to-r from-blue-600 to-purple-600 text-white py-2.5 rounded-xl font-semibold text-sm hover:from-blue-500 hover:to-purple-500 transition-all duration-200">Ajouter</button>
+              <button onClick={() => setShowAddCode(false)} className="flex-1 bg-white/5 hover:bg-white/10 text-gray-300 py-2.5 rounded-xl font-semibold text-sm border border-white/10 transition-all duration-200">Annuler</button>
             </div>
           </div>
         </div>
       )}
 
-      {/* ========== MODAL DÉTAIL ========== */}
+      {/* ── DETAIL MODAL ── */}
       {showDetailModal && selectedRepairDetail && selectedRepairClient && (
-        <div
-          className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center p-4 z-50"
-          onClick={() => setShowDetailModal(false)}
-        >
-          <div
-            className="bg-white rounded-xl w-full max-w-2xl max-h-[90vh] overflow-auto border border-blue-200 shadow-2xl"
-            onClick={(e) => e.stopPropagation()}
-          >
-            <div className="sticky top-0 bg-white p-4 border-b border-blue-200">
-              <div className="flex justify-between items-start">
-                <div>
-                  <h2 className="text-xl font-bold text-blue-600">
-                    🔧 Détail MBX-{selectedRepairDetail.id}
-                  </h2>
-                  <p className="text-sm text-gray-500">{selectedRepairClient.name}</p>
-                </div>
-                <button
-                  onClick={() => setShowDetailModal(false)}
-                  className="text-gray-400 hover:text-blue-500 text-2xl transition"
-                >
-                  ✕
-                </button>
+        <div className="fixed inset-0 bg-black/70 backdrop-blur-sm flex items-center justify-center p-4 z-50" onClick={() => setShowDetailModal(false)}>
+          <div className="bg-[#232742] border-t-2 border-t-blue-500 border border-white/10 rounded-2xl w-full max-w-2xl max-h-[90vh] overflow-auto shadow-2xl"
+            onClick={(e) => e.stopPropagation()}>
+            <div className="sticky top-0 bg-[#232742] border-b border-white/10 px-5 py-4 flex items-center justify-between">
+              <div>
+                <h2 className="text-lg font-bold text-white tracking-tight">🔧 Détail MBX-{selectedRepairDetail.id}</h2>
+                <p className="text-gray-400 text-sm">{selectedRepairClient.name}</p>
               </div>
+              <button onClick={() => setShowDetailModal(false)} className="w-8 h-8 bg-white/10 hover:bg-white/20 rounded-full flex items-center justify-center text-gray-400 transition text-sm">✕</button>
             </div>
             <div className="p-5 space-y-4">
-              <div className="bg-gray-50 p-4 rounded-lg">
-                <div className="font-semibold text-gray-800">👤 {selectedRepairClient.name}</div>
-                {selectedRepairClient.phone !== "NC" && (
-                  <div className="text-sm text-gray-600">📞 {selectedRepairClient.phone}</div>
-                )}
-                {selectedRepairClient.email !== "NC" && (
-                  <div className="text-sm text-gray-600">✉️ {selectedRepairClient.email}</div>
-                )}
-                {selectedRepairClient.client_code && (
-                  <div className="text-sm font-mono text-blue-600">
-                    🔑 Code: {selectedRepairClient.client_code}
-                  </div>
-                )}
+              <div className="bg-black/20 border border-white/10 rounded-xl p-4 space-y-1.5">
+                <div className="font-semibold text-white">👤 {selectedRepairClient.name}</div>
+                {selectedRepairClient.phone !== "NC" && <div className="text-sm text-gray-400">📞 {selectedRepairClient.phone}</div>}
+                {selectedRepairClient.email !== "NC" && <div className="text-sm text-gray-400">✉️ {selectedRepairClient.email}</div>}
+                {selectedRepairClient.client_code && <div className="text-sm font-mono text-blue-400">🔑 Code : {selectedRepairClient.client_code}</div>}
               </div>
-              <div className="border border-gray-200 rounded-lg overflow-hidden">
-                <div className="grid grid-cols-2 border-b border-gray-200">
-                  <div className="p-3 bg-gray-50 font-semibold">📱 Appareil</div>
-                  <div className="p-3">{selectedRepairDetail.device}</div>
+              <div className="bg-black/20 border border-white/10 rounded-xl overflow-hidden">
+                <div className="grid grid-cols-2 border-b border-white/10">
+                  <div className="px-4 py-3 text-gray-400 text-xs font-semibold uppercase tracking-widest bg-white/5">📱 Appareil</div>
+                  <div className="px-4 py-3 text-white text-sm">{selectedRepairDetail.device}</div>
                 </div>
                 <div className="grid grid-cols-2">
-                  <div className="p-3 bg-gray-50 font-semibold">🔧 Panne</div>
-                  <div className="p-3">{selectedRepairDetail.issue}</div>
+                  <div className="px-4 py-3 text-gray-400 text-xs font-semibold uppercase tracking-widest bg-white/5">🔧 Panne</div>
+                  <div className="px-4 py-3 text-white text-sm">{selectedRepairDetail.issue}</div>
                 </div>
               </div>
               <div className="flex gap-2">
-                <button
-                  onClick={async () => {
-                    const { data: clientData } = await supabase
-                      .from("clients")
-                      .select("*")
-                      .eq("id", selectedRepairDetail.client_id)
-                      .single();
-                    if (clientData) {
-                      const trackingUrl = await genererLienSuivi(selectedRepairDetail, clientData);
-                      printTicket(selectedRepairDetail, clientData, trackingUrl);
-                    }
-                  }}
-                  className="flex-1 bg-blue-600 text-white py-2 rounded-lg hover:bg-blue-700 transition"
-                >
-                  🖨️ Ticket
+                <button onClick={async () => {
+                  const { data: clientData } = await supabase.from("clients").select("*").eq("id", selectedRepairDetail.client_id).single();
+                  if (clientData) {
+                    const trackingUrl = await genererLienSuivi(selectedRepairDetail, clientData);
+                    printTicket(selectedRepairDetail, clientData, trackingUrl);
+                  }
+                }} className="flex-1 bg-gradient-to-r from-blue-600 to-blue-500 text-white py-2.5 rounded-xl font-semibold text-sm hover:from-blue-500 hover:to-blue-400 transition-all duration-200">
+                  🖨️ Imprimer ticket
                 </button>
-                <button
-                  onClick={() => setShowDetailModal(false)}
-                  className="flex-1 bg-gray-200 text-gray-700 py-2 rounded-lg hover:bg-gray-300 transition"
-                >
+                <button onClick={() => setShowDetailModal(false)}
+                  className="flex-1 bg-white/5 hover:bg-white/10 text-gray-300 py-2.5 rounded-xl font-semibold text-sm border border-white/10 transition-all duration-200">
                   Fermer
                 </button>
               </div>

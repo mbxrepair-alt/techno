@@ -479,158 +479,118 @@ export default function ClientsPage() {
     return (
       <Layout>
         <div className="flex justify-center items-center h-64">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-orange-500"></div>
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-emerald-500"></div>
         </div>
       </Layout>
     );
   }
 
+  const inputCls = "w-full bg-[#1a1d2e] border border-white/10 rounded-xl px-3 py-2.5 text-white text-sm outline-none focus:border-emerald-500/60 focus:ring-2 focus:ring-emerald-500/15 transition-all duration-200";
+  const labelCls = "block text-xs font-semibold text-gray-400 uppercase tracking-wider mb-1.5";
+
   return (
     <Layout>
-      <div className="max-w-7xl mx-auto px-4 py-6">
+      <div className="w-full">
         {message.text && (
-          <div
-            className={`fixed bottom-5 right-5 px-5 py-3 rounded-xl shadow-lg z-50 text-white ${message.type === "error" ? "bg-red-500" : "bg-green-500"}`}
-          >
+          <div className={`fixed bottom-5 right-5 px-5 py-3 rounded-xl shadow-lg z-50 text-sm font-semibold ${message.type === "error" ? "bg-red-500/20 border border-red-500/30 text-red-400" : "bg-green-500/20 border border-green-500/30 text-green-400"}`}>
             {message.text}
           </div>
         )}
 
-        <div className="flex justify-between items-center mb-6">
-          <div>
-            <h1 className="text-2xl font-bold text-gray-800">👥 Clients</h1>
-            <p className="text-sm text-gray-500">Gérez vos clients et leurs codes d'accès</p>
-          </div>
-          <button
-            onClick={() => {
-              resetForm();
-              setShowAddModal(true);
-            }}
-            className="bg-orange-500 text-white px-5 py-2.5 rounded-xl font-medium hover:bg-orange-600 transition"
-          >
-            + Nouveau client
-          </button>
-        </div>
-
-        <div className="grid grid-cols-3 gap-4 mb-6">
-          <div className="bg-orange-500 rounded-xl p-4 text-white">
-            <div className="text-sm">Total</div>
-            <div className="text-2xl font-bold">{stats.total}</div>
-          </div>
-          <div className="bg-indigo-500 rounded-xl p-4 text-white">
-            <div className="text-sm">Professionnels</div>
-            <div className="text-2xl font-bold">{stats.pro}</div>
-          </div>
-          <div className="bg-green-500 rounded-xl p-4 text-white">
-            <div className="text-sm">Particuliers</div>
-            <div className="text-2xl font-bold">{stats.particulier}</div>
-          </div>
-        </div>
-
-        <div className="bg-white rounded-xl shadow-sm border p-4 mb-6">
-          <div className="flex gap-3">
-            <input
-              type="text"
-              placeholder="🔍 Rechercher par nom ou code..."
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              className="flex-1 p-2 border rounded-lg focus:ring-2 focus:ring-orange-500"
-            />
-            <select
-              value={filterType}
-              onChange={(e) => setFilterType(e.target.value)}
-              className="p-2 border rounded-lg focus:ring-2 focus:ring-orange-500"
+        {/* HEADER */}
+        <div className="relative overflow-hidden bg-gradient-to-r from-emerald-500 to-green-600 rounded-2xl px-6 py-5 mb-6">
+          <div className="absolute inset-0 opacity-[0.06]" style={{ backgroundImage: "radial-gradient(circle, white 1px, transparent 1px)", backgroundSize: "18px 18px" }} />
+          <div className="relative flex justify-between items-center">
+            <div>
+              <h1 className="text-2xl font-black text-white tracking-tight">👥 Clients</h1>
+              <p className="text-xs text-white/60 uppercase tracking-widest mt-1">Gérez vos clients et codes d'accès</p>
+            </div>
+            <button
+              onClick={() => { resetForm(); setShowAddModal(true); }}
+              className="bg-white/20 hover:bg-white/30 text-white px-5 py-2.5 rounded-xl font-semibold text-sm shadow-[0_4px_0_rgba(0,0,0,0.3)] active:translate-y-0.5 active:shadow-[0_2px_0_rgba(0,0,0,0.3)] transition-all duration-150 border border-white/30"
             >
-              <option value="all">Tous</option>
-              <option value="pro">Professionnels</option>
-              <option value="particulier">Particuliers</option>
-            </select>
+              + Nouveau client
+            </button>
           </div>
         </div>
 
-        <div className="bg-white rounded-xl shadow-sm border overflow-hidden">
+        {/* STAT CARDS */}
+        <div className="grid grid-cols-3 gap-4 mb-6">
+          <div className="bg-gradient-to-br from-emerald-500 to-green-600 rounded-2xl p-4 text-white shadow-lg shadow-emerald-500/25">
+            <div className="text-xs font-medium text-white/70 uppercase tracking-wider">Total</div>
+            <div className="text-3xl font-black mt-1">{stats.total}</div>
+          </div>
+          <div className="bg-gradient-to-br from-blue-500 to-blue-700 rounded-2xl p-4 text-white shadow-lg shadow-blue-500/25">
+            <div className="text-xs font-medium text-white/70 uppercase tracking-wider">Professionnels</div>
+            <div className="text-3xl font-black mt-1">{stats.pro}</div>
+          </div>
+          <div className="bg-gradient-to-br from-teal-400 to-cyan-600 rounded-2xl p-4 text-white shadow-lg shadow-teal-400/25">
+            <div className="text-xs font-medium text-white/70 uppercase tracking-wider">Particuliers</div>
+            <div className="text-3xl font-black mt-1">{stats.particulier}</div>
+          </div>
+        </div>
+
+        {/* SEARCH / FILTER */}
+        <div className="bg-[#16161d] border border-white/5 rounded-2xl p-4 mb-5 flex gap-3">
+          <input
+            type="text"
+            placeholder="Rechercher par nom ou code..."
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+            className={`flex-1 ${inputCls}`}
+          />
+          <select
+            value={filterType}
+            onChange={(e) => setFilterType(e.target.value)}
+            className="bg-[#1a1d2e] border border-white/10 rounded-xl px-3 py-2.5 text-white text-sm outline-none focus:border-emerald-500/60 focus:ring-2 focus:ring-emerald-500/15 transition-all"
+          >
+            <option value="all">Tous</option>
+            <option value="pro">Professionnels</option>
+            <option value="particulier">Particuliers</option>
+          </select>
+        </div>
+
+        {/* TABLE */}
+        <div className="bg-[#16161d] border border-white/5 rounded-2xl overflow-hidden">
           <div className="overflow-x-auto">
             <table className="w-full">
-              <thead className="bg-gray-50 border-b">
-                <tr>
-                  <th className="px-4 py-3 text-left text-sm font-semibold">🔑 Code</th>
-                  <th className="px-4 py-3 text-left text-sm font-semibold">👤 Nom</th>
-                  <th className="px-4 py-3 text-left text-sm font-semibold">✉️ Email</th>
-                  <th className="px-4 py-3 text-left text-sm font-semibold">📞 Téléphone</th>
-                  <th className="px-4 py-3 text-left text-sm font-semibold">🏷️ Type</th>
-                  <th className="px-4 py-3 text-center text-sm font-semibold">⚡ Actions</th>
+              <thead>
+                <tr className="bg-emerald-500/10 border-b border-white/5">
+                  <th className="px-4 py-3 text-left text-xs font-bold text-emerald-400 uppercase tracking-widest">🔑 Code</th>
+                  <th className="px-4 py-3 text-left text-xs font-bold text-emerald-400 uppercase tracking-widest">👤 Nom</th>
+                  <th className="px-4 py-3 text-left text-xs font-bold text-emerald-400 uppercase tracking-widest">✉️ Email</th>
+                  <th className="px-4 py-3 text-left text-xs font-bold text-emerald-400 uppercase tracking-widest">📞 Téléphone</th>
+                  <th className="px-4 py-3 text-left text-xs font-bold text-emerald-400 uppercase tracking-widest">🏷️ Type</th>
+                  <th className="px-4 py-3 text-center text-xs font-bold text-emerald-400 uppercase tracking-widest">⚡ Actions</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-gray-100">
+              <tbody className="divide-y divide-white/5">
                 {filteredClients.length === 0 ? (
                   <tr>
-                    <td colSpan={6} className="px-4 py-8 text-center text-gray-400">
-                      Aucun client trouvé
-                    </td>
+                    <td colSpan={6} className="px-4 py-12 text-center text-gray-500 text-sm">Aucun client trouvé</td>
                   </tr>
                 ) : (
                   filteredClients.map((client) => (
-                    <tr
-                      key={client.id}
-                      className="hover:bg-gray-50 transition cursor-pointer"
-                      onClick={() => router.push(`/clients/${client.id}`)}
-                    >
+                    <tr key={client.id} className="hover:bg-white/5 transition-colors duration-150 cursor-pointer" onClick={() => router.push(`/clients/${client.id}`)}>
                       <td className="px-4 py-3">
                         <div className="flex items-center gap-2">
-                          <code className="bg-gray-100 px-2 py-1 rounded text-xs font-mono">
-                            {client.client_code}
-                          </code>
-                          <button
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              copyClientCode(client.client_code);
-                            }}
-                            className="text-green-600 hover:text-green-800 transition"
-                            title="Copier le code"
-                          >
-                            📋
-                          </button>
+                          <code className="bg-emerald-500/10 text-emerald-400 px-2 py-1 rounded-lg text-xs font-mono">{client.client_code}</code>
+                          <button onClick={(e) => { e.stopPropagation(); copyClientCode(client.client_code); }} className="text-gray-500 hover:text-emerald-400 transition-colors" title="Copier">📋</button>
                         </div>
                       </td>
-                      <td className="px-4 py-3 font-medium">{client.name}</td>
-                      <td className="px-4 py-3 text-sm text-gray-600">
-                        {client.email !== "NC" ? client.email : "-"}
-                      </td>
-                      <td className="px-4 py-3 text-sm">
-                        {client.phone !== "NC" ? client.phone : "-"}
-                      </td>
+                      <td className="px-4 py-3 font-semibold text-white text-sm">{client.name}</td>
+                      <td className="px-4 py-3 text-sm text-gray-400">{client.email !== "NC" ? client.email : "-"}</td>
+                      <td className="px-4 py-3 text-sm text-gray-400">{client.phone !== "NC" ? client.phone : "-"}</td>
                       <td className="px-4 py-3">
                         {client.type === "pro" ? (
-                          <span className="inline-flex items-center gap-1 px-2 py-1 bg-indigo-100 text-indigo-700 rounded-full text-xs">
-                            🏢 Pro
-                          </span>
+                          <span className="inline-flex items-center gap-1 px-2 py-1 bg-blue-500/10 text-blue-400 rounded-full text-xs font-medium">🏢 Pro</span>
                         ) : (
-                          <span className="inline-flex items-center gap-1 px-2 py-1 bg-green-100 text-green-700 rounded-full text-xs">
-                            👤 Particulier
-                          </span>
+                          <span className="inline-flex items-center gap-1 px-2 py-1 bg-emerald-500/10 text-emerald-400 rounded-full text-xs font-medium">👤 Particulier</span>
                         )}
                       </td>
                       <td className="px-4 py-3 text-center">
-                        <button
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            openEditModal(client);
-                          }}
-                          className="text-blue-600 hover:text-blue-800 transition mx-1 text-lg"
-                          title="Modifier"
-                        >
-                          ✏️
-                        </button>
-                        <button
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            openDeleteModal(client);
-                          }}
-                          className="text-red-600 hover:text-red-800 transition mx-1 text-lg"
-                          title="Supprimer"
-                        >
-                          🗑️
-                        </button>
+                        <button onClick={(e) => { e.stopPropagation(); openEditModal(client); }} className="text-gray-400 hover:text-emerald-400 transition-colors mx-1 text-lg" title="Modifier">✏️</button>
+                        <button onClick={(e) => { e.stopPropagation(); openDeleteModal(client); }} className="text-gray-400 hover:text-red-400 transition-colors mx-1 text-lg" title="Supprimer">🗑️</button>
                       </td>
                     </tr>
                   ))
@@ -641,213 +601,105 @@ export default function ClientsPage() {
         </div>
       </div>
 
-      {/* MODAL AJOUT CLIENT - Gardé identique */}
+      {/* MODAL AJOUT CLIENT */}
       {showAddModal && (
-        <div
-          className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4"
-          onClick={() => setShowAddModal(false)}
-        >
-          <div
-            className="bg-white rounded-xl max-w-2xl w-full p-6 max-h-[90vh] overflow-y-auto"
-            onClick={(e) => e.stopPropagation()}
-          >
-            <div className="flex justify-between items-center mb-4">
-              <h2 className="text-xl font-bold">➕ Nouveau client</h2>
-              <button
-                onClick={() => setShowAddModal(false)}
-                className="text-gray-400 hover:text-gray-600 text-2xl"
-              >
-                ✕
-              </button>
+        <div className="fixed inset-0 bg-black/70 backdrop-blur-sm flex items-center justify-center z-50 p-4" onClick={() => setShowAddModal(false)}>
+          <div className="bg-[#232742] border border-white/10 border-t-2 border-t-emerald-500 rounded-2xl max-w-2xl w-full p-6 max-h-[90vh] overflow-y-auto" onClick={(e) => e.stopPropagation()}>
+            <div className="flex justify-between items-center mb-5">
+              <h2 className="text-lg font-black text-white">➕ Nouveau client</h2>
+              <button onClick={() => setShowAddModal(false)} className="text-gray-500 hover:text-white transition-colors text-xl w-8 h-8 flex items-center justify-center rounded-lg hover:bg-white/10">✕</button>
             </div>
-            <form onSubmit={handleAddClient} className="space-y-6">
+            <form onSubmit={handleAddClient} className="space-y-5">
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Type de client *
-                </label>
+                <label className={labelCls}>Type de client *</label>
                 <div className="flex gap-4">
-                  <label className="flex items-center gap-2 cursor-pointer">
-                    <input
-                      type="radio"
-                      value="particulier"
-                      checked={formData.type === "particulier"}
-                      onChange={(e) => setFormData({ ...formData, type: e.target.value })}
-                      className="w-4 h-4"
-                    />
+                  <label className="flex items-center gap-2 cursor-pointer text-sm text-gray-300">
+                    <input type="radio" value="particulier" checked={formData.type === "particulier"} onChange={(e) => setFormData({ ...formData, type: e.target.value })} className="w-4 h-4 accent-emerald-500" />
                     <span>👤 Particulier</span>
                   </label>
-                  <label className="flex items-center gap-2 cursor-pointer">
-                    <input
-                      type="radio"
-                      value="pro"
-                      checked={formData.type === "pro"}
-                      onChange={(e) => setFormData({ ...formData, type: e.target.value })}
-                      className="w-4 h-4"
-                    />
+                  <label className="flex items-center gap-2 cursor-pointer text-sm text-gray-300">
+                    <input type="radio" value="pro" checked={formData.type === "pro"} onChange={(e) => setFormData({ ...formData, type: e.target.value })} className="w-4 h-4 accent-emerald-500" />
                     <span>🏢 Professionnel</span>
                   </label>
                 </div>
               </div>
 
               {formData.type === "particulier" && (
-                <div className="space-y-4 border-t pt-4">
+                <div className="space-y-4 border-t border-white/10 pt-4">
                   <div className="grid grid-cols-2 gap-4">
                     <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-1">
-                        Civilité
-                      </label>
-                      <select
-                        value={formData.civility}
-                        onChange={(e) => setFormData({ ...formData, civility: e.target.value })}
-                        className="w-full p-2 border rounded-lg"
-                      >
+                      <label className={labelCls}>Civilité</label>
+                      <select value={formData.civility} onChange={(e) => setFormData({ ...formData, civility: e.target.value })} className="bg-[#1a1d2e] border border-white/10 rounded-xl px-3 py-2.5 text-white text-sm outline-none focus:border-emerald-500/60 w-full">
                         <option value="mr">M.</option>
                         <option value="mme">Mme</option>
                         <option value="mlle">Mlle</option>
                       </select>
                     </div>
                     <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-1">
-                        Prénom *
-                      </label>
-                      <input
-                        type="text"
-                        required
-                        className="w-full p-2 border rounded-lg"
-                        value={formData.firstName}
-                        onChange={(e) => setFormData({ ...formData, firstName: e.target.value })}
-                      />
+                      <label className={labelCls}>Prénom *</label>
+                      <input type="text" required className={inputCls} value={formData.firstName} onChange={(e) => setFormData({ ...formData, firstName: e.target.value })} />
                     </div>
                   </div>
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">Nom *</label>
-                    <input
-                      type="text"
-                      required
-                      className="w-full p-2 border rounded-lg"
-                      value={formData.lastName}
-                      onChange={(e) => setFormData({ ...formData, lastName: e.target.value })}
-                    />
+                    <label className={labelCls}>Nom *</label>
+                    <input type="text" required className={inputCls} value={formData.lastName} onChange={(e) => setFormData({ ...formData, lastName: e.target.value })} />
                   </div>
                 </div>
               )}
 
               {formData.type === "pro" && (
-                <div className="space-y-4 border-t pt-4">
+                <div className="space-y-4 border-t border-white/10 pt-4">
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">
-                      Société *
-                    </label>
-                    <input
-                      type="text"
-                      required
-                      className="w-full p-2 border rounded-lg"
-                      value={formData.companyName}
-                      onChange={(e) => setFormData({ ...formData, companyName: e.target.value })}
-                    />
+                    <label className={labelCls}>Société *</label>
+                    <input type="text" required className={inputCls} value={formData.companyName} onChange={(e) => setFormData({ ...formData, companyName: e.target.value })} />
                   </div>
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">
-                      Numéro Siret
-                    </label>
-                    <input
-                      type="text"
-                      placeholder="14 chiffres"
-                      className="w-full p-2 border rounded-lg"
-                      value={formData.siret}
-                      onChange={(e) => {
-                        setFormData({ ...formData, siret: e.target.value });
-                        setSiretError("");
-                        setSiretInfo(null);
-                      }}
-                      onBlur={() =>
-                        formData.siret &&
-                        formData.siret.length === 14 &&
-                        validateSiret(formData.siret)
-                      }
+                    <label className={labelCls}>Numéro Siret</label>
+                    <input type="text" placeholder="14 chiffres" className={inputCls} value={formData.siret}
+                      onChange={(e) => { setFormData({ ...formData, siret: e.target.value }); setSiretError(""); setSiretInfo(null); }}
+                      onBlur={() => formData.siret && formData.siret.length === 14 && validateSiret(formData.siret)}
                       maxLength={14}
                     />
-                    {loadingSiret && (
-                      <p className="text-sm text-gray-500 mt-1">🔍 Vérification...</p>
-                    )}
-                    {siretError && <p className="text-sm text-red-600 mt-1">⚠️ {siretError}</p>}
+                    {loadingSiret && <p className="text-xs text-gray-500 mt-1">🔍 Vérification...</p>}
+                    {siretError && <p className="text-xs text-red-400 mt-1">⚠️ {siretError}</p>}
                     {siretInfo && (
-                      <div className="mt-2 p-3 bg-green-50 border border-green-200 rounded-lg">
-                        <p className="font-semibold text-green-800">✅ {siretInfo.nom}</p>
-                        <p className="text-sm text-gray-600">{siretInfo.adresse}</p>
+                      <div className="mt-2 p-3 bg-emerald-500/10 border border-emerald-500/20 rounded-xl">
+                        <p className="font-semibold text-emerald-400 text-sm">✅ {siretInfo.nom}</p>
+                        <p className="text-xs text-gray-400">{siretInfo.adresse}</p>
                       </div>
                     )}
                   </div>
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">Code APE</label>
-                    <input
-                      type="text"
-                      className="w-full p-2 border rounded-lg bg-gray-50"
-                      value={formData.apeCode}
-                      onChange={(e) => setFormData({ ...formData, apeCode: e.target.value })}
-                      placeholder="Auto-rempli"
-                      readOnly
-                    />
+                    <label className={labelCls}>Code APE</label>
+                    <input type="text" className="w-full bg-white/5 border border-white/10 rounded-xl px-3 py-2.5 text-gray-500 text-sm outline-none" value={formData.apeCode} onChange={(e) => setFormData({ ...formData, apeCode: e.target.value })} placeholder="Auto-rempli" readOnly />
                   </div>
                 </div>
               )}
 
-              <div className="space-y-4 border-t pt-4">
+              <div className="space-y-4 border-t border-white/10 pt-4">
                 <div className="grid grid-cols-2 gap-4">
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">Email *</label>
-                    <input
-                      type="email"
-                      required
-                      className="w-full p-2 border rounded-lg"
-                      value={formData.email}
-                      onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-                    />
+                    <label className={labelCls}>Email *</label>
+                    <input type="email" required className={inputCls} value={formData.email} onChange={(e) => setFormData({ ...formData, email: e.target.value })} />
                   </div>
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">
-                      Téléphone fixe
-                    </label>
-                    <input
-                      type="tel"
-                      className="w-full p-2 border rounded-lg"
-                      value={formData.phone}
-                      onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
-                    />
+                    <label className={labelCls}>Téléphone fixe</label>
+                    <input type="tel" className={inputCls} value={formData.phone} onChange={(e) => setFormData({ ...formData, phone: e.target.value })} />
                   </div>
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Téléphone portable
-                  </label>
-                  <input
-                    type="tel"
-                    className="w-full p-2 border rounded-lg"
-                    value={formData.mobile}
-                    onChange={(e) => setFormData({ ...formData, mobile: e.target.value })}
-                  />
+                  <label className={labelCls}>Téléphone portable</label>
+                  <input type="tel" className={inputCls} value={formData.mobile} onChange={(e) => setFormData({ ...formData, mobile: e.target.value })} />
                 </div>
                 <div className="relative">
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Adresse</label>
-                  <input
-                    type="text"
-                    placeholder="Saisissez votre adresse"
-                    className="w-full p-2 border rounded-lg"
-                    value={formData.address}
-                    onChange={(e) => {
-                      setFormData({ ...formData, address: e.target.value });
-                      searchAddress(e.target.value);
-                    }}
+                  <label className={labelCls}>Adresse</label>
+                  <input type="text" placeholder="Saisissez votre adresse" className={inputCls} value={formData.address}
+                    onChange={(e) => { setFormData({ ...formData, address: e.target.value }); searchAddress(e.target.value); }}
                   />
                   {showAddressSuggestions && addressSuggestions.length > 0 && (
-                    <div className="absolute z-10 w-full mt-1 bg-white border rounded-lg shadow-lg max-h-48 overflow-y-auto">
+                    <div className="absolute z-10 w-full mt-1 bg-[#232742] border border-white/10 rounded-xl shadow-2xl max-h-48 overflow-y-auto">
                       {addressSuggestions.map((suggestion) => (
-                        <button
-                          key={suggestion.id}
-                          type="button"
-                          className="w-full text-left px-4 py-2 hover:bg-gray-100 text-sm"
-                          onClick={() => selectAddress(suggestion)}
-                        >
+                        <button key={suggestion.id} type="button" className="w-full text-left px-4 py-2.5 hover:bg-emerald-500/10 text-sm text-gray-300 hover:text-white transition-colors" onClick={() => selectAddress(suggestion)}>
                           {suggestion.label}
                         </button>
                       ))}
@@ -856,18 +708,11 @@ export default function ClientsPage() {
                 </div>
               </div>
 
-              <div className="flex gap-3 pt-4">
-                <button
-                  type="submit"
-                  className="flex-1 bg-orange-500 text-white py-2 rounded-lg hover:bg-orange-600"
-                >
+              <div className="flex gap-3 pt-2">
+                <button type="submit" className="flex-1 bg-gradient-to-r from-emerald-500 to-green-600 text-white py-2.5 rounded-xl font-semibold text-sm shadow-[0_4px_0_rgba(0,0,0,0.3)] hover:opacity-90 hover:-translate-y-0.5 active:translate-y-0.5 active:shadow-[0_2px_0_rgba(0,0,0,0.3)] transition-all duration-150">
                   Ajouter le client
                 </button>
-                <button
-                  type="button"
-                  onClick={() => setShowAddModal(false)}
-                  className="flex-1 bg-gray-200 py-2 rounded-lg hover:bg-gray-300"
-                >
+                <button type="button" onClick={() => setShowAddModal(false)} className="flex-1 bg-white/10 text-gray-300 py-2.5 rounded-xl font-semibold text-sm hover:bg-white/20 transition-all duration-150">
                   Annuler
                 </button>
               </div>
@@ -876,188 +721,90 @@ export default function ClientsPage() {
         </div>
       )}
 
-      {/* MODAL MODIFICATION CLIENT - Gardé identique */}
+      {/* MODAL MODIFICATION CLIENT */}
       {showEditModal && selectedClient && (
-        <div
-          className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4"
-          onClick={() => setShowEditModal(false)}
-        >
-          <div
-            className="bg-white rounded-xl max-w-2xl w-full p-6 max-h-[90vh] overflow-y-auto"
-            onClick={(e) => e.stopPropagation()}
-          >
-            <div className="flex justify-between items-center mb-4">
-              <h2 className="text-xl font-bold">✏️ Modifier {selectedClient.name}</h2>
-              <button
-                onClick={() => setShowEditModal(false)}
-                className="text-gray-400 hover:text-gray-600 text-2xl"
-              >
-                ✕
-              </button>
+        <div className="fixed inset-0 bg-black/70 backdrop-blur-sm flex items-center justify-center z-50 p-4" onClick={() => setShowEditModal(false)}>
+          <div className="bg-[#232742] border border-white/10 border-t-2 border-t-emerald-500 rounded-2xl max-w-2xl w-full p-6 max-h-[90vh] overflow-y-auto" onClick={(e) => e.stopPropagation()}>
+            <div className="flex justify-between items-center mb-5">
+              <h2 className="text-lg font-black text-white">✏️ Modifier {selectedClient.name}</h2>
+              <button onClick={() => setShowEditModal(false)} className="text-gray-500 hover:text-white transition-colors text-xl w-8 h-8 flex items-center justify-center rounded-lg hover:bg-white/10">✕</button>
             </div>
-            <form onSubmit={handleEditClient} className="space-y-6">
-              {/* Même contenu que le modal d'ajout mais pour modification */}
+            <form onSubmit={handleEditClient} className="space-y-5">
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Type de client
-                </label>
+                <label className={labelCls}>Type de client</label>
                 <div className="flex gap-4">
-                  <label className="flex items-center gap-2 cursor-pointer">
-                    <input
-                      type="radio"
-                      value="particulier"
-                      checked={formData.type === "particulier"}
-                      onChange={(e) => setFormData({ ...formData, type: e.target.value })}
-                      className="w-4 h-4"
-                    />
+                  <label className="flex items-center gap-2 cursor-pointer text-sm text-gray-300">
+                    <input type="radio" value="particulier" checked={formData.type === "particulier"} onChange={(e) => setFormData({ ...formData, type: e.target.value })} className="w-4 h-4 accent-emerald-500" />
                     <span>👤 Particulier</span>
                   </label>
-                  <label className="flex items-center gap-2 cursor-pointer">
-                    <input
-                      type="radio"
-                      value="pro"
-                      checked={formData.type === "pro"}
-                      onChange={(e) => setFormData({ ...formData, type: e.target.value })}
-                      className="w-4 h-4"
-                    />
+                  <label className="flex items-center gap-2 cursor-pointer text-sm text-gray-300">
+                    <input type="radio" value="pro" checked={formData.type === "pro"} onChange={(e) => setFormData({ ...formData, type: e.target.value })} className="w-4 h-4 accent-emerald-500" />
                     <span>🏢 Professionnel</span>
                   </label>
                 </div>
               </div>
               {formData.type === "particulier" && (
-                <div className="space-y-4 border-t pt-4">
+                <div className="space-y-4 border-t border-white/10 pt-4">
                   <div className="grid grid-cols-2 gap-4">
                     <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-1">
-                        Civilité
-                      </label>
-                      <select
-                        value={formData.civility}
-                        onChange={(e) => setFormData({ ...formData, civility: e.target.value })}
-                        className="w-full p-2 border rounded-lg"
-                      >
+                      <label className={labelCls}>Civilité</label>
+                      <select value={formData.civility} onChange={(e) => setFormData({ ...formData, civility: e.target.value })} className="bg-[#1a1d2e] border border-white/10 rounded-xl px-3 py-2.5 text-white text-sm outline-none focus:border-emerald-500/60 w-full">
                         <option value="mr">M.</option>
                         <option value="mme">Mme</option>
                         <option value="mlle">Mlle</option>
                       </select>
                     </div>
                     <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-1">
-                        Prénom *
-                      </label>
-                      <input
-                        type="text"
-                        required
-                        className="w-full p-2 border rounded-lg"
-                        value={formData.firstName}
-                        onChange={(e) => setFormData({ ...formData, firstName: e.target.value })}
-                      />
+                      <label className={labelCls}>Prénom *</label>
+                      <input type="text" required className={inputCls} value={formData.firstName} onChange={(e) => setFormData({ ...formData, firstName: e.target.value })} />
                     </div>
                   </div>
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">Nom *</label>
-                    <input
-                      type="text"
-                      required
-                      className="w-full p-2 border rounded-lg"
-                      value={formData.lastName}
-                      onChange={(e) => setFormData({ ...formData, lastName: e.target.value })}
-                    />
+                    <label className={labelCls}>Nom *</label>
+                    <input type="text" required className={inputCls} value={formData.lastName} onChange={(e) => setFormData({ ...formData, lastName: e.target.value })} />
                   </div>
                 </div>
               )}
               {formData.type === "pro" && (
-                <div className="space-y-4 border-t pt-4">
+                <div className="space-y-4 border-t border-white/10 pt-4">
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">
-                      Société *
-                    </label>
-                    <input
-                      type="text"
-                      required
-                      className="w-full p-2 border rounded-lg"
-                      value={formData.companyName}
-                      onChange={(e) => setFormData({ ...formData, companyName: e.target.value })}
-                    />
+                    <label className={labelCls}>Société *</label>
+                    <input type="text" required className={inputCls} value={formData.companyName} onChange={(e) => setFormData({ ...formData, companyName: e.target.value })} />
                   </div>
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">
-                      Numéro Siret
-                    </label>
-                    <input
-                      type="text"
-                      className="w-full p-2 border rounded-lg"
-                      value={formData.siret}
-                      onChange={(e) => setFormData({ ...formData, siret: e.target.value })}
-                      maxLength={14}
-                    />
+                    <label className={labelCls}>Numéro Siret</label>
+                    <input type="text" className={inputCls} value={formData.siret} onChange={(e) => setFormData({ ...formData, siret: e.target.value })} maxLength={14} />
                   </div>
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">Code APE</label>
-                    <input
-                      type="text"
-                      className="w-full p-2 border rounded-lg bg-gray-50"
-                      value={formData.apeCode}
-                      onChange={(e) => setFormData({ ...formData, apeCode: e.target.value })}
-                    />
+                    <label className={labelCls}>Code APE</label>
+                    <input type="text" className="w-full bg-white/5 border border-white/10 rounded-xl px-3 py-2.5 text-gray-500 text-sm outline-none" value={formData.apeCode} onChange={(e) => setFormData({ ...formData, apeCode: e.target.value })} />
                   </div>
                 </div>
               )}
-              <div className="space-y-4 border-t pt-4">
+              <div className="space-y-4 border-t border-white/10 pt-4">
                 <div className="grid grid-cols-2 gap-4">
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">Email *</label>
-                    <input
-                      type="email"
-                      required
-                      className="w-full p-2 border rounded-lg"
-                      value={formData.email}
-                      onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-                    />
+                    <label className={labelCls}>Email *</label>
+                    <input type="email" required className={inputCls} value={formData.email} onChange={(e) => setFormData({ ...formData, email: e.target.value })} />
                   </div>
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">
-                      Téléphone fixe
-                    </label>
-                    <input
-                      type="tel"
-                      className="w-full p-2 border rounded-lg"
-                      value={formData.phone}
-                      onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
-                    />
+                    <label className={labelCls}>Téléphone fixe</label>
+                    <input type="tel" className={inputCls} value={formData.phone} onChange={(e) => setFormData({ ...formData, phone: e.target.value })} />
                   </div>
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Téléphone portable
-                  </label>
-                  <input
-                    type="tel"
-                    className="w-full p-2 border rounded-lg"
-                    value={formData.mobile}
-                    onChange={(e) => setFormData({ ...formData, mobile: e.target.value })}
-                  />
+                  <label className={labelCls}>Téléphone portable</label>
+                  <input type="tel" className={inputCls} value={formData.mobile} onChange={(e) => setFormData({ ...formData, mobile: e.target.value })} />
                 </div>
                 <div className="relative">
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Adresse</label>
-                  <input
-                    type="text"
-                    className="w-full p-2 border rounded-lg"
-                    value={formData.address}
-                    onChange={(e) => {
-                      setFormData({ ...formData, address: e.target.value });
-                      searchAddress(e.target.value);
-                    }}
+                  <label className={labelCls}>Adresse</label>
+                  <input type="text" className={inputCls} value={formData.address}
+                    onChange={(e) => { setFormData({ ...formData, address: e.target.value }); searchAddress(e.target.value); }}
                   />
                   {showAddressSuggestions && addressSuggestions.length > 0 && (
-                    <div className="absolute z-10 w-full mt-1 bg-white border rounded-lg shadow-lg max-h-48 overflow-y-auto">
+                    <div className="absolute z-10 w-full mt-1 bg-[#232742] border border-white/10 rounded-xl shadow-2xl max-h-48 overflow-y-auto">
                       {addressSuggestions.map((suggestion) => (
-                        <button
-                          key={suggestion.id}
-                          type="button"
-                          className="w-full text-left px-4 py-2 hover:bg-gray-100 text-sm"
-                          onClick={() => selectAddress(suggestion)}
-                        >
+                        <button key={suggestion.id} type="button" className="w-full text-left px-4 py-2.5 hover:bg-emerald-500/10 text-sm text-gray-300 hover:text-white transition-colors" onClick={() => selectAddress(suggestion)}>
                           {suggestion.label}
                         </button>
                       ))}
@@ -1065,18 +812,11 @@ export default function ClientsPage() {
                   )}
                 </div>
               </div>
-              <div className="flex gap-3 pt-4">
-                <button
-                  type="submit"
-                  className="flex-1 bg-orange-500 text-white py-2 rounded-lg hover:bg-orange-600"
-                >
+              <div className="flex gap-3 pt-2">
+                <button type="submit" className="flex-1 bg-gradient-to-r from-emerald-500 to-green-600 text-white py-2.5 rounded-xl font-semibold text-sm shadow-[0_4px_0_rgba(0,0,0,0.3)] hover:opacity-90 hover:-translate-y-0.5 active:translate-y-0.5 active:shadow-[0_2px_0_rgba(0,0,0,0.3)] transition-all duration-150">
                   Enregistrer
                 </button>
-                <button
-                  type="button"
-                  onClick={() => setShowEditModal(false)}
-                  className="flex-1 bg-gray-200 py-2 rounded-lg hover:bg-gray-300"
-                >
+                <button type="button" onClick={() => setShowEditModal(false)} className="flex-1 bg-white/10 text-gray-300 py-2.5 rounded-xl font-semibold text-sm hover:bg-white/20 transition-all duration-150">
                   Annuler
                 </button>
               </div>
@@ -1085,55 +825,30 @@ export default function ClientsPage() {
         </div>
       )}
 
-      {/* MODAL CONFIRMATION MOT DE PASSE */}
+      {/* MODAL CONFIRMATION SUPPRESSION */}
       {showPasswordModal && clientToDelete && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-xl max-w-md w-full p-6">
-            <div className="flex justify-between items-center mb-4">
-              <h2 className="text-xl font-bold text-red-600">⚠️ Suppression client</h2>
-              <button
-                onClick={() => setShowPasswordModal(false)}
-                className="text-gray-400 hover:text-gray-600 text-2xl"
-              >
-                ✕
-              </button>
+        <div className="fixed inset-0 bg-black/70 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+          <div className="bg-[#232742] border border-white/10 border-t-2 border-t-red-500 rounded-2xl max-w-md w-full p-6">
+            <div className="flex justify-between items-center mb-5">
+              <h2 className="text-lg font-black text-red-400">⚠️ Suppression client</h2>
+              <button onClick={() => setShowPasswordModal(false)} className="text-gray-500 hover:text-white transition-colors text-xl w-8 h-8 flex items-center justify-center rounded-lg hover:bg-white/10">✕</button>
             </div>
             <div className="space-y-4">
-              <div className="bg-red-50 p-3 rounded-lg border border-red-200">
-                <p className="text-red-700 text-sm">
-                  Vous êtes sur le point de supprimer définitivement :
-                </p>
-                <p className="font-bold text-gray-800 mt-1">{clientToDelete.name}</p>
+              <div className="bg-red-500/10 p-3 rounded-xl border border-red-500/20">
+                <p className="text-red-400 text-sm">Vous êtes sur le point de supprimer définitivement :</p>
+                <p className="font-bold text-white mt-1">{clientToDelete.name}</p>
                 <p className="text-xs text-gray-500 mt-1">Code: {clientToDelete.client_code}</p>
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  🔐 Mot de passe du compte
-                </label>
-                <input
-                  type="password"
-                  value={passwordToDelete}
-                  onChange={(e) => setPasswordToDelete(e.target.value)}
-                  placeholder="Entrez votre mot de passe"
-                  className="w-full border rounded-lg p-2 text-sm"
-                  autoFocus
-                  onKeyPress={(e) => e.key === "Enter" && verifyPasswordAndDelete()}
-                />
-                <p className="text-xs text-gray-400 mt-1">
-                  La suppression est irréversible. Veuillez confirmer avec votre mot de passe.
-                </p>
+                <label className={labelCls}>🔐 Mot de passe du compte</label>
+                <input type="password" value={passwordToDelete} onChange={(e) => setPasswordToDelete(e.target.value)} placeholder="Entrez votre mot de passe" className={inputCls} autoFocus onKeyPress={(e) => e.key === "Enter" && verifyPasswordAndDelete()} />
+                <p className="text-xs text-gray-500 mt-1">La suppression est irréversible. Veuillez confirmer avec votre mot de passe.</p>
               </div>
               <div className="flex gap-2">
-                <button
-                  onClick={verifyPasswordAndDelete}
-                  className="flex-1 bg-red-600 text-white py-2 rounded-lg hover:bg-red-700 transition"
-                >
-                  🗑️ Confirmer la suppression
+                <button onClick={verifyPasswordAndDelete} className="flex-1 bg-gradient-to-r from-red-500 to-red-600 text-white py-2.5 rounded-xl font-semibold text-sm shadow-[0_4px_0_rgba(0,0,0,0.3)] hover:opacity-90 hover:-translate-y-0.5 active:translate-y-0.5 active:shadow-[0_2px_0_rgba(0,0,0,0.3)] transition-all duration-150">
+                  🗑️ Confirmer
                 </button>
-                <button
-                  onClick={() => setShowPasswordModal(false)}
-                  className="flex-1 bg-gray-200 py-2 rounded-lg hover:bg-gray-300 transition"
-                >
+                <button onClick={() => setShowPasswordModal(false)} className="flex-1 bg-white/10 text-gray-300 py-2.5 rounded-xl font-semibold text-sm hover:bg-white/20 transition-all duration-150">
                   Annuler
                 </button>
               </div>

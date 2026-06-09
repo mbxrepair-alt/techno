@@ -29,13 +29,14 @@ interface NavItem {
   href: string;
   label: string;
   icon: string;
+  grad: string;
+  glow: string;
   visible: boolean;
 }
 
 export default function Navigation({ user, permissions }: NavigationProps) {
   const pathname = usePathname();
   const [isGerant, setIsGerant] = useState(false);
-  const [hoveredItem, setHoveredItem] = useState<string | null>(null);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [technicianName, setTechnicianName] = useState("");
   const [companyName, setCompanyName] = useState("MBX Réparations");
@@ -86,179 +87,206 @@ export default function Navigation({ user, permissions }: NavigationProps) {
   };
 
   const navItems: NavItem[] = [
-    { href: "/dashboard", label: "Tableau de bord", icon: "🏠", visible: true },
+    {
+      href: "/dashboard",
+      label: "Tableau de bord",
+      icon: "🏠",
+      grad: "from-blue-500 to-blue-600",
+      glow: "shadow-blue-500/40",
+      visible: true,
+    },
     {
       href: "/repairs",
       label: "Réparations",
       icon: "🔧",
+      grad: "from-orange-500 to-orange-600",
+      glow: "shadow-orange-500/40",
       visible: !!(permissions?.can_access_repairs || isGerant),
     },
     {
       href: "/clients",
       label: "Clients",
       icon: "👥",
+      grad: "from-emerald-500 to-green-600",
+      glow: "shadow-emerald-500/40",
       visible: !!(permissions?.can_access_clients || isGerant),
     },
     {
       href: "/historique",
       label: "Historique",
       icon: "📜",
+      grad: "from-amber-500 to-yellow-600",
+      glow: "shadow-amber-500/40",
       visible: !!(permissions?.can_access_historique || isGerant),
     },
     {
       href: "/factures",
       label: "Factures",
       icon: "📄",
+      grad: "from-purple-500 to-violet-600",
+      glow: "shadow-purple-500/40",
       visible: !!(permissions?.can_access_factures || isGerant),
     },
     {
       href: "/paiements",
       label: "Paiements",
       icon: "💳",
+      grad: "from-pink-500 to-rose-600",
+      glow: "shadow-pink-500/40",
       visible: !!(permissions?.can_access_paiements || isGerant),
     },
     {
       href: "/statistiques",
       label: "Statistiques",
       icon: "📊",
+      grad: "from-cyan-500 to-teal-600",
+      glow: "shadow-cyan-500/40",
       visible: !!(permissions?.can_access_statistiques || isGerant),
     },
-    { href: "/settings", label: "Paramètres", icon: "⚙️", visible: true },
+    {
+      href: "/settings",
+      label: "Paramètres",
+      icon: "⚙️",
+      grad: "from-gray-500 to-slate-600",
+      glow: "shadow-gray-500/40",
+      visible: true,
+    },
   ];
 
   const visibleItems = navItems.filter((item) => item.visible);
 
   return (
-    <nav className="bg-gradient-to-r from-gray-900 via-gray-800 to-gray-900 shadow-2xl sticky top-0 z-50 border-b border-orange-500/30">
-      <div className="container mx-auto px-4">
-        <div className="flex justify-between items-center h-16">
-          <Link
-            href="/dashboard"
-            className="group relative flex items-center gap-2 transition-all duration-300 hover:scale-105"
-          >
-            <div className="relative">
-              <div className="absolute -inset-1 bg-orange-500 rounded-full blur-md opacity-0 group-hover:opacity-100 transition duration-300"></div>
-              {logoUrl ? (
-                <img
-                  src={logoUrl}
-                  alt="Logo"
-                  className="relative w-8 h-8 object-contain rounded-lg"
-                />
-              ) : (
-                <span className="relative text-2xl drop-shadow-[0_0_10px_rgba(249,115,22,0.5)] group-hover:drop-shadow-[0_0_20px_rgba(249,115,22,0.8)] transition-all duration-300">
-                  🔧
-                </span>
+    <>
+      {/* ── DESKTOP SIDEBAR ── */}
+      <aside className="hidden lg:flex flex-col w-64 shrink-0 sticky top-0 h-screen bg-gradient-to-b from-[#16161d] to-[#0f0f13] border-r border-white/5 z-40">
+
+        {/* LOGO */}
+        <Link
+          href="/dashboard"
+          className="flex items-center gap-3 p-5 border-b border-white/5 hover:opacity-80 transition-opacity duration-200 shrink-0"
+        >
+          <div className="w-11 h-11 rounded-xl bg-gradient-to-br from-orange-500 to-orange-600 flex items-center justify-center text-xl shadow-lg shadow-orange-500/30 shrink-0 overflow-hidden">
+            {logoUrl ? (
+              <img src={logoUrl} alt="Logo" className="w-full h-full object-contain" />
+            ) : (
+              "🔧"
+            )}
+          </div>
+          <div className="flex flex-col leading-none min-w-0">
+            <span className="text-2xl font-black text-white tracking-tight truncate">
+              {companyName.split(" ")[0]}
+            </span>
+            <span className="text-xs font-medium text-orange-400 uppercase tracking-widest mt-0.5">
+              {companyName.split(" ").slice(1).join(" ") || "Réparations"}
+            </span>
+          </div>
+        </Link>
+
+        {/* NAV ITEMS */}
+        <nav className="flex-1 overflow-y-auto px-3 py-4 space-y-1.5">
+          {visibleItems.map((item) => {
+            const isActive = pathname === item.href;
+            return (
+              <Link
+                key={item.href}
+                href={item.href}
+                className={[
+                  "flex items-center gap-3 px-4 py-3 rounded-xl transition-all duration-150 select-none",
+                  isActive
+                    ? `bg-gradient-to-r ${item.grad} text-white shadow-lg ${item.glow}`
+                    : "bg-white/5 border border-white/5 text-gray-300 hover:bg-white/10 hover:text-white hover:-translate-y-0.5",
+                  "shadow-[0_4px_0_rgba(0,0,0,0.3)]",
+                  "active:translate-y-0.5 active:shadow-[0_2px_0_rgba(0,0,0,0.3)]",
+                ].join(" ")}
+              >
+                <div
+                  className={[
+                    "w-8 h-8 rounded-lg bg-gradient-to-br flex items-center justify-center text-base shrink-0",
+                    item.grad,
+                    isActive ? "opacity-90" : "opacity-70 group-hover:opacity-100",
+                  ].join(" ")}
+                >
+                  {item.icon}
+                </div>
+                <span className="text-sm font-medium truncate">{item.label}</span>
+              </Link>
+            );
+          })}
+        </nav>
+
+        {/* USER PROFILE */}
+        <div className="p-3 border-t border-white/5 space-y-2 shrink-0">
+          <div className="flex items-center gap-3 px-3 py-2.5 rounded-xl bg-white/5 border border-white/5">
+            <div className="w-9 h-9 rounded-full bg-gradient-to-br from-orange-500 to-orange-600 flex items-center justify-center text-white font-black text-sm ring-2 ring-orange-500/30 shrink-0">
+              {technicianName?.charAt(0).toUpperCase() || "?"}
+            </div>
+            <div className="min-w-0 flex-1">
+              <p className="text-sm font-semibold text-white truncate">
+                {technicianName || "Technicien"}
+              </p>
+              {isGerant && (
+                <span className="text-xs text-orange-400 font-medium">⭐ Gérant</span>
               )}
             </div>
-            <span className="bg-gradient-to-r from-white to-orange-400 bg-clip-text text-transparent font-black text-lg hidden sm:inline">
-              {companyName}
+          </div>
+          <button
+            onClick={handleLogout}
+            className="w-full flex items-center justify-center gap-2 px-4 py-3 rounded-xl bg-gradient-to-r from-red-500 to-red-600 text-white font-semibold text-sm shadow-[0_4px_0_rgba(0,0,0,0.3)] hover:opacity-90 hover:-translate-y-0.5 active:translate-y-0.5 active:shadow-[0_2px_0_rgba(0,0,0,0.3)] transition-all duration-150"
+          >
+            🚪 Déconnexion
+          </button>
+        </div>
+      </aside>
+
+      {/* ── MOBILE TOP BAR ── */}
+      <nav className="lg:hidden bg-gradient-to-r from-[#16161d] to-[#0f0f13] border-b border-white/5 sticky top-0 z-50">
+        <div className="flex items-center justify-between px-4 h-14">
+          <Link href="/dashboard" className="flex items-center gap-2 hover:opacity-80 transition-opacity">
+            <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-orange-500 to-orange-600 flex items-center justify-center text-base shadow-md">
+              🔧
+            </div>
+            <span className="text-lg font-black text-white tracking-tight">
+              {companyName.split(" ")[0]}
             </span>
           </Link>
-
-          <div className="hidden lg:flex items-center gap-2">
-            {visibleItems.map((item) => {
-              const isActive = pathname === item.href;
-              const isHovered = hoveredItem === item.href;
-              return (
-                <Link
-                  key={item.href}
-                  href={item.href}
-                  onMouseEnter={() => setHoveredItem(item.href)}
-                  onMouseLeave={() => setHoveredItem(null)}
-                  className={`group relative px-4 py-2 rounded-xl font-medium transition-all duration-300 ${
-                    isActive
-                      ? "bg-gradient-to-r from-orange-500 to-orange-600 text-white shadow-lg shadow-orange-500/30"
-                      : "text-gray-300 hover:text-white"
-                  }`}
-                  style={{
-                    transform: isHovered
-                      ? "translateY(-2px) scale(1.05)"
-                      : "translateY(0) scale(1)",
-                  }}
-                >
-                  <div
-                    className={`absolute inset-0 rounded-xl bg-gradient-to-r from-orange-500 to-orange-600 opacity-0 transition-opacity duration-300 ${isHovered && !isActive ? "opacity-20" : ""}`}
-                  ></div>
-                  <div className="relative flex items-center gap-2">
-                    <span
-                      className="text-lg transition-all duration-300 inline-block"
-                      style={{
-                        transform: isHovered
-                          ? "scale(1.2) translateX(-2px)"
-                          : "scale(1) translateX(0)",
-                      }}
-                    >
-                      {item.icon}
-                    </span>
-                    <span
-                      className="text-sm transition-all duration-300"
-                      style={{ transform: isHovered ? "translateX(2px)" : "translateX(0)" }}
-                    >
-                      {item.label}
-                    </span>
-                  </div>
-                  <div
-                    className={`absolute -bottom-1 left-1/2 transform -translate-x-1/2 h-0.5 bg-gradient-to-r from-orange-400 to-orange-600 rounded-full transition-all duration-300 ${isHovered ? "w-1/2 opacity-100" : "w-0 opacity-0"}`}
-                  ></div>
-                </Link>
-              );
-            })}
-          </div>
-
-          <div className="flex items-center gap-3">
-            <div className="relative group">
-              <div className="absolute -inset-1 bg-gradient-to-r from-orange-500 to-orange-600 rounded-full blur-md opacity-0 group-hover:opacity-100 transition duration-300"></div>
-              <div className="relative flex items-center gap-2 bg-gray-800/50 backdrop-blur-sm rounded-full px-3 py-1.5 border border-orange-500/30">
-                <div className="w-8 h-8 rounded-full bg-gradient-to-br from-orange-500 to-orange-600 flex items-center justify-center text-white font-bold shadow-lg">
-                  {technicianName?.charAt(0).toUpperCase() || "?"}
-                </div>
-                <div className="hidden md:block">
-                  <p className="text-sm font-medium text-white">{technicianName || "Technicien"}</p>
-                  {isGerant && <p className="text-xs text-orange-400">⭐ Gérant</p>}
-                </div>
-              </div>
-            </div>
-            <button
-              onClick={handleLogout}
-              className="group relative flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-red-500 to-red-600 text-white rounded-xl font-medium transition-all duration-300 hover:scale-105 hover:shadow-lg hover:shadow-red-500/30 overflow-hidden"
-            >
-              <span className="absolute inset-0 bg-gradient-to-r from-red-600 to-red-700 opacity-0 group-hover:opacity-100 transition duration-300"></span>
-              <span className="relative z-10 flex items-center gap-2">
-                <span className="text-lg group-hover:scale-110 transition-transform duration-300">
-                  🚪
-                </span>
-                <span className="hidden sm:inline">Déconnexion</span>
-              </span>
-            </button>
-            <button
-              onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-              className="lg:hidden text-white text-2xl"
-            >
-              ☰
-            </button>
-          </div>
+          <button
+            onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
+            className="text-gray-300 text-xl w-9 h-9 flex items-center justify-center rounded-lg bg-white/5 hover:bg-white/10 transition"
+          >
+            {mobileMenuOpen ? "✕" : "☰"}
+          </button>
         </div>
 
         {mobileMenuOpen && (
-          <div className="lg:hidden py-4 border-t border-orange-500/30">
+          <div className="px-3 pb-4 space-y-1.5 border-t border-white/5 pt-3">
             {visibleItems.map((item) => (
               <Link
                 key={item.href}
                 href={item.href}
                 onClick={() => setMobileMenuOpen(false)}
-                className={`flex items-center gap-3 px-4 py-3 rounded-lg transition ${
+                className={[
+                  "flex items-center gap-3 px-4 py-3 rounded-xl transition-all duration-150",
+                  "shadow-[0_4px_0_rgba(0,0,0,0.3)] active:translate-y-0.5 active:shadow-[0_2px_0_rgba(0,0,0,0.3)]",
                   pathname === item.href
-                    ? "bg-orange-500/20 text-orange-400"
-                    : "text-gray-300 hover:bg-gray-800"
-                }`}
+                    ? `bg-gradient-to-r ${item.grad} text-white shadow-lg ${item.glow}`
+                    : "bg-white/5 border border-white/5 text-gray-300",
+                ].join(" ")}
               >
-                <span className="text-xl">{item.icon}</span>
-                <span>{item.label}</span>
+                <div className={`w-8 h-8 rounded-lg bg-gradient-to-br ${item.grad} flex items-center justify-center text-base shrink-0`}>
+                  {item.icon}
+                </div>
+                <span className="text-sm font-medium">{item.label}</span>
               </Link>
             ))}
+            <button
+              onClick={handleLogout}
+              className="w-full flex items-center justify-center gap-2 px-4 py-3 rounded-xl bg-gradient-to-r from-red-500 to-red-600 text-white font-semibold text-sm shadow-[0_4px_0_rgba(0,0,0,0.3)] active:translate-y-0.5 transition-all duration-150 mt-1"
+            >
+              🚪 Déconnexion
+            </button>
           </div>
         )}
-      </div>
-    </nav>
+      </nav>
+    </>
   );
 }

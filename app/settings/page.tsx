@@ -222,30 +222,39 @@ export default function SettingsPage() {
 
   const visibleTabs = tabs.filter((tab) => tab.visible);
 
+  const inputCls = "w-full bg-[#1a1d2e] border border-white/10 rounded-xl px-4 py-2.5 text-white placeholder-gray-600 text-sm outline-none focus:border-slate-500/60 focus:ring-2 focus:ring-slate-500/15 transition-all";
+  const inputReadOnlyCls = "w-full bg-white/5 border border-white/5 rounded-xl px-4 py-2.5 text-gray-500 text-sm cursor-not-allowed";
+  const labelCls = "block text-xs font-bold text-gray-500 uppercase tracking-widest mb-1.5";
+
   return (
     <Layout>
-      <div className="max-w-6xl mx-auto px-4 py-6">
-        <h1 className="text-2xl font-bold mb-6">⚙️ Paramètres</h1>
+      <div className="max-w-6xl mx-auto">
+        {/* HEADER */}
+        <div className="relative overflow-hidden bg-gradient-to-r from-gray-500 to-slate-600 rounded-2xl px-6 py-5 mb-6">
+          <div className="absolute inset-0 opacity-[0.06]" style={{ backgroundImage: "radial-gradient(circle, white 1px, transparent 1px)", backgroundSize: "18px 18px" }} />
+          <div className="relative">
+            <h1 className="text-2xl font-black text-white tracking-tight">⚙️ Paramètres</h1>
+            <p className="text-xs text-white/60 uppercase tracking-widest mt-1">Configuration de l'atelier</p>
+          </div>
+        </div>
 
         {message && (
-          <div
-            className={`p-3 rounded-lg mb-4 ${message.includes("✅") ? "bg-green-100 text-green-700" : "bg-red-100 text-red-700"}`}
-          >
+          <div className={`px-4 py-3 rounded-xl mb-4 text-sm border ${message.includes("✅") ? "bg-green-500/10 border-green-500/20 text-green-400" : "bg-red-500/10 border-red-500/20 text-red-400"}`}>
             {message}
           </div>
         )}
 
         {/* Onglets */}
-        <div className="border-b border-gray-200 mb-6">
-          <nav className="flex gap-6 flex-wrap">
+        <div className="border-b border-white/10 mb-6">
+          <nav className="flex gap-1 flex-wrap">
             {visibleTabs.map((tab) => (
               <button
                 key={tab.id}
                 onClick={() => setActiveTab(tab.id)}
-                className={`pb-3 px-1 text-sm font-medium transition ${
+                className={`pb-3 px-4 text-sm font-medium transition ${
                   activeTab === tab.id
-                    ? "text-orange-600 border-b-2 border-orange-600"
-                    : "text-gray-500 hover:text-gray-700"
+                    ? "text-slate-300 border-b-2 border-slate-400"
+                    : "text-gray-600 hover:text-gray-400"
                 }`}
               >
                 {tab.label}
@@ -255,42 +264,23 @@ export default function SettingsPage() {
         </div>
 
         {/* Contenu des onglets */}
-        <div className="bg-white rounded-xl shadow-sm p-6">
+        <div className="bg-[#16161d] border border-white/5 rounded-2xl p-6">
           {/* Onglet Général */}
           {activeTab === "general" && (
             <div>
-              <h2 className="text-lg font-semibold mb-4">Informations générales</h2>
-              <div className="space-y-4">
+              <h2 className="text-sm font-bold text-gray-400 uppercase tracking-widest mb-5">Informations générales</h2>
+              <div className="space-y-4 max-w-lg">
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Nom du technicien
-                  </label>
-                  <input
-                    type="text"
-                    value={technicianName}
-                    readOnly
-                    className="w-full px-3 py-2 border rounded-lg bg-gray-50"
-                  />
+                  <label className={labelCls}>Nom du technicien</label>
+                  <input type="text" value={technicianName} readOnly className={inputReadOnlyCls} />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Email connecté
-                  </label>
-                  <input
-                    type="text"
-                    value={companyEmail}
-                    readOnly
-                    className="w-full px-3 py-2 border rounded-lg bg-gray-50"
-                  />
+                  <label className={labelCls}>Email connecté</label>
+                  <input type="text" value={companyEmail} readOnly className={inputReadOnlyCls} />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Version</label>
-                  <input
-                    type="text"
-                    value="MBX Réparations v2.0"
-                    readOnly
-                    className="w-full px-3 py-2 border rounded-lg bg-gray-50"
-                  />
+                  <label className={labelCls}>Version</label>
+                  <input type="text" value="MBX Réparations v2.0" readOnly className={inputReadOnlyCls} />
                 </div>
               </div>
             </div>
@@ -299,32 +289,19 @@ export default function SettingsPage() {
           {/* Onglet Entreprise */}
           {activeTab === "company" && (
             <div>
-              <h2 className="text-lg font-semibold mb-4">Informations de l'entreprise</h2>
+              <h2 className="text-sm font-bold text-gray-400 uppercase tracking-widest mb-5">Informations de l'entreprise</h2>
 
               {/* Upload Logo */}
-              <div className="mb-6 p-4 bg-gray-50 rounded-lg">
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  🖼️ Logo de l'entreprise
-                </label>
-                <div className="flex items-center gap-4">
+              <div className="mb-6 p-4 bg-white/5 border border-white/10 rounded-xl">
+                <label className={labelCls}>🖼️ Logo de l'entreprise</label>
+                <div className="flex items-center gap-4 mt-2">
                   {logoPreview ? (
                     <div className="relative">
-                      <img
-                        src={logoPreview}
-                        alt="Logo"
-                        className="w-16 h-16 object-contain border rounded-lg bg-white p-1"
-                      />
-                      <button
-                        onClick={removeLogo}
-                        className="absolute -top-2 -right-2 bg-red-500 text-white rounded-full w-5 h-5 flex items-center justify-center text-xs hover:bg-red-600"
-                      >
-                        ×
-                      </button>
+                      <img src={logoPreview} alt="Logo" className="w-16 h-16 object-contain border border-white/10 rounded-xl bg-white/5 p-1" />
+                      <button onClick={removeLogo} className="absolute -top-2 -right-2 bg-red-500 hover:bg-red-600 text-white rounded-full w-5 h-5 flex items-center justify-center text-xs">×</button>
                     </div>
                   ) : (
-                    <div className="w-16 h-16 bg-gray-200 rounded-lg flex items-center justify-center text-2xl">
-                      🔧
-                    </div>
+                    <div className="w-16 h-16 bg-white/10 rounded-xl flex items-center justify-center text-2xl">🔧</div>
                   )}
                   <div className="flex-1">
                     <input
@@ -332,57 +309,51 @@ export default function SettingsPage() {
                       accept="image/png,image/jpeg,image/jpg"
                       onChange={handleFileChange}
                       disabled={uploading}
-                      className="block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-semibold file:bg-orange-50 file:text-orange-700 hover:file:bg-orange-100"
+                      className="block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-semibold file:bg-slate-500/15 file:text-slate-300 hover:file:bg-slate-500/25 transition-all"
                     />
-                    <p className="text-xs text-gray-400 mt-1">PNG, JPG ou JPEG. Max 2MB.</p>
+                    <p className="text-xs text-gray-600 mt-1">PNG, JPG ou JPEG. Max 2MB.</p>
                   </div>
                 </div>
-                {uploading && (
-                  <div className="mt-2 text-sm text-orange-600">⏳ Téléchargement en cours...</div>
-                )}
+                {uploading && <div className="mt-2 text-sm text-slate-400">⏳ Téléchargement en cours...</div>}
               </div>
 
-              <div className="space-y-4">
+              <div className="space-y-4 max-w-lg">
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Nom de l'entreprise
-                  </label>
+                  <label className={labelCls}>Nom de l'entreprise</label>
                   <input
                     type="text"
                     value={settings.company_name}
                     onChange={(e) => setSettings({ ...settings, company_name: e.target.value })}
-                    className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-orange-500"
+                    className={inputCls}
                     placeholder="Votre entreprise"
                   />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Téléphone</label>
+                  <label className={labelCls}>Téléphone</label>
                   <input
                     type="tel"
                     value={settings.contact_phone}
                     onChange={(e) => setSettings({ ...settings, contact_phone: e.target.value })}
-                    className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-orange-500"
+                    className={inputCls}
                     placeholder="0612345678"
                   />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Email de contact
-                  </label>
+                  <label className={labelCls}>Email de contact</label>
                   <input
                     type="email"
                     value={settings.contact_email}
                     onChange={(e) => setSettings({ ...settings, contact_email: e.target.value })}
-                    className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-orange-500"
+                    className={inputCls}
                     placeholder="contact@entreprise.com"
                   />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Adresse</label>
+                  <label className={labelCls}>Adresse</label>
                   <textarea
                     value={settings.contact_address}
                     onChange={(e) => setSettings({ ...settings, contact_address: e.target.value })}
-                    className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-orange-500"
+                    className={inputCls}
                     rows={3}
                     placeholder="Adresse complète"
                   />
@@ -390,7 +361,7 @@ export default function SettingsPage() {
                 <button
                   onClick={saveSettings}
                   disabled={loading}
-                  className="bg-orange-500 hover:bg-orange-600 text-white px-4 py-2 rounded-lg transition"
+                  className="px-6 py-2.5 bg-gradient-to-r from-gray-500 to-slate-600 text-white rounded-xl text-sm font-semibold shadow-[0_4px_0_rgba(0,0,0,0.3)] active:translate-y-0.5 active:shadow-[0_2px_0_rgba(0,0,0,0.3)] transition-all disabled:opacity-50"
                 >
                   {loading ? "Enregistrement..." : "💾 Enregistrer"}
                 </button>
@@ -401,23 +372,20 @@ export default function SettingsPage() {
           {/* Onglet Techniciens */}
           {activeTab === "technicians" && isGerant && (
             <div>
-              <div className="flex justify-between items-center mb-4">
-                <h2 className="text-lg font-semibold">Gestion des techniciens</h2>
+              <div className="flex justify-between items-center mb-5">
+                <h2 className="text-sm font-bold text-gray-400 uppercase tracking-widest">Gestion des techniciens</h2>
                 <Link
                   href="/technicians"
-                  className="bg-orange-500 hover:bg-orange-600 text-white px-4 py-2 rounded-lg text-sm transition"
+                  className="px-4 py-2 bg-gradient-to-r from-gray-500 to-slate-600 text-white rounded-xl text-sm font-semibold shadow-[0_4px_0_rgba(0,0,0,0.3)] active:translate-y-0.5 active:shadow-[0_2px_0_rgba(0,0,0,0.3)] transition-all"
                 >
                   + Accéder à la gestion
                 </Link>
               </div>
-              <p className="text-gray-500 mb-4">
-                Gérez les techniciens, leurs codes d'accès et permissions d'accès aux différentes
-                sections.
+              <p className="text-gray-500 text-sm mb-4">
+                Gérez les techniciens, leurs codes d'accès et permissions d'accès aux différentes sections.
               </p>
-              <div className="bg-gray-50 p-4 rounded-lg">
-                <p className="text-sm text-gray-600">
-                  📋 {technicians.length} technicien(s) actif(s)
-                </p>
+              <div className="bg-slate-500/10 border border-slate-500/20 rounded-xl px-4 py-3">
+                <p className="text-sm text-slate-400">📋 {technicians.length} technicien(s) actif(s)</p>
               </div>
             </div>
           )}
@@ -425,18 +393,17 @@ export default function SettingsPage() {
           {/* Onglet Logs */}
           {activeTab === "logs" && isGerant && (
             <div>
-              <div className="flex justify-between items-center mb-4">
-                <h2 className="text-lg font-semibold">Historique des actions</h2>
+              <div className="flex justify-between items-center mb-5">
+                <h2 className="text-sm font-bold text-gray-400 uppercase tracking-widest">Historique des actions</h2>
                 <Link
                   href="/logs"
-                  className="bg-orange-500 hover:bg-orange-600 text-white px-4 py-2 rounded-lg text-sm transition"
+                  className="px-4 py-2 bg-gradient-to-r from-gray-500 to-slate-600 text-white rounded-xl text-sm font-semibold shadow-[0_4px_0_rgba(0,0,0,0.3)] active:translate-y-0.5 active:shadow-[0_2px_0_rgba(0,0,0,0.3)] transition-all"
                 >
                   📋 Voir tous les logs
                 </Link>
               </div>
-              <p className="text-gray-500 mb-4">
-                Consultez l'historique complet des connexions et actions effectuées par les
-                techniciens.
+              <p className="text-gray-500 text-sm mb-4">
+                Consultez l'historique complet des connexions et actions effectuées par les techniciens.
               </p>
             </div>
           )}

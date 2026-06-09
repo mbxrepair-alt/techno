@@ -1,192 +1,150 @@
-﻿"use client";
+"use client";
 
-import { Suspense } from "react";
-import { useEffect, useState } from "react";
+import { Suspense, Fragment } from "react";
+import { useState } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
-import { supabase } from "../../lib/supabase";
+import { supabase } from "../../lib/supabase"; // used only for client_response updates
 
-// Composant interne qui utilise useSearchParams
+const STATUS_STEPS = [
+  "📥 Réceptionné",
+  "🔬 Diagnostic",
+  "🔧 En réparation",
+  "✅ Terminé",
+  "📦 Rendu",
+];
+
+const STATUS_BADGE: Record<string, string> = {
+  "📥 Réceptionné":               "bg-blue-500/15 text-blue-300 border border-blue-500/30",
+  "🔬 Diagnostic":                "bg-purple-500/15 text-purple-300 border border-purple-500/30",
+  "✅ Validé client":             "bg-emerald-500/15 text-emerald-300 border border-emerald-500/30",
+  "🔧 En réparation":             "bg-orange-500/15 text-orange-300 border border-orange-500/30",
+  "⏳ Attente validation client": "bg-amber-500/15 text-amber-300 border border-amber-500/30",
+  "📦 Attente pièce":             "bg-violet-500/15 text-violet-300 border border-violet-500/30",
+  "✅ Terminé":                   "bg-green-500/15 text-green-300 border border-green-500/30",
+  "📦 Rendu":                     "bg-gray-500/15 text-gray-400 border border-gray-500/30",
+  "❌ KO":                        "bg-red-500/15 text-red-300 border border-red-500/30",
+  "🚫 Refus client":              "bg-red-500/15 text-red-300 border border-red-500/30",
+  "📤 Envoyé à l'atelier":        "bg-cyan-500/15 text-cyan-300 border border-cyan-500/30",
+  "🔐 Mot de passe incorrect":    "bg-red-500/15 text-red-300 border border-red-500/30",
+};
+
+function getStepIndex(status: string): number {
+  return STATUS_STEPS.indexOf(status);
+}
+
 function SuiviClientContent() {
   const searchParams = useSearchParams();
   const router = useRouter();
-  const clientCodeParam = searchParams.get("code");
+  const codeFromUrl = searchParams.get("code") || "";
 
-  const [loading, setLoading] = useState(true);
-  const [client, setClient] = useState(null);
-  const [tickets, setTickets] = useState([]);
-  const [selectedTicket, setSelectedTicket] = useState(null);
-  const [error, setError] = useState(null);
-  const [manualCode, setManualCode] = useState("");
-  const [showCodeInput, setShowCodeInput] = useState(false);
-
-  // État pour la réponse client
+  const [nameInput, setNameInput] = useState("");
+  const [codeInput, setCodeInput] = useState(codeFromUrl);
+  const [loading, setLoading] = useState(false);
+  const [client, setClient] = useState<any>(null);
+  const [repairs, setRepairs] = useState<any[]>([]);
+  const [selectedRepair, setSelectedRepair] = useState<any>(null);
+  const [error, setError] = useState("");
   const [clientResponse, setClientResponse] = useState("");
   const [sending, setSending] = useState(false);
-
-  // État pour les photos
   const [showPhotoModal, setShowPhotoModal] = useState(false);
-  const [selectedPhoto, setSelectedPhoto] = useState(null);
+  const [selectedPhoto, setSelectedPhoto] = useState<string | null>(null);
 
-  useEffect(() => {
-    if (clientCodeParam) {
-      loadClientData(clientCodeParam);
-    } else {
-      setShowCodeInput(true);
-      setLoading(false);
+  const handleSearch = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!nameInput.trim() || !codeInput.trim()) {
+      setError("Veuillez remplir les deux champs.");
+      return;
     }
-  }, [clientCodeParam]);
-
-  const loadClientData = async (code) => {
     setLoading(true);
-    setError(null);
-    try {
-      const { data: clientData, error: clientError } = await supabase
-        .from("clients")
-        .select("*")
-        .eq("client_code", code)
-        .single();
+    setError("");
+    setClient(null);
+    setRepairs([]);
+    setSelectedRepair(null);
 
-      if (clientError || !clientData) {
-        setError("Code client invalide. Veuillez vérifier votre code.");
-        setShowCodeInput(true);
+    try {
+      const params = new URLSearchParams({
+        code: codeInput.trim().toUpperCase(),
+        name: nameInput.trim(),
+      });
+      const res = await fetch(`/api/client-tracking?${params}`);
+      const json = await res.json();
+
+      if (!res.ok || json.error) {
+        if (res.status === 500) {
+          setError("❌ Erreur serveur. Réessayez dans quelques instants.");
+        } else {
+          setError("❌ Aucun client trouvé avec ces informations. Vérifiez votre nom et votre code.");
+        }
         setLoading(false);
         return;
       }
 
-      setClient(clientData);
-
-      const { data: ticketsData, error: ticketsError } = await supabase
-        .from("repairs")
-        .select("*")
-        .eq("client_id", clientData.id)
-        .order("created_at", { ascending: false });
-
-      if (ticketsError) throw ticketsError;
-
-      setTickets(ticketsData || []);
-      if (ticketsData?.length > 0) {
-        setSelectedTicket(ticketsData[0]);
-      }
+      setClient(json.client);
+      const list: any[] = json.repairs || [];
+      setRepairs(list);
+      if (list.length > 0) setSelectedRepair(list[0]);
     } catch (err) {
       console.error(err);
-      setError("Erreur de chargement");
+      setError("❌ Erreur de chargement. Réessayez.");
     } finally {
       setLoading(false);
     }
   };
 
-  const handleManualSubmit = (e) => {
-    e.preventDefault();
-    if (manualCode.trim()) {
-      router.push(`/suivi-client?code=${manualCode.trim().toUpperCase()}`);
-    }
-  };
-
-  const getStatusBadge = (status) => {
-    const statusColors = {
-      "🟡 Réceptionné": "bg-yellow-500",
-      "🔬 Diagnostic": "bg-blue-500",
-      "✅ Validé client": "bg-green-500",
-      "🔧 En réparation": "bg-cyan-500",
-      "✅ Terminé": "bg-green-600",
-      "📦 Rendu": "bg-gray-500",
-      "❌ KO": "bg-red-500",
-      "🚫 Refus client": "bg-pink-500",
-    };
-    return (
-      <span
-        className={`px-2 py-1 text-xs rounded-full text-white ${statusColors[status] || "bg-gray-500"}`}
-      >
-        {status || "🟡 Réceptionné"}
-      </span>
-    );
-  };
-
-  const cleanNotes = (text) => {
-    if (!text) return "";
-    return text
-      .replace(/\[DIAGNOSTIC VALIDÉ\]/gi, "")
-      .replace(/Risques: Aucun/gi, "")
-      .replace(/Risques : Aucun/gi, "")
-      .trim();
-  };
-
   const handleValidate = async () => {
-    if (!selectedTicket) return;
-    if (!clientResponse.trim()) {
-      alert("Veuillez écrire un message avant de valider");
+    if (!selectedRepair || !clientResponse.trim()) {
+      alert("Veuillez écrire un message avant de valider.");
       return;
     }
-
     setSending(true);
     const { error } = await supabase
       .from("repairs")
-      .update({
-        client_response: clientResponse,
-        client_response_type: "accepte",
-      })
-      .eq("id", selectedTicket.id);
-
+      .update({ client_response: clientResponse, client_response_type: "accepte" })
+      .eq("id", selectedRepair.id);
     if (!error) {
-      setTickets(
-        tickets.map((t) =>
-          t.id === selectedTicket.id
-            ? { ...t, client_response: clientResponse, client_response_type: "accepte" }
-            : t
-        )
-      );
-      setSelectedTicket({
-        ...selectedTicket,
-        client_response: clientResponse,
-        client_response_type: "accepte",
-      });
+      const updated = { ...selectedRepair, client_response: clientResponse, client_response_type: "accepte" };
+      setRepairs(repairs.map((r) => (r.id === selectedRepair.id ? updated : r)));
+      setSelectedRepair(updated);
       setClientResponse("");
       alert("✅ Votre réponse a été envoyée à l'atelier !");
     } else {
-      alert("❌ Erreur lors de l'envoi");
+      alert("❌ Erreur lors de l'envoi. Réessayez.");
     }
     setSending(false);
   };
 
   const handleRefuse = async () => {
-    if (!selectedTicket) return;
-    if (!clientResponse.trim()) {
-      alert("Veuillez écrire un message avant de refuser");
+    if (!selectedRepair || !clientResponse.trim()) {
+      alert("Veuillez écrire un message avant de refuser.");
       return;
     }
-
     setSending(true);
     const { error } = await supabase
       .from("repairs")
-      .update({
-        client_response: clientResponse,
-        client_response_type: "refuse",
-      })
-      .eq("id", selectedTicket.id);
-
+      .update({ client_response: clientResponse, client_response_type: "refuse" })
+      .eq("id", selectedRepair.id);
     if (!error) {
-      setTickets(
-        tickets.map((t) =>
-          t.id === selectedTicket.id
-            ? { ...t, client_response: clientResponse, client_response_type: "refuse" }
-            : t
-        )
-      );
-      setSelectedTicket({
-        ...selectedTicket,
-        client_response: clientResponse,
-        client_response_type: "refuse",
-      });
+      const updated = { ...selectedRepair, client_response: clientResponse, client_response_type: "refuse" };
+      setRepairs(repairs.map((r) => (r.id === selectedRepair.id ? updated : r)));
+      setSelectedRepair(updated);
       setClientResponse("");
-      alert("❌ Votre réponse a été envoyée à l'atelier !");
+      alert("Votre réponse a été envoyée à l'atelier !");
     } else {
-      alert("❌ Erreur lors de l'envoi");
+      alert("❌ Erreur lors de l'envoi. Réessayez.");
     }
     setSending(false);
   };
 
-  const formatDate = (date) => {
-    if (!date) return "";
+  const cleanNotes = (text?: string) => {
+    if (!text) return "";
+    return text
+      .replace(/\[DIAGNOSTIC VALIDÉ\]/gi, "")
+      .replace(/Risques\s*:\s*Aucun/gi, "")
+      .trim();
+  };
+
+  const formatDate = (date?: string) => {
+    if (!date) return "—";
     return new Date(date).toLocaleDateString("fr-FR", {
       day: "2-digit",
       month: "2-digit",
@@ -194,22 +152,31 @@ function SuiviClientContent() {
     });
   };
 
-  // Modal photos
+  const resetSearch = () => {
+    setClient(null);
+    setRepairs([]);
+    setSelectedRepair(null);
+    setNameInput("");
+    setCodeInput("");
+    setError("");
+  };
+
+  // Photo full-screen modal
   if (showPhotoModal && selectedPhoto) {
     return (
       <div
-        className="fixed inset-0 bg-black/90 z-[100] flex items-center justify-center p-4"
+        className="fixed inset-0 bg-black/95 z-[100] flex items-center justify-center p-4"
         onClick={() => setShowPhotoModal(false)}
       >
         <div className="relative max-w-4xl max-h-[90vh]" onClick={(e) => e.stopPropagation()}>
           <img
             src={selectedPhoto}
-            alt="Photo téléphone"
-            className="max-w-full max-h-[90vh] object-contain rounded-lg"
+            alt="Photo"
+            className="max-w-full max-h-[90vh] object-contain rounded-xl"
           />
           <button
             onClick={() => setShowPhotoModal(false)}
-            className="absolute top-4 right-4 bg-black/50 text-white rounded-full w-10 h-10 flex items-center justify-center text-2xl hover:bg-black/70 transition"
+            className="absolute top-4 right-4 bg-black/60 hover:bg-black/80 text-white rounded-full w-10 h-10 flex items-center justify-center text-xl transition"
           >
             ✕
           </button>
@@ -218,398 +185,467 @@ function SuiviClientContent() {
     );
   }
 
-  // Affichage de la demande de code client
-  if (showCodeInput && !client) {
-    return (
-      <div className="min-h-screen bg-gradient-to-br from-amber-50 via-white to-orange-50 flex items-center justify-center p-4">
-        <div className="bg-white rounded-2xl shadow-xl p-8 max-w-md w-full">
-          <div className="text-center">
-            <div className="inline-flex items-center justify-center w-16 h-16 bg-gradient-to-br from-orange-500 to-orange-600 rounded-2xl mb-4 shadow-lg">
-              <span className="text-3xl">🔍</span>
-            </div>
-            <h1 className="text-2xl font-bold text-gray-800 mb-2">Suivi de réparation</h1>
-            <p className="text-gray-500 mb-6">
-              Entrez votre code client pour suivre l'avancement de votre réparation
-            </p>
-
-            <div className="bg-orange-50 p-4 rounded-xl mb-6 border border-orange-100">
-              <p className="text-sm text-orange-700">
-                💡 <strong>Où trouver mon code client ?</strong>
-                <br />
-                Votre code client vous a été envoyé par email lors du dépôt de votre appareil.
-              </p>
-            </div>
-
-            <form onSubmit={handleManualSubmit}>
-              <input
-                type="text"
-                placeholder="Ex: DOM923167"
-                value={manualCode}
-                onChange={(e) => setManualCode(e.target.value.toUpperCase())}
-                className="w-full px-4 py-3 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-orange-400 font-mono text-center text-lg"
-                autoFocus
-              />
-              <button
-                type="submit"
-                className="w-full mt-4 bg-gradient-to-r from-orange-500 to-orange-600 text-white py-3 rounded-xl font-semibold hover:from-orange-600 hover:to-orange-700 transition shadow-md"
-              >
-                🔍 Suivre ma réparation
-              </button>
-            </form>
-          </div>
-        </div>
-      </div>
-    );
-  }
-
-  if (loading) {
-    return (
-      <div className="min-h-screen bg-gradient-to-br from-amber-50 via-white to-orange-50 flex items-center justify-center">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-16 w-16 border-b-4 border-orange-500 mx-auto"></div>
-          <p className="mt-4 text-gray-600 font-medium">Chargement de vos informations...</p>
-        </div>
-      </div>
-    );
-  }
-
-  if (error && !client) {
-    return (
-      <div className="min-h-screen bg-gradient-to-br from-amber-50 via-white to-orange-50 flex items-center justify-center p-4">
-        <div className="bg-white rounded-2xl shadow-xl p-8 max-w-md text-center">
-          <div className="text-red-500 text-6xl mb-4">❌</div>
-          <h2 className="text-2xl font-bold text-gray-800 mb-2">Code invalide</h2>
-          <p className="text-gray-600 mb-4">{error}</p>
-          <button
-            onClick={() => router.push("/")}
-            className="bg-gradient-to-r from-orange-500 to-orange-600 text-white px-6 py-2 rounded-xl hover:from-orange-600 hover:to-orange-700 transition"
-          >
-            Retour à l'accueil
-          </button>
-        </div>
-      </div>
-    );
-  }
-
   return (
-    <div className="min-h-screen bg-gradient-to-br from-amber-50 via-white to-orange-50">
-      {/* Header */}
-      <header className="bg-white/80 backdrop-blur-sm border-b border-gray-100 sticky top-0 z-10">
-        <div className="max-w-6xl mx-auto px-4 py-4 flex justify-between items-center">
-          <div
-            className="flex items-center gap-3 group cursor-pointer"
-            onClick={() => router.push("/")}
-          >
-            <div className="relative">
-              <div className="absolute inset-0 bg-orange-500 rounded-xl blur-lg opacity-50 group-hover:opacity-75 transition"></div>
-              <div className="relative w-10 h-10 bg-gradient-to-br from-orange-500 to-orange-700 rounded-xl flex items-center justify-center shadow-lg">
-                <span className="text-white font-bold text-lg">M</span>
-              </div>
+    <div className="min-h-screen bg-[#0f0f13]">
+      {/* HEADER */}
+      <header className="sticky top-0 z-50 bg-[#0f0f13]/95 backdrop-blur-xl border-b border-orange-500/20">
+        <div className="max-w-6xl mx-auto px-4 sm:px-6 py-4 flex items-center justify-between">
+          <button onClick={() => router.push("/")} className="flex items-center gap-3 group">
+            <div className="w-9 h-9 bg-gradient-to-br from-orange-500 to-orange-700 rounded-xl flex items-center justify-center shadow-lg shadow-orange-500/30">
+              <span className="text-white font-black text-base">M</span>
             </div>
-            <div>
-              <span className="font-black text-xl tracking-tight text-gray-800">MBX</span>
-              <span className="text-orange-500 font-light text-xs block -mt-1">Réparations</span>
+            <div className="text-left">
+              <span className="font-black text-lg text-white tracking-tight">MBX</span>
+              <span className="text-orange-500 text-xs block -mt-1 font-light">Réparations</span>
             </div>
-          </div>
-          <div className="bg-orange-50 px-4 py-2 rounded-full border border-orange-100">
-            <span className="text-sm font-mono text-orange-600">Code: {client?.client_code}</span>
-          </div>
+          </button>
+          <span className="text-xs text-gray-600 uppercase tracking-widest hidden sm:block">
+            Suivi de réparation
+          </span>
         </div>
       </header>
 
-      <div className="max-w-6xl mx-auto px-4 py-8">
-        {/* Infos client */}
-        {client && (
-          <div className="bg-gradient-to-r from-orange-600 to-orange-700 rounded-xl shadow-lg p-6 mb-8 text-white">
-            <div className="flex justify-between items-start flex-wrap gap-4">
-              <div>
-                <p className="text-orange-100 text-sm">🔑 Code client</p>
-                <p className="text-3xl font-mono font-bold">{client.client_code}</p>
+      {/* ── SEARCH FORM (shown when no client loaded) ── */}
+      {!client ? (
+        <div className="flex items-center justify-center min-h-[calc(100vh-73px)] px-4 py-12">
+          <div className="w-full max-w-md">
+            <div className="text-center mb-8">
+              <div className="inline-flex items-center justify-center w-16 h-16 bg-gradient-to-br from-orange-500 to-orange-700 rounded-2xl mb-4 shadow-xl shadow-orange-500/30">
+                <span className="text-3xl">🔍</span>
               </div>
-              <div>
-                <p className="text-orange-100 text-sm">👤 Nom</p>
-                <p className="text-xl font-semibold">{client.name}</p>
-              </div>
-              {client.phone && client.phone !== "NC" && (
-                <div>
-                  <p className="text-orange-100 text-sm">📞 Téléphone</p>
-                  <p className="text-lg">{client.phone}</p>
-                </div>
-              )}
-            </div>
-          </div>
-        )}
-
-        {/* Stats */}
-        <div className="grid grid-cols-3 gap-4 mb-8">
-          <div className="bg-white rounded-xl shadow p-4 text-center">
-            <div className="text-2xl font-bold text-gray-800">{tickets.length}</div>
-            <div className="text-sm text-gray-500">Total réparations</div>
-          </div>
-          <div className="bg-white rounded-xl shadow p-4 text-center">
-            <div className="text-2xl font-bold text-yellow-600">
-              {tickets.filter((t) => t.status !== "✅ Terminé" && t.status !== "📦 Rendu").length}
-            </div>
-            <div className="text-sm text-gray-500">En cours</div>
-          </div>
-          <div className="bg-white rounded-xl shadow p-4 text-center">
-            <div className="text-2xl font-bold text-green-600">
-              {tickets.filter((t) => t.status === "✅ Terminé" || t.status === "📦 Rendu").length}
-            </div>
-            <div className="text-sm text-gray-500">Terminées</div>
-          </div>
-        </div>
-
-        {/* Liste des tickets et détail */}
-        <div className="grid lg:grid-cols-2 gap-6">
-          {/* Liste des tickets */}
-          <div className="bg-white rounded-xl shadow-lg overflow-hidden">
-            <div className="px-6 py-4 border-b bg-gray-50">
-              <h2 className="text-xl font-semibold text-gray-800">📋 Mes réparations</h2>
-              <p className="text-sm text-gray-500">Cliquez sur un ticket pour voir les détails</p>
+              <h1 className="text-2xl font-black text-white tracking-tight">Suivi de réparation</h1>
+              <p className="text-gray-500 text-sm mt-2">
+                Entrez vos informations pour accéder à vos dossiers
+              </p>
             </div>
 
-            {tickets.length === 0 ? (
-              <div className="text-center py-12">
-                <div className="text-6xl mb-4">📭</div>
-                <p className="text-gray-500">Aucune réparation trouvée</p>
-              </div>
-            ) : (
-              <div className="divide-y max-h-[600px] overflow-y-auto">
-                {tickets.map((ticket) => (
-                  <div
-                    key={ticket.id}
-                    className={`p-4 hover:bg-gray-50 cursor-pointer transition ${selectedTicket?.id === ticket.id ? "bg-orange-50" : ""}`}
-                    onClick={() => setSelectedTicket(ticket)}
-                  >
-                    <div className="flex justify-between items-center">
-                      <div className="flex-1">
-                        <div className="flex items-center gap-3 mb-2 flex-wrap">
-                          <span className="font-mono text-lg font-bold text-gray-900">
-                            🎫 MBX-{ticket.id}
-                          </span>
-                          {getStatusBadge(ticket.status)}
-                        </div>
-                        <div className="text-sm">
-                          <span className="text-gray-500">📱 {ticket.device}</span>
-                          <span className="text-gray-400 mx-2">•</span>
-                          <span className="text-gray-600">{ticket.issue?.substring(0, 50)}</span>
-                        </div>
-                      </div>
-                      <div className="text-right">
-                        <p className="text-lg font-bold text-gray-900">
-                          {ticket.estimated_price || ticket.final_price || 0}€
-                        </p>
-                        <p className="text-xs text-gray-400">{formatDate(ticket.created_at)}</p>
-                      </div>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            )}
-          </div>
-
-          {/* Détail du ticket sélectionné */}
-          <div>
-            {selectedTicket ? (
-              <div className="bg-white rounded-xl shadow-lg overflow-hidden">
-                <div className="bg-gradient-to-r from-gray-50 to-gray-100 p-6 border-b">
-                  <div className="flex justify-between items-start flex-wrap gap-4">
-                    <div>
-                      <h2 className="text-xl font-bold text-gray-800">
-                        Ticket MBX-{selectedTicket.id}
-                      </h2>
-                      <p className="text-gray-500 text-sm mt-1">
-                        Créé le {formatDate(selectedTicket.created_at)}
-                      </p>
-                    </div>
-                    {getStatusBadge(selectedTicket.status)}
-                  </div>
-                </div>
-
-                <div className="p-6 space-y-4 max-h-[600px] overflow-y-auto">
-                  {/* Infos appareil */}
-                  <div className="border rounded-lg overflow-hidden">
-                    <div className="grid grid-cols-2 border-b">
-                      <div className="p-3 bg-gray-50 font-semibold">📱 Appareil</div>
-                      <div className="p-3">{selectedTicket.device}</div>
-                    </div>
-                    <div className="grid grid-cols-2 border-b">
-                      <div className="p-3 bg-gray-50 font-semibold">🔧 Panne</div>
-                      <div className="p-3">{selectedTicket.issue}</div>
-                    </div>
-                    {selectedTicket.imei && selectedTicket.imei !== "NC" && (
-                      <div className="grid grid-cols-2 border-b">
-                        <div className="p-3 bg-gray-50 font-semibold">🔢 IMEI</div>
-                        <div className="p-3 font-mono text-sm">{selectedTicket.imei}</div>
-                      </div>
-                    )}
-                  </div>
-
-                  {/* Prix */}
-                  <div className="border rounded-lg overflow-hidden">
-                    <div className="grid grid-cols-2">
-                      <div className="p-3 bg-gray-50 font-semibold">💰 Prix estimé</div>
-                      <div className="p-3 font-bold text-orange-600">
-                        {selectedTicket.estimated_price || 0}€
-                      </div>
-                    </div>
-                    {selectedTicket.final_price > 0 && (
-                      <div className="grid grid-cols-2 border-t">
-                        <div className="p-3 bg-gray-50 font-semibold">💰 Prix final</div>
-                        <div className="p-3 font-bold text-green-600">
-                          {selectedTicket.final_price}€
-                        </div>
-                      </div>
-                    )}
-                  </div>
-
-                  {/* Diagnostic */}
-                  {(selectedTicket.diagnosis ||
-                    selectedTicket.repair_description ||
-                    selectedTicket.description) && (
-                    <div className="border rounded-lg overflow-hidden">
-                      <div className="p-3 bg-gray-50 font-semibold border-b">🔍 Diagnostic</div>
-                      <div className="p-3 text-gray-700 whitespace-pre-wrap">
-                        {cleanNotes(selectedTicket.diagnosis) ||
-                          cleanNotes(selectedTicket.repair_description) ||
-                          cleanNotes(selectedTicket.description) ||
-                          "Aucune information"}
-                      </div>
-                    </div>
-                  )}
-
-                  {/* PHOTOS */}
-                  {selectedTicket.photos && selectedTicket.photos.length > 0 && (
-                    <div className="border rounded-lg overflow-hidden">
-                      <div className="p-3 bg-gray-50 font-semibold border-b">
-                        📸 Photos de l'appareil
-                      </div>
-                      <div className="p-3">
-                        <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
-                          {selectedTicket.photos.map((photo, index) => (
-                            <div
-                              key={index}
-                              className="aspect-square bg-gray-100 rounded-lg overflow-hidden cursor-pointer hover:opacity-80 transition transform hover:scale-105"
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                setSelectedPhoto(photo);
-                                setShowPhotoModal(true);
-                              }}
-                            >
-                              <img
-                                src={photo}
-                                alt={`Photo ${index + 1}`}
-                                className="w-full h-full object-cover"
-                              />
-                            </div>
-                          ))}
-                        </div>
-                        <p className="text-xs text-gray-400 mt-2 text-center">
-                          Cliquez sur une photo pour l'agrandir
-                        </p>
-                      </div>
-                    </div>
-                  )}
-
-                  {/* SECTION RÉPONSE CLIENT */}
-                  {selectedTicket.status !== "✅ Terminé" &&
-                    selectedTicket.status !== "📦 Rendu" && (
-                      <div className="border-2 border-orange-200 rounded-lg p-4 bg-orange-50">
-                        <h3 className="font-semibold text-orange-800 mb-3">📝 Votre réponse</h3>
-                        <textarea
-                          className="w-full p-3 border rounded-lg focus:ring-2 focus:ring-orange-500 resize-none"
-                          rows={4}
-                          placeholder="Écrivez votre message ici... (acceptation, refus, questions, etc.)"
-                          value={clientResponse}
-                          onChange={(e) => setClientResponse(e.target.value)}
-                        />
-                        <div className="flex gap-3 mt-4">
-                          <button
-                            onClick={handleValidate}
-                            disabled={sending}
-                            className="flex-1 bg-green-600 text-white py-2 rounded-lg font-semibold hover:bg-green-700 disabled:opacity-50"
-                          >
-                            ✅ Valider
-                          </button>
-                          <button
-                            onClick={handleRefuse}
-                            disabled={sending}
-                            className="flex-1 bg-red-600 text-white py-2 rounded-lg font-semibold hover:bg-red-700 disabled:opacity-50"
-                          >
-                            ❌ Refuser
-                          </button>
-                        </div>
-                        <p className="text-xs text-orange-600 mt-3 text-center">
-                          📱 Merci de nous répondre le plus rapidement possible
-                        </p>
-                      </div>
-                    )}
-
-                  {/* Réponse déjà donnée */}
-                  {selectedTicket.client_response && (
-                    <div
-                      className={`border rounded-lg overflow-hidden ${
-                        selectedTicket.client_response_type === "accepte"
-                          ? "border-green-300 bg-green-50"
-                          : selectedTicket.client_response_type === "refuse"
-                            ? "border-red-300 bg-red-50"
-                            : ""
-                      }`}
-                    >
-                      <div className="p-3 bg-gray-50 font-semibold border-b">📝 Votre réponse</div>
-                      <div className="p-3 text-gray-700 italic whitespace-pre-wrap">
-                        {selectedTicket.client_response}
-                      </div>
-                      {selectedTicket.client_response_type === "accepte" && (
-                        <div className="px-3 pb-3 text-green-600 text-sm">
-                          ✅ Vous avez accepté le diagnostic
-                        </div>
-                      )}
-                      {selectedTicket.client_response_type === "refuse" && (
-                        <div className="px-3 pb-3 text-red-600 text-sm">
-                          ❌ Vous avez refusé le diagnostic
-                        </div>
-                      )}
-                    </div>
-                  )}
-                </div>
-              </div>
-            ) : (
-              <div className="bg-white rounded-xl shadow-lg p-12 text-center">
-                <div className="text-gray-400 text-6xl mb-4">📭</div>
-                <p className="text-gray-500 text-lg">
-                  Sélectionnez un ticket pour voir les détails
+            <div className="bg-[#16161d] border border-white/8 rounded-2xl p-6">
+              <div className="bg-orange-500/10 border border-orange-500/20 rounded-xl px-4 py-3 mb-5">
+                <p className="text-xs text-orange-300 leading-relaxed">
+                  💡 <strong>Où trouver mon code ?</strong> Il vous a été remis lors du dépôt de
+                  votre appareil ou envoyé par email/SMS.
                 </p>
               </div>
-            )}
+
+              <form onSubmit={handleSearch} className="space-y-4">
+                <div>
+                  <label className="block text-xs font-bold text-gray-500 uppercase tracking-widest mb-1.5">
+                    Nom du client
+                  </label>
+                  <input
+                    type="text"
+                    placeholder="Votre nom"
+                    value={nameInput}
+                    onChange={(e) => setNameInput(e.target.value)}
+                    className="w-full bg-[#1a1d2e] border border-white/10 rounded-xl px-4 py-3 text-white placeholder-gray-600 outline-none focus:border-orange-500/60 focus:ring-2 focus:ring-orange-500/15 transition-all"
+                    autoFocus
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs font-bold text-gray-500 uppercase tracking-widest mb-1.5">
+                    Code client
+                  </label>
+                  <input
+                    type="text"
+                    placeholder="Votre code client"
+                    value={codeInput}
+                    onChange={(e) => setCodeInput(e.target.value.toUpperCase())}
+                    className="w-full bg-[#1a1d2e] border border-white/10 rounded-xl px-4 py-3 text-white placeholder-gray-600 font-mono outline-none focus:border-orange-500/60 focus:ring-2 focus:ring-orange-500/15 transition-all"
+                  />
+                </div>
+
+                {error && (
+                  <div className="bg-red-500/10 border border-red-500/20 rounded-xl px-4 py-3 text-sm text-red-400">
+                    {error}
+                  </div>
+                )}
+
+                <button
+                  type="submit"
+                  disabled={loading}
+                  className="w-full bg-gradient-to-r from-orange-500 to-orange-600 text-white py-3 rounded-xl font-semibold shadow-[0_4px_0_rgba(0,0,0,0.4)] active:translate-y-0.5 active:shadow-[0_2px_0_rgba(0,0,0,0.4)] transition-all disabled:opacity-60 mt-1"
+                >
+                  {loading ? (
+                    <span className="flex items-center justify-center gap-2">
+                      <svg className="animate-spin h-4 w-4" viewBox="0 0 24 24" fill="none">
+                        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
+                      </svg>
+                      Recherche en cours…
+                    </span>
+                  ) : (
+                    "🔍 Suivre mes appareils"
+                  )}
+                </button>
+              </form>
+            </div>
           </div>
         </div>
-      </div>
+      ) : (
+        /* ── RESULTS ── */
+        <div className="max-w-6xl mx-auto px-4 sm:px-6 py-8">
+          {/* Client banner */}
+          <div className="relative overflow-hidden bg-gradient-to-r from-orange-500 to-orange-700 rounded-2xl px-6 py-5 mb-6">
+            <div
+              className="absolute inset-0 opacity-[0.06]"
+              style={{ backgroundImage: "radial-gradient(circle, white 1px, transparent 1px)", backgroundSize: "18px 18px" }}
+            />
+            <div className="relative flex flex-wrap justify-between items-center gap-4">
+              <div>
+                <p className="text-orange-200 text-xs uppercase tracking-widest mb-0.5">Client identifié</p>
+                <h2 className="text-2xl font-black text-white">{client.name}</h2>
+                {client.phone && client.phone !== "NC" && (
+                  <p className="text-orange-200/70 text-sm mt-0.5">📞 {client.phone}</p>
+                )}
+              </div>
+              <div className="bg-white/20 rounded-xl px-4 py-2 text-right">
+                <p className="text-orange-200 text-xs uppercase tracking-widest">Code</p>
+                <p className="text-white font-mono font-bold text-lg">{client.client_code}</p>
+              </div>
+              <button
+                onClick={resetSearch}
+                className="bg-white/15 hover:bg-white/25 text-white border border-white/30 px-4 py-2 rounded-xl text-sm transition-all"
+              >
+                ← Nouvelle recherche
+              </button>
+            </div>
+          </div>
 
-      {/* Footer */}
-      <footer className="bg-gray-800 text-gray-300 mt-12 py-6">
+          {/* Stats */}
+          <div className="grid grid-cols-3 gap-4 mb-6">
+            <div className="bg-[#16161d] border border-white/5 rounded-2xl p-4 text-center">
+              <div className="text-2xl font-black text-white">{repairs.length}</div>
+              <div className="text-xs text-gray-500 uppercase tracking-wider mt-1">Total</div>
+            </div>
+            <div className="bg-[#16161d] border border-white/5 rounded-2xl p-4 text-center">
+              <div className="text-2xl font-black text-orange-400">
+                {repairs.filter((r) => r.status !== "✅ Terminé" && r.status !== "📦 Rendu" && r.status !== "❌ KO" && r.status !== "🚫 Refus client").length}
+              </div>
+              <div className="text-xs text-gray-500 uppercase tracking-wider mt-1">En cours</div>
+            </div>
+            <div className="bg-[#16161d] border border-white/5 rounded-2xl p-4 text-center">
+              <div className="text-2xl font-black text-green-400">
+                {repairs.filter((r) => r.status === "✅ Terminé" || r.status === "📦 Rendu").length}
+              </div>
+              <div className="text-xs text-gray-500 uppercase tracking-wider mt-1">Terminées</div>
+            </div>
+          </div>
+
+          {repairs.length === 0 ? (
+            <div className="bg-[#16161d] border border-white/5 rounded-2xl p-12 text-center">
+              <div className="text-5xl mb-4">📭</div>
+              <p className="text-gray-500">Aucune réparation trouvée pour ce compte.</p>
+            </div>
+          ) : (
+            <div className="grid lg:grid-cols-5 gap-6">
+              {/* Left: repair cards list */}
+              <div className="lg:col-span-2 space-y-3">
+                {repairs.map((repair) => {
+                  const stepIdx = getStepIndex(repair.status);
+                  const isActive = selectedRepair?.id === repair.id;
+                  return (
+                    <div
+                      key={repair.id}
+                      onClick={() => setSelectedRepair(repair)}
+                      className={`cursor-pointer rounded-2xl border p-4 transition-all ${
+                        isActive
+                          ? "bg-orange-500/10 border-orange-500/40 shadow-lg shadow-orange-500/10"
+                          : "bg-[#16161d] border-white/5 hover:border-white/15"
+                      }`}
+                    >
+                      <div className="flex items-start justify-between gap-3 mb-3">
+                        <div className="min-w-0">
+                          <span className="font-mono font-bold text-orange-400 text-sm">
+                            MBX-{repair.id}
+                          </span>
+                          <p className="text-white font-semibold text-sm mt-0.5 truncate">
+                            {repair.device}
+                          </p>
+                          <p className="text-gray-500 text-xs mt-0.5 line-clamp-1">{repair.issue}</p>
+                        </div>
+                        <span
+                          className={`px-2 py-1 rounded-full text-xs whitespace-nowrap shrink-0 ${
+                            STATUS_BADGE[repair.status] || "bg-gray-500/15 text-gray-400 border border-gray-500/30"
+                          }`}
+                        >
+                          {repair.status || "📥 Réceptionné"}
+                        </span>
+                      </div>
+
+                      {/* Mini progress bar */}
+                      {stepIdx >= 0 && (
+                        <div className="flex gap-1 mt-1">
+                          {STATUS_STEPS.map((_, i) => (
+                            <div
+                              key={i}
+                              className={`h-1 flex-1 rounded-full transition-all ${
+                                i <= stepIdx ? "bg-orange-500" : "bg-white/10"
+                              }`}
+                            />
+                          ))}
+                        </div>
+                      )}
+
+                      <p className="text-xs text-gray-600 mt-2">Déposé le {formatDate(repair.created_at)}</p>
+                    </div>
+                  );
+                })}
+              </div>
+
+              {/* Right: repair detail */}
+              <div className="lg:col-span-3">
+                {selectedRepair ? (
+                  <div className="bg-[#16161d] border border-white/5 rounded-2xl overflow-hidden">
+                    {/* Detail header */}
+                    <div className="border-b border-white/5 px-6 py-5 flex flex-wrap justify-between items-center gap-3">
+                      <div>
+                        <p className="text-xs text-gray-600 uppercase tracking-widest">Ticket</p>
+                        <h3 className="text-xl font-black text-white font-mono">
+                          MBX-{selectedRepair.id}
+                        </h3>
+                        <p className="text-xs text-gray-600 mt-0.5">
+                          Déposé le {formatDate(selectedRepair.created_at)}
+                        </p>
+                      </div>
+                      <span
+                        className={`px-3 py-1.5 rounded-full text-sm ${
+                          STATUS_BADGE[selectedRepair.status] || "bg-gray-500/15 text-gray-400 border border-gray-500/30"
+                        }`}
+                      >
+                        {selectedRepair.status || "📥 Réceptionné"}
+                      </span>
+                    </div>
+
+                    <div className="p-6 space-y-5 max-h-[72vh] overflow-y-auto">
+                      {/* Progress stepper */}
+                      {getStepIndex(selectedRepair.status) >= 0 && (
+                        <div>
+                          <p className="text-xs text-gray-600 uppercase tracking-widest mb-4">
+                            Progression
+                          </p>
+                          <div className="flex items-start">
+                            {STATUS_STEPS.map((step, i) => {
+                              const current = getStepIndex(selectedRepair.status);
+                              const done = i < current;
+                              const active = i === current;
+                              const isLast = i === STATUS_STEPS.length - 1;
+                              const stepLabel = step.replace(/^\S+\s/, "");
+                              return (
+                                <Fragment key={step}>
+                                  <div className="flex flex-col items-center shrink-0">
+                                    <div
+                                      className={`w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold border-2 transition-all ${
+                                        done
+                                          ? "bg-orange-500 border-orange-500 text-white"
+                                          : active
+                                          ? "bg-orange-500 border-orange-500 text-white shadow-lg shadow-orange-500/40"
+                                          : "bg-[#0f0f13] border-white/15 text-gray-600"
+                                      }`}
+                                    >
+                                      {done ? "✓" : i + 1}
+                                    </div>
+                                    <span
+                                      className={`text-[9px] leading-tight text-center mt-1.5 w-12 uppercase tracking-wide ${
+                                        active
+                                          ? "text-orange-400 font-bold"
+                                          : done
+                                          ? "text-gray-400"
+                                          : "text-gray-700"
+                                      }`}
+                                    >
+                                      {stepLabel}
+                                    </span>
+                                  </div>
+                                  {!isLast && (
+                                    <div
+                                      className={`flex-1 h-0.5 mt-4 mx-1 transition-all ${
+                                        i < current ? "bg-orange-500" : "bg-white/10"
+                                      }`}
+                                    />
+                                  )}
+                                </Fragment>
+                              );
+                            })}
+                          </div>
+                        </div>
+                      )}
+
+                      {/* Device + issue */}
+                      <div className="grid grid-cols-2 gap-3">
+                        <div className="bg-white/5 rounded-xl p-4">
+                          <p className="text-xs text-gray-500 uppercase tracking-wider mb-1">
+                            Appareil
+                          </p>
+                          <p className="text-white font-semibold text-sm">{selectedRepair.device}</p>
+                        </div>
+                        <div className="bg-white/5 rounded-xl p-4">
+                          <p className="text-xs text-gray-500 uppercase tracking-wider mb-1">
+                            Panne signalée
+                          </p>
+                          <p className="text-white text-sm">{selectedRepair.issue}</p>
+                        </div>
+                      </div>
+
+                      {/* IMEI */}
+                      {selectedRepair.imei && selectedRepair.imei !== "NC" && (
+                        <div className="bg-white/5 rounded-xl p-4">
+                          <p className="text-xs text-gray-500 uppercase tracking-wider mb-1">IMEI</p>
+                          <p className="text-white font-mono text-sm">{selectedRepair.imei}</p>
+                        </div>
+                      )}
+
+                      {/* Technician */}
+                      {selectedRepair.technician_name && (
+                        <div className="bg-white/5 rounded-xl p-4">
+                          <p className="text-xs text-gray-500 uppercase tracking-wider mb-1">
+                            Technicien
+                          </p>
+                          <p className="text-white text-sm">👨‍🔧 {selectedRepair.technician_name}</p>
+                        </div>
+                      )}
+
+                      {/* Workshop notes */}
+                      {(() => {
+                        const notes =
+                          cleanNotes(selectedRepair.diagnosis) ||
+                          cleanNotes(selectedRepair.repair_description) ||
+                          cleanNotes(selectedRepair.description);
+                        if (!notes) return null;
+                        return (
+                          <div className="bg-white/5 rounded-xl p-4">
+                            <p className="text-xs text-gray-500 uppercase tracking-wider mb-2">
+                              Notes de l'atelier
+                            </p>
+                            <p className="text-gray-300 text-sm whitespace-pre-wrap leading-relaxed">
+                              {notes}
+                            </p>
+                          </div>
+                        );
+                      })()}
+
+                      {/* Photos */}
+                      {selectedRepair.photos?.length > 0 && (
+                        <div className="bg-white/5 rounded-xl p-4">
+                          <p className="text-xs text-gray-500 uppercase tracking-wider mb-3">
+                            📸 Photos de l'appareil
+                          </p>
+                          <div className="grid grid-cols-3 gap-2">
+                            {selectedRepair.photos.map((photo: string, i: number) => (
+                              <div
+                                key={i}
+                                className="aspect-square rounded-xl overflow-hidden cursor-pointer hover:opacity-80 transition hover:scale-105 transform"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  setSelectedPhoto(photo);
+                                  setShowPhotoModal(true);
+                                }}
+                              >
+                                <img
+                                  src={photo}
+                                  alt={`Photo ${i + 1}`}
+                                  className="w-full h-full object-cover"
+                                />
+                              </div>
+                            ))}
+                          </div>
+                          <p className="text-xs text-gray-600 mt-2 text-center">
+                            Cliquez sur une photo pour l'agrandir
+                          </p>
+                        </div>
+                      )}
+
+                      {/* Client response input */}
+                      {selectedRepair.status !== "✅ Terminé" &&
+                        selectedRepair.status !== "📦 Rendu" &&
+                        !selectedRepair.client_response && (
+                          <div className="bg-orange-500/10 border border-orange-500/20 rounded-xl p-4">
+                            <p className="text-sm font-semibold text-orange-300 mb-3">
+                              📝 Répondre à l'atelier
+                            </p>
+                            <textarea
+                              className="w-full bg-[#0f0f13] border border-white/15 rounded-xl px-4 py-3 text-white placeholder-gray-600 text-sm outline-none focus:border-orange-500/60 focus:ring-2 focus:ring-orange-500/15 transition-all resize-none"
+                              rows={3}
+                              placeholder="Votre message (acceptation du devis, questions, etc.)"
+                              value={clientResponse}
+                              onChange={(e) => setClientResponse(e.target.value)}
+                            />
+                            <div className="flex gap-3 mt-3">
+                              <button
+                                onClick={handleValidate}
+                                disabled={sending}
+                                className="flex-1 bg-green-600 hover:bg-green-700 text-white py-2.5 rounded-xl text-sm font-semibold shadow-[0_3px_0_rgba(0,0,0,0.3)] active:translate-y-0.5 transition-all disabled:opacity-50"
+                              >
+                                ✅ Valider
+                              </button>
+                              <button
+                                onClick={handleRefuse}
+                                disabled={sending}
+                                className="flex-1 bg-red-600 hover:bg-red-700 text-white py-2.5 rounded-xl text-sm font-semibold shadow-[0_3px_0_rgba(0,0,0,0.3)] active:translate-y-0.5 transition-all disabled:opacity-50"
+                              >
+                                ❌ Refuser
+                              </button>
+                            </div>
+                            <p className="text-xs text-orange-400/60 mt-3 text-center">
+                              Merci de nous répondre le plus rapidement possible
+                            </p>
+                          </div>
+                        )}
+
+                      {/* Already responded */}
+                      {selectedRepair.client_response && (
+                        <div
+                          className={`rounded-xl p-4 border ${
+                            selectedRepair.client_response_type === "accepte"
+                              ? "bg-green-500/10 border-green-500/20"
+                              : selectedRepair.client_response_type === "refuse"
+                              ? "bg-red-500/10 border-red-500/20"
+                              : "bg-white/5 border-white/10"
+                          }`}
+                        >
+                          <p className="text-xs text-gray-500 uppercase tracking-wider mb-2">
+                            Votre réponse
+                          </p>
+                          <p className="text-gray-300 text-sm italic leading-relaxed">
+                            {selectedRepair.client_response}
+                          </p>
+                          {selectedRepair.client_response_type === "accepte" && (
+                            <p className="text-green-400 text-xs mt-2">✅ Vous avez accepté le diagnostic</p>
+                          )}
+                          {selectedRepair.client_response_type === "refuse" && (
+                            <p className="text-red-400 text-xs mt-2">❌ Vous avez refusé le diagnostic</p>
+                          )}
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                ) : (
+                  <div className="bg-[#16161d] border border-white/5 rounded-2xl p-12 text-center">
+                    <p className="text-gray-600 text-sm">Sélectionnez une réparation pour voir les détails</p>
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* FOOTER */}
+      <footer className="border-t border-white/5 mt-16 py-6">
         <div className="max-w-6xl mx-auto px-4 text-center">
-          <p>© {new Date().getFullYear()} MBX Réparations - Tous droits réservés</p>
-          <p className="text-sm text-gray-500 mt-2">
-            Suivi de réparation en temps réel avec votre code client unique
-          </p>
+          <p className="text-gray-700 text-sm">© {new Date().getFullYear()} MBX Réparations</p>
+          <p className="text-gray-800 text-xs mt-1">Suivi de réparation sécurisé</p>
         </div>
       </footer>
     </div>
   );
 }
 
-// Page principale avec Suspense - C'EST LE PLUS IMPORTANT !
 export default function SuiviClientPage() {
   return (
     <Suspense
       fallback={
-        <div className="min-h-screen bg-gradient-to-br from-amber-50 via-white to-orange-50 flex items-center justify-center">
-          <div className="text-center">
-            <div className="animate-spin rounded-full h-16 w-16 border-b-4 border-orange-500 mx-auto"></div>
-            <p className="mt-4 text-gray-600 font-medium">Chargement...</p>
-          </div>
+        <div className="min-h-screen bg-[#0f0f13] flex items-center justify-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-orange-500" />
         </div>
       }
     >

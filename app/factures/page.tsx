@@ -436,7 +436,7 @@ export default function FacturesPage() {
     return (
       <Layout>
         <div className="flex items-center justify-center h-96">
-          <div className="animate-spin rounded-full h-16 w-16 border-t-2 border-b-2 border-orange-600"></div>
+          <div className="animate-spin rounded-full h-16 w-16 border-t-2 border-b-2 border-purple-500"></div>
         </div>
       </Layout>
     );
@@ -444,131 +444,112 @@ export default function FacturesPage() {
 
   return (
     <Layout>
-      <div className="max-w-7xl mx-auto px-4 py-8">
-        <h1 className="text-4xl font-extrabold text-gray-800 mb-2">💰 Factures</h1>
-        <p className="text-lg text-gray-500 mb-8">
-          Gestion des paiements pour les réparations terminées.
-        </p>
+      <div className="max-w-7xl mx-auto">
+        {/* HEADER */}
+        <div className="relative overflow-hidden bg-gradient-to-r from-purple-500 to-violet-600 rounded-2xl px-6 py-5 mb-6">
+          <div className="absolute inset-0 opacity-[0.06]" style={{ backgroundImage: "radial-gradient(circle, white 1px, transparent 1px)", backgroundSize: "18px 18px" }} />
+          <div className="relative">
+            <h1 className="text-2xl font-black text-white tracking-tight">💰 Factures</h1>
+            <p className="text-xs text-white/60 uppercase tracking-widest mt-1">Gestion des paiements · réparations terminées</p>
+          </div>
+        </div>
 
         {/* STATISTIQUES */}
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-8">
-          <div className="bg-gradient-to-r from-blue-500 to-blue-600 rounded-xl p-5 text-white">
-            <div className="text-sm opacity-90">Total TTC facturé</div>
-            <div className="text-3xl font-bold">{totalTtc.toFixed(2)} €</div>
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
+          <div className="bg-gradient-to-br from-purple-500 to-violet-600 rounded-2xl p-5 text-white shadow-lg shadow-purple-500/25">
+            <div className="text-xs font-medium text-white/70 uppercase tracking-wider">Total TTC facturé</div>
+            <div className="text-3xl font-black mt-1">{totalTtc.toFixed(2)} €</div>
           </div>
-          <div className="bg-gradient-to-r from-green-500 to-green-600 rounded-xl p-5 text-white">
-            <div className="text-sm opacity-90">Total payé</div>
-            <div className="text-3xl font-bold">{totalPaid.toFixed(2)} €</div>
+          <div className="bg-gradient-to-br from-green-500 to-green-600 rounded-2xl p-5 text-white shadow-lg shadow-green-500/25">
+            <div className="text-xs font-medium text-white/70 uppercase tracking-wider">Total payé</div>
+            <div className="text-3xl font-black mt-1">{totalPaid.toFixed(2)} €</div>
           </div>
-          <div
-            className={`bg-gradient-to-r rounded-xl p-5 text-white ${totalRemaining > 500 ? "from-red-500 to-red-600" : "from-orange-500 to-orange-600"}`}
-          >
-            <div className="text-sm opacity-90">Reste à payer</div>
-            <div className="text-3xl font-bold">{totalRemaining.toFixed(2)} €</div>
+          <div className={`bg-gradient-to-br rounded-2xl p-5 text-white shadow-lg ${totalRemaining > 500 ? "from-red-500 to-red-600 shadow-red-500/25" : "from-violet-500 to-purple-600 shadow-violet-500/25"}`}>
+            <div className="text-xs font-medium text-white/70 uppercase tracking-wider">Reste à payer</div>
+            <div className="text-3xl font-black mt-1">{totalRemaining.toFixed(2)} €</div>
           </div>
-          <div className="bg-gradient-to-r from-purple-500 to-purple-600 rounded-xl p-5 text-white">
-            <div className="text-sm opacity-90">Clients</div>
-            <div className="text-3xl font-bold">{unpaidGroups.length + paidGroups.length}</div>
+          <div className="bg-[#16161d] border border-white/5 rounded-2xl p-5">
+            <div className="text-xs font-medium text-gray-500 uppercase tracking-wider">Clients</div>
+            <div className="text-3xl font-black mt-1 text-purple-400">{unpaidGroups.length + paidGroups.length}</div>
           </div>
         </div>
 
         {/* RECHERCHE */}
-        <div className="flex gap-3 mb-8 p-4 bg-white rounded-xl shadow-sm border">
+        <div className="flex gap-3 mb-6 p-4 bg-[#16161d] border border-white/5 rounded-2xl">
           <input
             type="text"
             placeholder="🔍 Rechercher un client..."
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
-            className="flex-1 p-2.5 border rounded-lg text-sm"
+            className="flex-1 bg-[#1a1d2e] border border-white/10 rounded-xl px-4 py-2.5 text-white placeholder-gray-600 text-sm outline-none focus:border-purple-500/60 focus:ring-2 focus:ring-purple-500/15 transition-all duration-200"
           />
           <button
             onClick={loadData}
-            className="px-4 py-2.5 bg-gray-100 rounded-lg text-sm hover:bg-gray-200"
+            className="px-4 py-2.5 bg-white/5 hover:bg-white/10 text-gray-400 rounded-xl text-sm border border-white/10 transition-all"
           >
             🔄 Actualiser
           </button>
         </div>
 
         {/* SECTION FACTURES IMPAYÉES */}
-        <div className="mb-12">
-          <h2 className="text-xl font-bold text-gray-700 mb-4">
+        <div className="mb-10">
+          <h2 className="text-sm font-bold text-gray-400 uppercase tracking-widest mb-4">
             📋 Factures en attente ({unpaidGroups.length} client(s))
           </h2>
           <div className="space-y-4">
             {unpaidGroups
               .filter((g) => g.client?.name?.toLowerCase().includes(searchTerm.toLowerCase()))
               .map((group) => (
-                <div
-                  key={group.client?.id}
-                  className="bg-white rounded-xl shadow-md border overflow-hidden"
-                >
-                  <div className="px-6 py-4 bg-gradient-to-r from-gray-800 to-gray-700 text-white">
+                <div key={group.client?.id} className="bg-[#16161d] border border-white/5 rounded-2xl overflow-hidden">
+                  <div className="px-6 py-4 bg-gradient-to-r from-purple-600 to-violet-600 text-white">
                     <div className="flex justify-between items-center">
                       <div>
-                        <h3 className="text-xl font-bold">{group.client?.name}</h3>
+                        <h3 className="text-lg font-bold">{group.client?.name}</h3>
                         <div className="flex items-center gap-2 mt-1">
-                          <span className="text-xs">TVA</span>
+                          <span className="text-xs text-white/70">TVA</span>
                           <select
                             value={group.tvaRate}
-                            onChange={(e) =>
-                              updateClientTva(group.client?.id, Number(e.target.value))
-                            }
-                            className="bg-white/20 text-white text-xs rounded-lg px-2 py-1"
+                            onChange={(e) => updateClientTva(group.client?.id, Number(e.target.value))}
+                            className="bg-white/20 text-white text-xs rounded-lg px-2 py-1 outline-none"
                           >
                             {TVA_RATES.map((r) => (
-                              <option key={r} value={r}>
-                                {r}%
-                              </option>
+                              <option key={r} value={r}>{r}%</option>
                             ))}
                           </select>
                         </div>
                       </div>
                       <div className="text-right">
-                        <div className="text-sm opacity-80">Total dû</div>
-                        <div className="text-2xl font-bold">
-                          {group.totalRemaining.toFixed(2)} €
-                        </div>
+                        <div className="text-xs text-white/70">Total dû</div>
+                        <div className="text-2xl font-black">{group.totalRemaining.toFixed(2)} €</div>
                       </div>
                     </div>
                   </div>
                   <div className="overflow-x-auto">
                     <table className="w-full">
-                      <thead className="bg-gray-50 border-b">
-                        <tr>
-                          <th className="px-4 py-2 text-left text-xs">Ticket</th>
-                          <th className="px-4 py-2 text-left text-xs">Appareil</th>
-                          <th className="px-4 py-2 text-left text-xs">Panne</th>
-                          <th className="px-4 py-2 text-center text-xs">TTC</th>
-                          <th className="px-4 py-2 text-center text-xs">Payé</th>
-                          <th className="px-4 py-2 text-center text-xs">Reste</th>
-                          <th className="px-4 py-2 text-center text-xs">Actions</th>
+                      <thead>
+                        <tr className="bg-purple-500/10 border-b border-white/5">
+                          <th className="px-4 py-2.5 text-left text-xs font-bold text-purple-400 uppercase tracking-widest">Ticket</th>
+                          <th className="px-4 py-2.5 text-left text-xs font-bold text-purple-400 uppercase tracking-widest">Appareil</th>
+                          <th className="px-4 py-2.5 text-left text-xs font-bold text-purple-400 uppercase tracking-widest">Panne</th>
+                          <th className="px-4 py-2.5 text-center text-xs font-bold text-purple-400 uppercase tracking-widest">TTC</th>
+                          <th className="px-4 py-2.5 text-center text-xs font-bold text-purple-400 uppercase tracking-widest">Payé</th>
+                          <th className="px-4 py-2.5 text-center text-xs font-bold text-purple-400 uppercase tracking-widest">Reste</th>
+                          <th className="px-4 py-2.5 text-center text-xs font-bold text-purple-400 uppercase tracking-widest">Actions</th>
                         </tr>
                       </thead>
-                      <tbody>
+                      <tbody className="divide-y divide-white/5">
                         {group.repairs.map((r) => (
-                          <tr key={r.id} className="border-b">
-                            <td className="px-4 py-2 font-mono text-sm">MBX-{r.id}</td>
-                            <td className="px-4 py-2 text-sm">{r.device}</td>
-                            <td className="px-4 py-2 text-sm text-gray-500">{r.issue}</td>
-                            <td className="px-4 py-2 text-center">{r.totalTtc.toFixed(2)}€</td>
-                            <td className="px-4 py-2 text-center text-green-600">
-                              {r.paidTtc.toFixed(2)}€
-                            </td>
-                            <td className="px-4 py-2 text-center text-red-500">
-                              {r.remainingTtc.toFixed(2)}€
-                            </td>
-                            <td className="px-4 py-2 text-center">
+                          <tr key={r.id} className="hover:bg-white/5 transition-colors">
+                            <td className="px-4 py-3 font-mono text-purple-400 text-sm font-bold">MBX-{r.id}</td>
+                            <td className="px-4 py-3 text-sm text-white">{r.device}</td>
+                            <td className="px-4 py-3 text-sm text-gray-400">{r.issue}</td>
+                            <td className="px-4 py-3 text-center text-white text-sm">{r.totalTtc.toFixed(2)}€</td>
+                            <td className="px-4 py-3 text-center text-green-400 text-sm">{r.paidTtc.toFixed(2)}€</td>
+                            <td className="px-4 py-3 text-center text-red-400 text-sm">{r.remainingTtc.toFixed(2)}€</td>
+                            <td className="px-4 py-3 text-center">
                               <button
-                                onClick={() => {
-                                  setSelectedGroup({
-                                    ...group,
-                                    repairs: [r],
-                                    totalRemaining: r.remainingTtc,
-                                  });
-                                  setPaymentAmount(r.remainingTtc.toString());
-                                  setShowPaymentModal(true);
-                                }}
-                                className="px-2 py-1 bg-green-600 text-white rounded-lg text-xs"
+                                onClick={() => { setSelectedGroup({ ...group, repairs: [r], totalRemaining: r.remainingTtc }); setPaymentAmount(r.remainingTtc.toString()); setShowPaymentModal(true); }}
+                                className="px-3 py-1 bg-green-600 hover:bg-green-500 text-white rounded-lg text-xs transition-all font-medium"
                               >
                                 💵 Encaisser
                               </button>
@@ -578,30 +559,19 @@ export default function FacturesPage() {
                       </tbody>
                     </table>
                   </div>
-                  <div className="bg-gray-50 px-4 py-3 border-t flex gap-2 justify-end">
+                  <div className="px-4 py-3 border-t border-white/5 flex gap-2 justify-end">
                     <button
-                      onClick={() => {
-                        setSelectedGroup(group);
-                        setPaymentAmount(group.totalRemaining.toString());
-                        setShowPaymentModal(true);
-                      }}
-                      className="px-4 py-2 bg-green-600 text-white rounded-lg text-sm"
+                      onClick={() => { setSelectedGroup(group); setPaymentAmount(group.totalRemaining.toString()); setShowPaymentModal(true); }}
+                      className="px-4 py-2 bg-green-600 hover:bg-green-500 text-white rounded-xl text-sm font-semibold transition-all"
                     >
                       💰 Encaisser le solde
                     </button>
-                    <button
-                      onClick={() => printInvoice(group)}
-                      className="px-4 py-2 bg-blue-600 text-white rounded-lg text-sm"
-                    >
+                    <button onClick={() => printInvoice(group)} className="px-4 py-2 bg-purple-600 hover:bg-purple-500 text-white rounded-xl text-sm font-semibold transition-all">
                       🖨️ Imprimer
                     </button>
                     <button
-                      onClick={() => {
-                        setSelectedGroupForEmail(group);
-                        setEmailTo(group.client?.email || "");
-                        setShowEmailModal(true);
-                      }}
-                      className="px-4 py-2 bg-purple-600 text-white rounded-lg text-sm"
+                      onClick={() => { setSelectedGroupForEmail(group); setEmailTo(group.client?.email || ""); setShowEmailModal(true); }}
+                      className="px-4 py-2 bg-violet-600 hover:bg-violet-500 text-white rounded-xl text-sm font-semibold transition-all"
                     >
                       ✉️ Email
                     </button>
@@ -609,7 +579,7 @@ export default function FacturesPage() {
                 </div>
               ))}
             {unpaidGroups.length === 0 && (
-              <div className="text-center text-gray-400 py-8">✅ Aucune facture en attente</div>
+              <div className="text-center text-gray-500 py-8 bg-[#16161d] border border-white/5 rounded-2xl text-sm">✅ Aucune facture en attente</div>
             )}
           </div>
         </div>
@@ -617,49 +587,43 @@ export default function FacturesPage() {
         {/* SECTION FACTURES PAYÉES */}
         {paidGroups.length > 0 && (
           <div>
-            <h2 className="text-xl font-bold text-gray-700 mb-4">
+            <h2 className="text-sm font-bold text-gray-400 uppercase tracking-widest mb-4">
               ✅ Factures payées ({paidGroups.length} client(s))
             </h2>
             <div className="space-y-4">
               {paidGroups
                 .filter((g) => g.client?.name?.toLowerCase().includes(searchTerm.toLowerCase()))
                 .map((group) => (
-                  <div
-                    key={group.client?.id}
-                    className="bg-white rounded-xl shadow-md border border-green-200 overflow-hidden"
-                  >
+                  <div key={group.client?.id} className="bg-[#16161d] border border-green-500/20 rounded-2xl overflow-hidden">
                     <div className="px-6 py-4 bg-gradient-to-r from-green-700 to-green-600 text-white">
                       <div className="flex justify-between items-center">
-                        <h3 className="text-xl font-bold">{group.client?.name}</h3>
+                        <h3 className="text-lg font-bold">{group.client?.name}</h3>
                         <div className="text-right">
-                          <div className="text-sm opacity-80">Total payé</div>
-                          <div className="text-2xl font-bold">{group.totalPaid.toFixed(2)} €</div>
+                          <div className="text-xs text-white/70">Total payé</div>
+                          <div className="text-2xl font-black">{group.totalPaid.toFixed(2)} €</div>
                         </div>
                       </div>
                     </div>
                     <div className="overflow-x-auto">
                       <table className="w-full">
-                        <thead className="bg-gray-50 border-b">
-                          <tr>
-                            <th className="px-4 py-2 text-left text-xs">Ticket</th>
-                            <th className="px-4 py-2 text-left text-xs">Appareil</th>
-                            <th className="px-4 py-2 text-left text-xs">Panne</th>
-                            <th className="px-4 py-2 text-center text-xs">Montant TTC</th>
-                            <th className="px-4 py-2 text-center text-xs">Actions</th>
+                        <thead>
+                          <tr className="bg-green-500/10 border-b border-white/5">
+                            <th className="px-4 py-2.5 text-left text-xs font-bold text-green-400 uppercase tracking-widest">Ticket</th>
+                            <th className="px-4 py-2.5 text-left text-xs font-bold text-green-400 uppercase tracking-widest">Appareil</th>
+                            <th className="px-4 py-2.5 text-left text-xs font-bold text-green-400 uppercase tracking-widest">Panne</th>
+                            <th className="px-4 py-2.5 text-center text-xs font-bold text-green-400 uppercase tracking-widest">Montant TTC</th>
+                            <th className="px-4 py-2.5 text-center text-xs font-bold text-green-400 uppercase tracking-widest">Actions</th>
                           </tr>
                         </thead>
-                        <tbody>
+                        <tbody className="divide-y divide-white/5">
                           {group.repairs.map((r) => (
-                            <tr key={r.id} className="border-b">
-                              <td className="px-4 py-2 font-mono text-sm">MBX-{r.id}</td>
-                              <td className="px-4 py-2 text-sm">{r.device}</td>
-                              <td className="px-4 py-2 text-sm text-gray-500">{r.issue}</td>
-                              <td className="px-4 py-2 text-center">{r.totalTtc.toFixed(2)}€</td>
-                              <td className="px-4 py-2 text-center">
-                                <button
-                                  onClick={() => printInvoice({ ...group, repairs: [r] })}
-                                  className="px-2 py-1 bg-blue-600 text-white rounded-lg text-xs"
-                                >
+                            <tr key={r.id} className="hover:bg-white/5 transition-colors">
+                              <td className="px-4 py-3 font-mono text-purple-400 text-sm font-bold">MBX-{r.id}</td>
+                              <td className="px-4 py-3 text-sm text-white">{r.device}</td>
+                              <td className="px-4 py-3 text-sm text-gray-400">{r.issue}</td>
+                              <td className="px-4 py-3 text-center text-white text-sm">{r.totalTtc.toFixed(2)}€</td>
+                              <td className="px-4 py-3 text-center">
+                                <button onClick={() => printInvoice({ ...group, repairs: [r] })} className="px-3 py-1 bg-purple-600 hover:bg-purple-500 text-white rounded-lg text-xs transition-all font-medium">
                                   🧾 Facture
                                 </button>
                               </td>
@@ -677,43 +641,32 @@ export default function FacturesPage() {
 
       {/* MODAL PAIEMENT */}
       {showPaymentModal && selectedGroup && (
-        <div className="fixed inset-0 bg-black/60 flex items-center justify-center p-4 z-50">
-          <div className="bg-white rounded-xl max-w-md w-full p-6">
-            <h2 className="text-xl font-bold mb-4">💰 Encaissement</h2>
-            <p>
-              <strong>Client:</strong> {selectedGroup.client?.name}
-            </p>
-            <p className="text-red-600 font-bold my-2">
-              Reste: {selectedGroup.totalRemaining.toFixed(2)} €
-            </p>
+        <div className="fixed inset-0 bg-black/70 backdrop-blur-sm flex items-center justify-center p-4 z-50">
+          <div className="bg-[#232742] border border-white/10 border-t-2 border-t-purple-500 rounded-2xl max-w-md w-full p-6 shadow-2xl">
+            <h2 className="text-lg font-bold text-white mb-4">💰 Encaissement</h2>
+            <p className="text-gray-400 text-sm"><span className="text-gray-500">Client:</span> <span className="text-white font-medium">{selectedGroup.client?.name}</span></p>
+            <p className="text-red-400 font-bold my-3 text-lg">Reste: {selectedGroup.totalRemaining.toFixed(2)} €</p>
             <input
               type="number"
               value={paymentAmount}
               onChange={(e) => setPaymentAmount(e.target.value)}
-              className="w-full border rounded-lg p-2 my-2"
+              className="w-full bg-[#1a1d2e] border border-white/10 rounded-xl px-4 py-2.5 text-white text-sm outline-none focus:border-purple-500/60 focus:ring-2 focus:ring-purple-500/15 transition-all my-2"
               step="0.01"
             />
             <select
               value={paymentMethod}
               onChange={(e) => setPaymentMethod(e.target.value)}
-              className="w-full border rounded-lg p-2 my-2"
+              className="w-full bg-[#1a1d2e] border border-white/10 rounded-xl px-4 py-2.5 text-white text-sm outline-none focus:border-purple-500/60 focus:ring-2 focus:ring-purple-500/15 transition-all my-2"
             >
               <option>Espèces</option>
               <option>Carte Bancaire</option>
               <option>Virement</option>
               <option>Chèque</option>
             </select>
-            <button
-              onClick={registerPayment}
-              disabled={isSending}
-              className="w-full bg-green-600 text-white py-2 rounded-lg mt-2"
-            >
+            <button onClick={registerPayment} disabled={isSending} className="w-full bg-gradient-to-r from-purple-500 to-violet-600 text-white py-2.5 rounded-xl font-semibold text-sm shadow-[0_4px_0_rgba(0,0,0,0.3)] active:translate-y-0.5 transition-all mt-2 disabled:opacity-50">
               ✅ Encaisser
             </button>
-            <button
-              onClick={() => setShowPaymentModal(false)}
-              className="w-full bg-gray-200 py-2 rounded-lg mt-2"
-            >
+            <button onClick={() => setShowPaymentModal(false)} className="w-full bg-white/5 hover:bg-white/10 text-gray-300 py-2.5 rounded-xl text-sm border border-white/10 transition-all mt-2">
               Annuler
             </button>
           </div>
@@ -722,27 +675,20 @@ export default function FacturesPage() {
 
       {/* MODAL EMAIL */}
       {showEmailModal && selectedGroupForEmail && (
-        <div className="fixed inset-0 bg-black/60 flex items-center justify-center p-4 z-50">
-          <div className="bg-white rounded-xl max-w-md w-full p-6">
-            <h2 className="text-xl font-bold mb-4">✉️ Envoyer la facture</h2>
+        <div className="fixed inset-0 bg-black/70 backdrop-blur-sm flex items-center justify-center p-4 z-50">
+          <div className="bg-[#232742] border border-white/10 border-t-2 border-t-purple-500 rounded-2xl max-w-md w-full p-6 shadow-2xl">
+            <h2 className="text-lg font-bold text-white mb-4">✉️ Envoyer la facture</h2>
             <input
               type="email"
               value={emailTo}
               onChange={(e) => setEmailTo(e.target.value)}
               placeholder="Email du client"
-              className="w-full border rounded-lg p-2 mb-4"
+              className="w-full bg-[#1a1d2e] border border-white/10 rounded-xl px-4 py-2.5 text-white placeholder-gray-600 text-sm outline-none focus:border-purple-500/60 focus:ring-2 focus:ring-purple-500/15 transition-all mb-4"
             />
-            <button
-              onClick={sendEmailInvoice}
-              disabled={isSending}
-              className="w-full bg-blue-600 text-white py-2 rounded-lg"
-            >
+            <button onClick={sendEmailInvoice} disabled={isSending} className="w-full bg-gradient-to-r from-purple-500 to-violet-600 text-white py-2.5 rounded-xl font-semibold text-sm shadow-[0_4px_0_rgba(0,0,0,0.3)] active:translate-y-0.5 transition-all disabled:opacity-50">
               Envoyer
             </button>
-            <button
-              onClick={() => setShowEmailModal(false)}
-              className="w-full bg-gray-200 py-2 rounded-lg mt-2"
-            >
+            <button onClick={() => setShowEmailModal(false)} className="w-full bg-white/5 hover:bg-white/10 text-gray-300 py-2.5 rounded-xl text-sm border border-white/10 transition-all mt-2">
               Annuler
             </button>
           </div>

@@ -4,10 +4,10 @@ const PUBLIC_PATHS = [
   "/",
   "/login",
   "/suivi",
-  "/client/repairs",
-  "/client/code",
-  "/client/soumettre-appareil",
+  "/suivi-client",
+  "/client",
   "/api/assistant-public",
+  "/api/client-tracking",
 ];
 
 function isPublic(pathname: string): boolean {

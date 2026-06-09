@@ -10,70 +10,70 @@ import { getHistoriqueAppareil } from "../../lib/historique";
 const STATUS_CONFIG = {
   "📤 Envoyé à l'atelier": {
     label: "📤 Envoyé à l'atelier",
-    color: "bg-blue-100 text-blue-800",
+    color: "bg-blue-500/15 text-blue-400",
     badge: "📤 Envoyé",
     order: 0,
     icon: "📤",
   },
   "📥 Réceptionné": {
     label: "📥 Réceptionné",
-    color: "bg-yellow-100 text-yellow-800",
+    color: "bg-amber-500/15 text-amber-400",
     badge: "📥 Réceptionné",
     order: 1,
     icon: "📥",
   },
   "🔬 Diagnostic": {
     label: "🔬 Diagnostic",
-    color: "bg-blue-100 text-blue-800",
+    color: "bg-blue-500/15 text-blue-400",
     badge: "🔬 Diagnostic",
     order: 2,
     icon: "🔬",
   },
   "✅ Validé client": {
     label: "✅ Validé client",
-    color: "bg-green-100 text-green-800",
+    color: "bg-emerald-500/15 text-emerald-400",
     badge: "✅ Validé client",
     order: 3,
     icon: "✅",
   },
   "⏳ Attente validation client": {
     label: "⏳ Attente validation",
-    color: "bg-orange-100 text-orange-800",
+    color: "bg-orange-500/15 text-orange-400",
     badge: "⏳ Attente validation",
     order: 4,
     icon: "⏳",
   },
   "🔐 Mot de passe incorrect": {
     label: "🔐 Mot de passe incorrect",
-    color: "bg-red-100 text-red-800",
+    color: "bg-red-500/15 text-red-400",
     badge: "🔐 Mot de passe incorrect",
     order: 5,
     icon: "🔐",
   },
   "📦 Attente pièce": {
     label: "📦 Attente pièce",
-    color: "bg-purple-100 text-purple-800",
+    color: "bg-purple-500/15 text-purple-400",
     badge: "📦 Attente pièce",
     order: 6,
     icon: "📦",
   },
   "🔧 En réparation": {
     label: "🔧 En réparation",
-    color: "bg-cyan-100 text-cyan-800",
+    color: "bg-cyan-500/15 text-cyan-400",
     badge: "🔧 En réparation",
     order: 7,
     icon: "🔧",
   },
   "❌ KO": {
     label: "❌ KO - Irréparable",
-    color: "bg-red-100 text-red-800",
+    color: "bg-red-500/15 text-red-400",
     badge: "❌ KO",
     order: 8,
     icon: "❌",
   },
   "🚫 Refus client": {
     label: "🚫 Refus client",
-    color: "bg-pink-100 text-pink-800",
+    color: "bg-pink-500/15 text-pink-400",
     badge: "🚫 Refus client",
     order: 9,
     icon: "🚫",
@@ -374,10 +374,10 @@ export default function HistoriquePage() {
   const FullHistoryTimeline = ({ historique }) => {
     if (!historique || historique.length === 0) {
       return (
-        <div className="text-center py-8 text-gray-400">
+        <div className="text-center py-8 text-gray-500">
           <p className="text-2xl mb-2">📭</p>
-          <p>Aucun historique enregistré pour cet appareil</p>
-          <p className="text-xs mt-2">Les actions seront tracées automatiquement</p>
+          <p className="text-sm">Aucun historique enregistré pour cet appareil</p>
+          <p className="text-xs mt-2 text-gray-600">Les actions seront tracées automatiquement</p>
         </div>
       );
     }
@@ -395,13 +395,13 @@ export default function HistoriquePage() {
 
     const getActionColor = (action) => {
       const colors = {
-        creation: "border-green-500 bg-green-50",
-        modification: "border-blue-500 bg-blue-50",
-        changement_statut: "border-purple-500 bg-purple-50",
-        changement_technicien: "border-orange-500 bg-orange-50",
-        commentaire: "border-gray-500 bg-gray-50",
+        creation: "border-green-500 bg-green-500/10",
+        modification: "border-blue-500 bg-blue-500/10",
+        changement_statut: "border-purple-500 bg-purple-500/10",
+        changement_technicien: "border-amber-500 bg-amber-500/10",
+        commentaire: "border-gray-500 bg-white/5",
       };
-      return colors[action] || "border-gray-300 bg-gray-50";
+      return colors[action] || "border-gray-500 bg-white/5";
     };
 
     const getActionTitle = (action) => {
@@ -417,68 +417,52 @@ export default function HistoriquePage() {
 
     return (
       <div className="relative">
-        <div className="absolute left-4 top-0 bottom-0 w-0.5 bg-gray-200"></div>
+        <div className="absolute left-4 top-0 bottom-0 w-0.5 bg-white/10"></div>
 
         {historique.map((entry, index) => (
-          <div key={entry.id} className="relative mb-6 flex items-start group">
-            <div
-              className={`absolute left-2 w-4 h-4 rounded-full border-2 border-white z-10 ${getActionColor(entry.action)}`}
-            >
+          <div key={entry.id} className="relative mb-4 flex items-start group">
+            <div className={`absolute left-2 w-4 h-4 rounded-full border-2 border-[#1a1d2e] z-10 ${getActionColor(entry.action)}`}>
               <div className={`w-full h-full rounded-full ${getActionColor(entry.action)}`}></div>
             </div>
 
-            <div
-              className={`ml-10 flex-1 rounded-lg p-4 border-l-4 ${getActionColor(entry.action)} transition hover:shadow-md`}
-            >
+            <div className={`ml-10 flex-1 rounded-xl p-4 border-l-4 ${getActionColor(entry.action)} transition`}>
               <div className="flex justify-between items-start mb-2 flex-wrap gap-2">
                 <div className="flex items-center gap-2">
                   <span className="text-xl">{getActionIcon(entry.action)}</span>
-                  <span className="font-bold text-gray-800">{getActionTitle(entry.action)}</span>
+                  <span className="font-bold text-white text-sm">{getActionTitle(entry.action)}</span>
                 </div>
-                <div className="text-xs text-gray-500 bg-white px-2 py-1 rounded-full">
+                <div className="text-xs text-gray-500 bg-white/5 px-2 py-1 rounded-full">
                   ⏱️ {formatDateTime(entry.created_at)}
                 </div>
               </div>
 
-              <p className="text-gray-700 text-sm mb-2">{entry.description}</p>
+              <p className="text-gray-400 text-sm mb-2">{entry.description}</p>
 
               {entry.old_value && entry.new_value && (
-                <div className="bg-white/70 rounded p-2 text-xs mt-2">
-                  <span className="text-gray-500">🔄 Modification :</span>{" "}
-                  <span className="text-red-500 line-through">{entry.old_value}</span>
+                <div className="bg-white/5 rounded-lg p-2 text-xs mt-2">
+                  <span className="text-gray-500">🔄</span>{" "}
+                  <span className="text-red-400 line-through">{entry.old_value}</span>
                   {" → "}
-                  <span className="text-green-600 font-medium">{entry.new_value}</span>
+                  <span className="text-green-400 font-medium">{entry.new_value}</span>
                 </div>
               )}
 
-              <div className="flex justify-between items-center mt-2 pt-2 border-t border-gray-100">
+              <div className="flex justify-between items-center mt-2 pt-2 border-t border-white/10">
                 <div className="flex items-center gap-2 text-xs">
                   <span className="text-gray-500">👤 {getUserDisplayName(entry)}</span>
-                  <span
-                    className={`px-2 py-0.5 rounded-full text-xs ${
-                      entry.user_type === "client"
-                        ? "bg-green-100 text-green-700"
-                        : "bg-blue-100 text-blue-700"
-                    }`}
-                  >
+                  <span className={`px-2 py-0.5 rounded-full text-xs ${entry.user_type === "client" ? "bg-green-500/15 text-green-400" : "bg-amber-500/15 text-amber-400"}`}>
                     {entry.user_type === "client" ? "Client" : "Technicien"}
                   </span>
                 </div>
-                <button
-                  onClick={() => navigator.clipboard.writeText(entry.description)}
-                  className="text-gray-400 hover:text-gray-600 text-xs"
-                  title="Copier"
-                >
-                  📋
-                </button>
+                <button onClick={() => navigator.clipboard.writeText(entry.description)} className="text-gray-500 hover:text-gray-300 text-xs transition" title="Copier">📋</button>
               </div>
             </div>
           </div>
         ))}
 
         {/* Résumé */}
-        <div className="ml-10 mt-4 p-3 bg-gray-100 rounded-lg text-center text-sm text-gray-600">
-          📊 Total : {historique.length} action(s) enregistrée(s)
+        <div className="ml-10 mt-4 p-3 bg-amber-500/10 border border-amber-500/20 rounded-xl text-center text-sm text-amber-400">
+          📊 {historique.length} action(s) enregistrée(s)
         </div>
       </div>
     );
@@ -488,7 +472,7 @@ export default function HistoriquePage() {
     return (
       <Layout>
         <div className="flex justify-center items-center h-64">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-amber-500"></div>
         </div>
       </Layout>
     );
@@ -498,12 +482,12 @@ export default function HistoriquePage() {
     return (
       <Layout>
         <div className="flex justify-center items-center h-64">
-          <div className="bg-red-50 border border-red-200 rounded-lg p-4 text-red-700">
+          <div className="bg-red-500/10 border border-red-500/20 rounded-2xl p-4 text-red-400">
             <p className="font-semibold">❌ Erreur</p>
             <p className="text-sm">{error}</p>
             <button
               onClick={() => loadHistory()}
-              className="mt-3 px-4 py-2 bg-red-600 text-white rounded-lg text-sm"
+              className="mt-3 px-4 py-2 bg-red-500 text-white rounded-xl text-sm"
             >
               Réessayer
             </button>
@@ -537,31 +521,32 @@ export default function HistoriquePage() {
         </div>
       )}
 
-      <div className="max-w-6xl mx-auto px-4 py-6">
-        {/* En-tête */}
-        <div className="mb-6">
-          <h1 className="text-2xl font-bold text-gray-800">📜 Historique des réparations</h1>
-          <p className="text-gray-500 text-sm mt-1">
-            Consultez toutes vos réparations et leur suivi complet
-          </p>
+      <div className="max-w-6xl mx-auto">
+        {/* HEADER */}
+        <div className="relative overflow-hidden bg-gradient-to-r from-amber-500 to-yellow-600 rounded-2xl px-6 py-5 mb-6">
+          <div className="absolute inset-0 opacity-[0.06]" style={{ backgroundImage: "radial-gradient(circle, white 1px, transparent 1px)", backgroundSize: "18px 18px" }} />
+          <div className="relative">
+            <h1 className="text-2xl font-black text-white tracking-tight">📜 Historique</h1>
+            <p className="text-xs text-white/60 uppercase tracking-widest mt-1">Suivi complet des réparations</p>
+          </div>
         </div>
 
         {/* Barre de recherche */}
-        <div className="bg-white rounded-lg shadow-sm border p-4 mb-6">
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+        <div className="bg-[#16161d] border border-white/5 rounded-2xl p-4 mb-5">
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-3">
             <div className="md:col-span-2">
               <input
                 type="text"
                 placeholder="🔍 Rechercher par client, téléphone, appareil, ticket..."
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
-                className="w-full p-2 border rounded-lg focus:ring-2 focus:ring-blue-500 outline-none"
+                className="w-full bg-[#1a1d2e] border border-white/10 rounded-xl px-4 py-2.5 text-white placeholder-gray-600 text-sm outline-none focus:border-amber-500/60 focus:ring-2 focus:ring-amber-500/15 transition-all duration-200"
               />
             </div>
             <select
               value={filterStatus}
               onChange={(e) => setFilterStatus(e.target.value)}
-              className="p-2 border rounded-lg"
+              className="bg-[#1a1d2e] border border-white/10 rounded-xl px-3 py-2.5 text-white text-sm outline-none focus:border-amber-500/60 focus:ring-2 focus:ring-amber-500/15 transition-all"
             >
               <option value="all">Tous les statuts</option>
               {Object.keys(STATUS_CONFIG).map((status) => (
@@ -573,7 +558,7 @@ export default function HistoriquePage() {
             <select
               value={filterClient}
               onChange={(e) => setFilterClient(e.target.value)}
-              className="p-2 border rounded-lg"
+              className="bg-[#1a1d2e] border border-white/10 rounded-xl px-3 py-2.5 text-white text-sm outline-none focus:border-amber-500/60 focus:ring-2 focus:ring-amber-500/15 transition-all"
             >
               <option value="all">Tous les clients</option>
               {clients.map((client) => (
@@ -584,16 +569,16 @@ export default function HistoriquePage() {
             </select>
           </div>
 
-          <div className="mt-4 flex flex-wrap gap-2 items-center">
-            <span className="text-xs text-gray-500">Trier :</span>
+          <div className="mt-3 flex flex-wrap gap-2 items-center">
+            <span className="text-xs text-gray-500 uppercase tracking-wider">Trier :</span>
             {SORT_OPTIONS.map((option) => (
               <button
                 key={option.value}
                 onClick={() => setSortBy(option.value)}
-                className={`px-3 py-1 rounded-lg text-xs transition ${
+                className={`px-3 py-1 rounded-lg text-xs transition-all duration-150 ${
                   sortBy === option.value
-                    ? "bg-blue-600 text-white"
-                    : "bg-gray-100 hover:bg-gray-200"
+                    ? "bg-amber-500 text-white shadow-[0_2px_0_rgba(0,0,0,0.3)]"
+                    : "bg-white/5 text-gray-400 hover:bg-white/10 hover:text-gray-300"
                 }`}
               >
                 {option.label}
@@ -601,45 +586,45 @@ export default function HistoriquePage() {
             ))}
           </div>
 
-          <div className="mt-3 text-sm text-gray-500">
+          <div className="mt-2 text-xs text-gray-500">
             {filteredAndSortedRepairs.length} réparation(s) trouvée(s)
           </div>
         </div>
 
         {/* Liste des réparations */}
-        <div className="space-y-3">
+        <div className="space-y-2">
           {filteredAndSortedRepairs.length === 0 ? (
-            <div className="bg-white rounded-lg shadow-sm border p-8 text-center text-gray-500">
+            <div className="bg-[#16161d] border border-white/5 rounded-2xl p-8 text-center text-gray-500 text-sm">
               Aucune réparation trouvée
             </div>
           ) : (
             filteredAndSortedRepairs.map((repair) => (
               <div
                 key={repair.id}
-                className="bg-white rounded-lg shadow-sm border hover:shadow-md transition cursor-pointer"
+                className="bg-[#16161d] border border-white/5 hover:border-amber-500/30 rounded-2xl transition-all duration-150 cursor-pointer"
                 onClick={() => openDetails(repair)}
               >
                 <div className="p-4">
                   <div className="flex flex-wrap justify-between items-start gap-2">
                     <div className="flex-1">
                       <div className="flex items-center gap-2 flex-wrap">
-                        <span className="text-xs text-gray-400">Ticket #{repair.id}</span>
+                        <span className="font-mono font-bold text-amber-400 text-sm bg-amber-500/10 px-2 py-0.5 rounded-lg">#{repair.id}</span>
                         {getStatusBadge(repair.status)}
                       </div>
-                      <h3 className="font-semibold text-gray-800 mt-1">
+                      <h3 className="font-semibold text-white mt-1.5">
                         {repair.client?.name || "Client inconnu"}
                       </h3>
-                      <div className="flex flex-wrap gap-3 mt-2 text-sm">
-                        <span className="text-gray-600">📱 {repair.device || "-"}</span>
-                        <span className="text-gray-400">|</span>
-                        <span className="text-gray-600">🔧 {repair.issue || "-"}</span>
+                      <div className="flex flex-wrap gap-3 mt-1 text-sm">
+                        <span className="text-gray-400">📱 {repair.device || "-"}</span>
+                        <span className="text-gray-600">|</span>
+                        <span className="text-gray-400">🔧 {repair.issue || "-"}</span>
                       </div>
                     </div>
                     <div className="text-right">
-                      <div className="text-lg font-bold text-blue-600">
+                      <div className="text-lg font-bold text-amber-400">
                         {repair.final_price ? `${repair.final_price}€` : "-"}
                       </div>
-                      <div className="text-xs text-gray-400">
+                      <div className="text-xs text-gray-500">
                         {formatDateTime(repair.created_at)}
                       </div>
                     </div>
@@ -673,50 +658,35 @@ export default function HistoriquePage() {
       {/* Modal Détails */}
       {showDetails && selectedRepair && (
         <div
-          className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4"
+          className="fixed inset-0 bg-black/70 backdrop-blur-sm flex items-center justify-center z-50 p-4"
           onClick={() => closeDetails()}
         >
           <div
-            className="bg-white rounded-xl w-full max-w-4xl max-h-[90vh] overflow-y-auto"
+            className="bg-[#1a1d2e] border border-white/10 border-t-2 border-t-amber-500 rounded-2xl w-full max-w-4xl max-h-[90vh] overflow-y-auto shadow-2xl"
             onClick={(e) => e.stopPropagation()}
           >
             {/* En-tête */}
-            <div className="sticky top-0 bg-white border-b p-4 flex justify-between items-center">
+            <div className="sticky top-0 bg-[#1a1d2e] border-b border-white/10 px-5 py-4 flex justify-between items-center">
               <div>
-                <h2 className="text-xl font-bold">
-                  📋 Détail de la réparation #{selectedRepair.id}
+                <h2 className="text-lg font-bold text-white tracking-tight">
+                  📋 Réparation #{selectedRepair.id}
                 </h2>
                 <p className="text-xs text-gray-400">
-                  Ticket créé le {formatDateTime(selectedRepair.created_at)}
+                  Créé le {formatDateTime(selectedRepair.created_at)}
                 </p>
               </div>
-              <button onClick={closeDetails} className="text-gray-400 hover:text-gray-600 text-2xl">
-                ✕
-              </button>
+              <button onClick={closeDetails} className="w-8 h-8 bg-white/10 hover:bg-white/20 rounded-full flex items-center justify-center text-gray-400 transition text-sm">✕</button>
             </div>
 
-            <div className="p-6 space-y-4">
+            <div className="p-5 space-y-4">
               {/* Client */}
-              <div className="bg-gradient-to-r from-blue-50 to-indigo-50 rounded-lg p-4">
-                <h3 className="font-semibold text-blue-800 mb-3">👤 Informations client</h3>
+              <div className="bg-amber-500/10 border border-amber-500/20 rounded-xl p-4">
+                <h3 className="font-semibold text-amber-400 mb-3 text-sm uppercase tracking-wider">👤 Client</h3>
                 <div className="grid grid-cols-2 md:grid-cols-3 gap-3 text-sm">
-                  <div>
-                    <span className="text-gray-500">Nom:</span> {selectedRepair.client?.name || "-"}
-                  </div>
-                  <div>
-                    <span className="text-gray-500">Téléphone:</span>{" "}
-                    {selectedRepair.client?.phone || "-"}
-                  </div>
-                  <div>
-                    <span className="text-gray-500">Email:</span>{" "}
-                    {selectedRepair.client?.email || "-"}
-                  </div>
-                  <div>
-                    <span className="text-gray-500">Code client:</span>{" "}
-                    <span className="font-mono font-bold">
-                      {selectedRepair.client?.client_code || "-"}
-                    </span>
-                  </div>
+                  <div><span className="text-gray-500">Nom:</span> <span className="text-white">{selectedRepair.client?.name || "-"}</span></div>
+                  <div><span className="text-gray-500">Tél:</span> <span className="text-white">{selectedRepair.client?.phone || "-"}</span></div>
+                  <div><span className="text-gray-500">Email:</span> <span className="text-white">{selectedRepair.client?.email || "-"}</span></div>
+                  <div><span className="text-gray-500">Code:</span> <span className="font-mono font-bold text-amber-400">{selectedRepair.client?.client_code || "-"}</span></div>
                 </div>
               </div>
 
@@ -724,102 +694,80 @@ export default function HistoriquePage() {
               <div className="flex justify-between items-center">
                 <button
                   onClick={() => setShowFullHistory(!showFullHistory)}
-                  className="flex items-center gap-2 px-4 py-2 bg-gray-800 text-white rounded-lg hover:bg-gray-900 transition"
+                  className="flex items-center gap-2 px-4 py-2 bg-amber-500/15 text-amber-400 border border-amber-500/30 rounded-xl hover:bg-amber-500/25 transition-all duration-150 text-sm font-medium"
                 >
                   <span>📜</span>
-                  <span>{showFullHistory ? "Masquer" : "Afficher"} l'historique complet</span>
-                  <span className="text-xs bg-gray-700 px-2 py-0.5 rounded-full">
+                  <span>{showFullHistory ? "Masquer" : "Afficher"} l'historique</span>
+                  <span className="bg-amber-500/20 px-2 py-0.5 rounded-full text-xs">
                     {appareilHistorique.length}
                   </span>
                 </button>
-                <div className="text-xs text-gray-400">
-                  ⏱️ Toutes les actions avec date et heure
-                </div>
+                <div className="text-xs text-gray-500">⏱️ Date et heure</div>
               </div>
 
               {/* Timeline Historique Complet */}
               {showFullHistory && (
-                <div className="bg-white rounded-lg p-4 border-2 border-blue-200">
-                  <h3 className="font-bold text-gray-800 mb-4 flex items-center gap-2 border-b pb-2">
-                    <span className="text-2xl">📜</span>
-                    <span>Historique complet depuis la saisie</span>
-                    <span className="text-xs text-gray-500 ml-2">
-                      ⏱️ Toutes les actions tracées
-                    </span>
+                <div className="bg-[#16161d] rounded-xl p-4 border border-amber-500/20">
+                  <h3 className="font-bold text-white mb-4 flex items-center gap-2 border-b border-white/10 pb-2 text-sm">
+                    <span className="text-xl">📜</span>
+                    <span>Historique complet</span>
+                    <span className="text-xs text-gray-500 ml-2">⏱️ Actions tracées</span>
                   </h3>
                   <FullHistoryTimeline historique={appareilHistorique} />
                 </div>
               )}
 
               {/* Chronologie réparation */}
-              <div className="bg-white rounded-lg p-4 border">
-                <h3 className="font-semibold mb-4 border-b pb-2">
-                  📅 Chronologie de la réparation
+              <div className="bg-[#16161d] border border-white/5 rounded-xl p-4">
+                <h3 className="font-semibold text-white mb-4 border-b border-white/10 pb-2 text-sm uppercase tracking-wider">
+                  📅 Chronologie
                 </h3>
                 <div className="space-y-3">
-                  {/* Réception */}
-                  <div className="flex items-start gap-3 p-3 bg-yellow-50 rounded-lg border-l-4 border-yellow-500">
+                  <div className="flex items-start gap-3 p-3 bg-amber-500/10 rounded-xl border-l-4 border-amber-500">
                     <div className="text-2xl">📥</div>
                     <div className="flex-1">
                       <div className="flex justify-between">
-                        <span className="font-bold">📝 Saisie initiale</span>
-                        <span className="text-xs text-gray-500">
-                          ⏱️ {formatDateTime(selectedRepair.created_at)}
-                        </span>
+                        <span className="font-bold text-white text-sm">📝 Saisie initiale</span>
+                        <span className="text-xs text-gray-500">⏱️ {formatDateTime(selectedRepair.created_at)}</span>
                       </div>
-                      <p className="text-sm mt-1">Appareil: {selectedRepair.device || "-"}</p>
-                      <p className="text-sm">Panne: {selectedRepair.issue || "-"}</p>
+                      <p className="text-sm text-gray-400 mt-1">Appareil: {selectedRepair.device || "-"}</p>
+                      <p className="text-sm text-gray-400">Panne: {selectedRepair.issue || "-"}</p>
                     </div>
                   </div>
 
-                  {/* Diagnostic */}
                   {selectedRepair.diagnosis && (
-                    <div className="flex items-start gap-3 p-3 bg-blue-50 rounded-lg border-l-4 border-blue-500">
+                    <div className="flex items-start gap-3 p-3 bg-blue-500/10 rounded-xl border-l-4 border-blue-500">
                       <div className="text-2xl">🔬</div>
                       <div className="flex-1">
                         <div className="flex justify-between">
-                          <span className="font-bold">Diagnostic</span>
-                          <span className="text-xs text-gray-500">
-                            ⏱️{" "}
-                            {formatDateTime(
-                              selectedRepair.diagnostic_date || selectedRepair.updated_at
-                            )}
-                          </span>
+                          <span className="font-bold text-white text-sm">Diagnostic</span>
+                          <span className="text-xs text-gray-500">⏱️ {formatDateTime(selectedRepair.diagnostic_date || selectedRepair.updated_at)}</span>
                         </div>
-                        <p className="text-sm mt-1">{selectedRepair.diagnosis}</p>
+                        <p className="text-sm text-gray-400 mt-1">{selectedRepair.diagnosis}</p>
                       </div>
                     </div>
                   )}
 
-                  {/* Fin réparation */}
                   {selectedRepair.end_time && (
-                    <div className="flex items-start gap-3 p-3 bg-green-50 rounded-lg border-l-4 border-green-500">
+                    <div className="flex items-start gap-3 p-3 bg-green-500/10 rounded-xl border-l-4 border-green-500">
                       <div className="text-2xl">✅</div>
                       <div className="flex-1">
                         <div className="flex justify-between">
-                          <span className="font-bold">Réparation terminée</span>
-                          <span className="text-xs text-gray-500">
-                            ⏱️ {formatDateTime(selectedRepair.end_time)}
-                          </span>
+                          <span className="font-bold text-white text-sm">Terminée</span>
+                          <span className="text-xs text-gray-500">⏱️ {formatDateTime(selectedRepair.end_time)}</span>
                         </div>
-                        <p className="text-sm mt-1">
-                          Prix final:{" "}
-                          <span className="font-bold">{selectedRepair.final_price || 0}€</span>
-                        </p>
+                        <p className="text-sm text-gray-400 mt-1">Prix final: <span className="font-bold text-amber-400">{selectedRepair.final_price || 0}€</span></p>
                       </div>
                     </div>
                   )}
 
-                  {/* Rendu */}
                   {selectedRepair.return_date && (
-                    <div className="flex items-start gap-3 p-3 bg-gray-100 rounded-lg border-l-4 border-gray-500">
+                    <div className="flex items-start gap-3 p-3 bg-white/5 rounded-xl border-l-4 border-gray-500">
                       <div className="text-2xl">📦</div>
                       <div className="flex-1">
                         <div className="flex justify-between">
-                          <span className="font-bold">Rendu au client</span>
-                          <span className="text-xs text-gray-500">
-                            ⏱️ {formatDateTime(selectedRepair.return_date)}
-                          </span>
+                          <span className="font-bold text-white text-sm">Rendu</span>
+                          <span className="text-xs text-gray-500">⏱️ {formatDateTime(selectedRepair.return_date)}</span>
                         </div>
                       </div>
                     </div>
@@ -827,57 +775,33 @@ export default function HistoriquePage() {
                 </div>
               </div>
 
-              {/* Appareil */}
-              <div className="bg-gray-50 rounded-lg p-4">
-                <h3 className="font-semibold mb-3">📱 Appareil</h3>
-                <div className="grid grid-cols-2 gap-3 text-sm">
-                  <div>
-                    <span className="text-gray-500">Modèle:</span> {selectedRepair.device || "-"}
+              {/* Appareil + Prix */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                <div className="bg-[#16161d] border border-white/5 rounded-xl p-4">
+                  <h3 className="font-semibold text-white mb-3 text-sm uppercase tracking-wider">📱 Appareil</h3>
+                  <div className="space-y-1 text-sm">
+                    <div><span className="text-gray-500">Modèle:</span> <span className="text-white">{selectedRepair.device || "-"}</span></div>
+                    <div><span className="text-gray-500">Panne:</span> <span className="text-white">{selectedRepair.issue || "-"}</span></div>
+                    {selectedRepair.imei && <div><span className="text-gray-500">IMEI:</span> <span className="text-white">{selectedRepair.imei}</span></div>}
                   </div>
-                  <div>
-                    <span className="text-gray-500">Panne:</span> {selectedRepair.issue || "-"}
-                  </div>
-                  {selectedRepair.imei && (
-                    <div>
-                      <span className="text-gray-500">IMEI:</span> {selectedRepair.imei}
-                    </div>
-                  )}
                 </div>
-              </div>
-
-              {/* Prix */}
-              <div className="bg-gray-50 rounded-lg p-4">
-                <h3 className="font-semibold mb-3">💰 Prix</h3>
-                <div className="grid grid-cols-2 gap-3 text-sm">
-                  <div>
-                    <span className="text-gray-500">Prix estimé:</span>{" "}
-                    {selectedRepair.estimated_price || 0}€
-                  </div>
-                  <div>
-                    <span className="text-gray-500">Prix final:</span>{" "}
-                    <span className="font-bold text-green-600">
-                      {selectedRepair.final_price || 0}€
-                    </span>
+                <div className="bg-[#16161d] border border-white/5 rounded-xl p-4">
+                  <h3 className="font-semibold text-white mb-3 text-sm uppercase tracking-wider">💰 Prix</h3>
+                  <div className="space-y-1 text-sm">
+                    <div><span className="text-gray-500">Estimé:</span> <span className="text-white">{selectedRepair.estimated_price || 0}€</span></div>
+                    <div><span className="text-gray-500">Final:</span> <span className="font-bold text-amber-400">{selectedRepair.final_price || 0}€</span></div>
                   </div>
                 </div>
               </div>
 
               {/* Photos */}
               {selectedRepair.photos && selectedRepair.photos.length > 0 && (
-                <div className="bg-gray-50 rounded-lg p-4">
-                  <h3 className="font-semibold mb-3">📸 Photos</h3>
+                <div className="bg-[#16161d] border border-white/5 rounded-xl p-4">
+                  <h3 className="font-semibold text-white mb-3 text-sm uppercase tracking-wider">📸 Photos</h3>
                   <div className="grid grid-cols-3 gap-2">
                     {selectedRepair.photos.map((photo, idx) => (
-                      <img
-                        key={idx}
-                        src={photo}
-                        className="w-full h-24 object-cover rounded cursor-pointer"
-                        onClick={() => {
-                          setSelectedPhoto(photo);
-                          setShowPhotoModal(true);
-                        }}
-                        alt=""
-                      />
+                      <img key={idx} src={photo} className="w-full h-24 object-cover rounded-xl cursor-pointer hover:opacity-90 transition"
+                        onClick={() => { setSelectedPhoto(photo); setShowPhotoModal(true); }} alt="" />
                     ))}
                   </div>
                 </div>
@@ -885,17 +809,14 @@ export default function HistoriquePage() {
             </div>
 
             {/* Boutons */}
-            <div className="sticky bottom-0 bg-white border-t p-4 flex gap-3">
+            <div className="sticky bottom-0 bg-[#1a1d2e] border-t border-white/10 p-4 flex gap-3">
               <button
                 onClick={() => router.push(`/repairs/${selectedRepair.id}`)}
-                className="flex-1 bg-blue-600 text-white p-2 rounded-lg hover:bg-blue-700"
+                className="flex-1 bg-gradient-to-r from-amber-500 to-yellow-600 text-white py-2.5 rounded-xl font-semibold text-sm shadow-[0_4px_0_rgba(0,0,0,0.3)] active:translate-y-0.5 active:shadow-[0_2px_0_rgba(0,0,0,0.3)] transition-all"
               >
                 🔧 Voir et modifier
               </button>
-              <button
-                onClick={closeDetails}
-                className="flex-1 bg-gray-200 p-2 rounded-lg hover:bg-gray-300"
-              >
+              <button onClick={closeDetails} className="flex-1 bg-white/5 hover:bg-white/10 text-gray-300 py-2.5 rounded-xl font-medium text-sm border border-white/10 transition-all">
                 Fermer
               </button>
             </div>

@@ -216,7 +216,7 @@ export default function FacturesPage() {
   /* -------------------------------------------------------------
      6️⃣ Impression PDF
      ------------------------------------------------------------- */
-  const printInvoice = (group) => {
+  const printInvoice = async (group) => {
     const win = window.open("", "_blank", "height=900,width=1000");
     if (!win) { alert("Autorisez les pop-ups pour imprimer."); return; }
 
@@ -228,9 +228,23 @@ export default function FacturesPage() {
     const date = new Date().toLocaleDateString("fr-FR");
     const isSolde = group.totalRemaining <= 0;
 
-    const logoHtml = cp.logo_url
-      ? `<img src="${cp.logo_url}" style="height:52px;max-width:160px;object-fit:contain;display:block" alt="logo"/>`
-      : `<div style="font-size:32px;font-weight:900;letter-spacing:-2px;color:#fff;line-height:1">${shortName}<span style="font-size:13px;font-weight:400;opacity:.7;margin-left:4px;letter-spacing:1px">RÉPARATIONS</span></div>`;
+    // Convertir le logo en base64 pour éviter les blocages cross-origin dans la popup
+    let logoBase64 = "";
+    if (cp.logo_url) {
+      try {
+        const res = await fetch(cp.logo_url);
+        const blob = await res.blob();
+        logoBase64 = await new Promise<string>((resolve) => {
+          const reader = new FileReader();
+          reader.onload = () => resolve(reader.result as string);
+          reader.readAsDataURL(blob);
+        });
+      } catch (_) { /* logo non chargeable, on utilise le texte */ }
+    }
+
+    const logoHtml = logoBase64
+      ? `<img src="${logoBase64}" style="height:52px;max-width:180px;object-fit:contain;display:block" alt="logo"/>`
+      : `<div style="font-size:34px;font-weight:900;letter-spacing:-2px;color:#fff;line-height:1">${shortName}</div>`;
 
     win.document.write(`<!DOCTYPE html><html><head><meta charset="UTF-8">
     <title>Facture ${invoiceRef}</title>

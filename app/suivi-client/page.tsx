@@ -420,9 +420,7 @@ function SuiviClientContent() {
                       {/* Progress stepper */}
                       {getStepIndex(selectedRepair.status) >= 0 && (
                         <div>
-                          <p className="text-xs text-gray-600 uppercase tracking-widest mb-4">
-                            Progression
-                          </p>
+                          <p className="text-xs text-gray-600 uppercase tracking-widest mb-4">Progression</p>
                           <div className="flex items-start">
                             {STATUS_STEPS.map((step, i) => {
                               const current = getStepIndex(selectedRepair.status);
@@ -433,35 +431,15 @@ function SuiviClientContent() {
                               return (
                                 <Fragment key={step}>
                                   <div className="flex flex-col items-center shrink-0">
-                                    <div
-                                      className={`w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold border-2 transition-all ${
-                                        done
-                                          ? "bg-orange-500 border-orange-500 text-white"
-                                          : active
-                                          ? "bg-orange-500 border-orange-500 text-white shadow-lg shadow-orange-500/40"
-                                          : "bg-[#0f0f13] border-white/15 text-gray-600"
-                                      }`}
-                                    >
+                                    <div className={`w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold border-2 transition-all ${done ? "bg-orange-500 border-orange-500 text-white" : active ? "bg-orange-500 border-orange-500 text-white shadow-lg shadow-orange-500/40" : "bg-[#0f0f13] border-white/15 text-gray-600"}`}>
                                       {done ? "✓" : i + 1}
                                     </div>
-                                    <span
-                                      className={`text-[9px] leading-tight text-center mt-1.5 w-12 uppercase tracking-wide ${
-                                        active
-                                          ? "text-orange-400 font-bold"
-                                          : done
-                                          ? "text-gray-400"
-                                          : "text-gray-700"
-                                      }`}
-                                    >
+                                    <span className={`text-[9px] leading-tight text-center mt-1.5 w-12 uppercase tracking-wide ${active ? "text-orange-400 font-bold" : done ? "text-gray-400" : "text-gray-700"}`}>
                                       {stepLabel}
                                     </span>
                                   </div>
                                   {!isLast && (
-                                    <div
-                                      className={`flex-1 h-0.5 mt-4 mx-1 transition-all ${
-                                        i < current ? "bg-orange-500" : "bg-white/10"
-                                      }`}
-                                    />
+                                    <div className={`flex-1 h-0.5 mt-4 mx-1 transition-all ${i < current ? "bg-orange-500" : "bg-white/10"}`} />
                                   )}
                                 </Fragment>
                               );
@@ -473,15 +451,11 @@ function SuiviClientContent() {
                       {/* Device + issue */}
                       <div className="grid grid-cols-2 gap-3">
                         <div className="bg-white/5 rounded-xl p-4">
-                          <p className="text-xs text-gray-500 uppercase tracking-wider mb-1">
-                            Appareil
-                          </p>
+                          <p className="text-xs text-gray-500 uppercase tracking-wider mb-1">Appareil</p>
                           <p className="text-white font-semibold text-sm">{selectedRepair.device}</p>
                         </div>
                         <div className="bg-white/5 rounded-xl p-4">
-                          <p className="text-xs text-gray-500 uppercase tracking-wider mb-1">
-                            Panne signalée
-                          </p>
+                          <p className="text-xs text-gray-500 uppercase tracking-wider mb-1">Panne signalée</p>
                           <p className="text-white text-sm">{selectedRepair.issue}</p>
                         </div>
                       </div>
@@ -494,78 +468,113 @@ function SuiviClientContent() {
                         </div>
                       )}
 
-                      {/* Technician */}
-                      {selectedRepair.technician_name && (
+                      {/* Technicien */}
+                      {selectedRepair.technician && (
                         <div className="bg-white/5 rounded-xl p-4">
-                          <p className="text-xs text-gray-500 uppercase tracking-wider mb-1">
-                            Technicien
-                          </p>
-                          <p className="text-white text-sm">👨‍🔧 {selectedRepair.technician_name}</p>
+                          <p className="text-xs text-gray-500 uppercase tracking-wider mb-1">Technicien</p>
+                          <p className="text-white text-sm">👨‍🔧 {selectedRepair.technician}</p>
                         </div>
                       )}
 
-                      {/* Workshop notes */}
-                      {(() => {
-                        const notes =
-                          cleanNotes(selectedRepair.diagnosis) ||
-                          cleanNotes(selectedRepair.repair_description) ||
-                          cleanNotes(selectedRepair.description);
-                        if (!notes) return null;
-                        return (
-                          <div className="bg-white/5 rounded-xl p-4">
-                            <p className="text-xs text-gray-500 uppercase tracking-wider mb-2">
-                              Notes de l'atelier
-                            </p>
-                            <p className="text-gray-300 text-sm whitespace-pre-wrap leading-relaxed">
-                              {notes}
+                      {/* Bandeau diagnostic payant */}
+                      {selectedRepair.estimated_price > 0 && selectedRepair.status === "🔬 Diagnostic" && (
+                        <div className="bg-amber-500/10 border border-amber-500/30 rounded-xl p-4 flex items-start gap-3">
+                          <span className="text-2xl">💳</span>
+                          <div>
+                            <p className="text-amber-300 font-semibold text-sm">Diagnostic payant</p>
+                            <p className="text-amber-200/70 text-xs mt-1">
+                              Le diagnostic de votre appareil est facturé <strong className="text-amber-300">{selectedRepair.estimated_price}€</strong>. Ce montant est à régler directement à l&apos;atelier. Il sera déduit du prix de la réparation si vous acceptez le devis.
                             </p>
                           </div>
-                        );
-                      })()}
+                        </div>
+                      )}
+
+                      {/* 🔍 Diagnostic technicien */}
+                      {cleanNotes(selectedRepair.diagnosis) && (
+                        <div className="bg-purple-500/10 border border-purple-500/20 rounded-xl p-4">
+                          <p className="text-xs text-purple-400 uppercase tracking-wider font-bold mb-2">🔍 Diagnostic technicien</p>
+                          <p className="text-gray-300 text-sm whitespace-pre-wrap leading-relaxed">
+                            {cleanNotes(selectedRepair.diagnosis)}
+                          </p>
+                        </div>
+                      )}
+
+                      {/* 🔧 Travaux effectués */}
+                      {cleanNotes(selectedRepair.repair_description) && (
+                        <div className="bg-blue-500/10 border border-blue-500/20 rounded-xl p-4">
+                          <p className="text-xs text-blue-400 uppercase tracking-wider font-bold mb-2">🔧 Travaux effectués</p>
+                          <p className="text-gray-300 text-sm whitespace-pre-wrap leading-relaxed">
+                            {cleanNotes(selectedRepair.repair_description)}
+                          </p>
+                        </div>
+                      )}
+
+                      {/* ⚠️ Risques & Préconisations */}
+                      {cleanNotes(selectedRepair.description) && (
+                        <div className="bg-orange-500/10 border border-orange-500/20 rounded-xl p-4">
+                          <p className="text-xs text-orange-400 uppercase tracking-wider font-bold mb-2">⚠️ Risques & Préconisations</p>
+                          <p className="text-gray-300 text-sm whitespace-pre-wrap leading-relaxed">
+                            {cleanNotes(selectedRepair.description)}
+                          </p>
+                        </div>
+                      )}
+
+                      {/* Prix */}
+                      {(selectedRepair.final_price > 0 || selectedRepair.estimated_price > 0) && selectedRepair.status !== "🔬 Diagnostic" && (
+                        <div className="bg-white/5 rounded-xl p-4 flex items-center justify-between">
+                          <div>
+                            <p className="text-xs text-gray-500 uppercase tracking-wider mb-1">
+                              {selectedRepair.final_price > 0 ? "Prix final" : "Estimation"}
+                            </p>
+                            <p className="text-white font-bold text-xl">
+                              {selectedRepair.final_price > 0 ? selectedRepair.final_price : selectedRepair.estimated_price}€
+                            </p>
+                          </div>
+                          <span className="text-3xl">💰</span>
+                        </div>
+                      )}
 
                       {/* Photos */}
                       {selectedRepair.photos?.length > 0 && (
                         <div className="bg-white/5 rounded-xl p-4">
-                          <p className="text-xs text-gray-500 uppercase tracking-wider mb-3">
-                            📸 Photos de l'appareil
-                          </p>
+                          <p className="text-xs text-gray-500 uppercase tracking-wider mb-3">📸 Photos de l&apos;appareil</p>
                           <div className="grid grid-cols-3 gap-2">
                             {selectedRepair.photos.map((photo: string, i: number) => (
                               <div
                                 key={i}
                                 className="aspect-square rounded-xl overflow-hidden cursor-pointer hover:opacity-80 transition hover:scale-105 transform"
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  setSelectedPhoto(photo);
-                                  setShowPhotoModal(true);
-                                }}
+                                onClick={(e) => { e.stopPropagation(); setSelectedPhoto(photo); setShowPhotoModal(true); }}
                               >
-                                <img
-                                  src={photo}
-                                  alt={`Photo ${i + 1}`}
-                                  className="w-full h-full object-cover"
-                                />
+                                <img src={photo} alt={`Photo ${i + 1}`} className="w-full h-full object-cover" />
                               </div>
                             ))}
                           </div>
-                          <p className="text-xs text-gray-600 mt-2 text-center">
-                            Cliquez sur une photo pour l'agrandir
-                          </p>
+                          <p className="text-xs text-gray-600 mt-2 text-center">Cliquez sur une photo pour l&apos;agrandir</p>
                         </div>
                       )}
 
-                      {/* Client response input */}
-                      {selectedRepair.status !== "✅ Terminé" &&
-                        selectedRepair.status !== "📦 Rendu" &&
+                      {/* Bloc validation — uniquement pour les statuts qui demandent une réponse client */}
+                      {(selectedRepair.status === "⏳ Attente validation client" || selectedRepair.status === "🔐 Mot de passe incorrect") &&
                         !selectedRepair.client_response && (
-                          <div className="bg-orange-500/10 border border-orange-500/20 rounded-xl p-4">
-                            <p className="text-sm font-semibold text-orange-300 mb-3">
-                              📝 Répondre à l'atelier
+                          <div className="bg-amber-500/10 border border-amber-500/30 rounded-xl p-4">
+                            <p className="text-sm font-semibold text-amber-300 mb-1">
+                              {selectedRepair.status === "⏳ Attente validation client"
+                                ? "⏳ Votre accord est requis"
+                                : "🔐 Code de déverrouillage requis"}
+                            </p>
+                            <p className="text-xs text-amber-200/60 mb-3">
+                              {selectedRepair.status === "⏳ Attente validation client"
+                                ? "Le technicien attend votre validation pour poursuivre la réparation."
+                                : "Le technicien a besoin de votre code pour accéder à l'appareil."}
                             </p>
                             <textarea
-                              className="w-full bg-[#0f0f13] border border-white/15 rounded-xl px-4 py-3 text-white placeholder-gray-600 text-sm outline-none focus:border-orange-500/60 focus:ring-2 focus:ring-orange-500/15 transition-all resize-none"
+                              className="w-full bg-[#0f0f13] border border-white/15 rounded-xl px-4 py-3 text-white placeholder-gray-600 text-sm outline-none focus:border-amber-500/60 focus:ring-2 focus:ring-amber-500/15 transition-all resize-none"
                               rows={3}
-                              placeholder="Votre message (acceptation du devis, questions, etc.)"
+                              placeholder={
+                                selectedRepair.status === "⏳ Attente validation client"
+                                  ? "Écrivez votre réponse (ex: je valide le devis de 89€)"
+                                  : "Entrez votre code ou schéma de déverrouillage"
+                              }
                               value={clientResponse}
                               onChange={(e) => setClientResponse(e.target.value)}
                             />
@@ -575,44 +584,34 @@ function SuiviClientContent() {
                                 disabled={sending}
                                 className="flex-1 bg-green-600 hover:bg-green-700 text-white py-2.5 rounded-xl text-sm font-semibold shadow-[0_3px_0_rgba(0,0,0,0.3)] active:translate-y-0.5 transition-all disabled:opacity-50"
                               >
-                                ✅ Valider
+                                ✅ {selectedRepair.status === "⏳ Attente validation client" ? "Valider" : "Envoyer le code"}
                               </button>
-                              <button
-                                onClick={handleRefuse}
-                                disabled={sending}
-                                className="flex-1 bg-red-600 hover:bg-red-700 text-white py-2.5 rounded-xl text-sm font-semibold shadow-[0_3px_0_rgba(0,0,0,0.3)] active:translate-y-0.5 transition-all disabled:opacity-50"
-                              >
-                                ❌ Refuser
-                              </button>
+                              {selectedRepair.status === "⏳ Attente validation client" && (
+                                <button
+                                  onClick={handleRefuse}
+                                  disabled={sending}
+                                  className="flex-1 bg-red-600 hover:bg-red-700 text-white py-2.5 rounded-xl text-sm font-semibold shadow-[0_3px_0_rgba(0,0,0,0.3)] active:translate-y-0.5 transition-all disabled:opacity-50"
+                                >
+                                  ❌ Refuser
+                                </button>
+                              )}
                             </div>
-                            <p className="text-xs text-orange-400/60 mt-3 text-center">
+                            <p className="text-xs text-amber-400/60 mt-3 text-center">
                               Merci de nous répondre le plus rapidement possible
                             </p>
                           </div>
                         )}
 
-                      {/* Already responded */}
+                      {/* Déjà répondu */}
                       {selectedRepair.client_response && (
-                        <div
-                          className={`rounded-xl p-4 border ${
-                            selectedRepair.client_response_type === "accepte"
-                              ? "bg-green-500/10 border-green-500/20"
-                              : selectedRepair.client_response_type === "refuse"
-                              ? "bg-red-500/10 border-red-500/20"
-                              : "bg-white/5 border-white/10"
-                          }`}
-                        >
-                          <p className="text-xs text-gray-500 uppercase tracking-wider mb-2">
-                            Votre réponse
-                          </p>
-                          <p className="text-gray-300 text-sm italic leading-relaxed">
-                            {selectedRepair.client_response}
-                          </p>
+                        <div className={`rounded-xl p-4 border ${selectedRepair.client_response_type === "accepte" ? "bg-green-500/10 border-green-500/20" : selectedRepair.client_response_type === "refuse" ? "bg-red-500/10 border-red-500/20" : "bg-white/5 border-white/10"}`}>
+                          <p className="text-xs text-gray-500 uppercase tracking-wider mb-2">Votre réponse</p>
+                          <p className="text-gray-300 text-sm italic leading-relaxed">{selectedRepair.client_response}</p>
                           {selectedRepair.client_response_type === "accepte" && (
-                            <p className="text-green-400 text-xs mt-2">✅ Vous avez accepté le diagnostic</p>
+                            <p className="text-green-400 text-xs mt-2">✅ Vous avez accepté</p>
                           )}
                           {selectedRepair.client_response_type === "refuse" && (
-                            <p className="text-red-400 text-xs mt-2">❌ Vous avez refusé le diagnostic</p>
+                            <p className="text-red-400 text-xs mt-2">❌ Vous avez refusé</p>
                           )}
                         </div>
                       )}

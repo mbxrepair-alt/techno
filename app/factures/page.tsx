@@ -43,6 +43,7 @@ export default function FacturesPage() {
   const [emailTo, setEmailTo] = useState("");
   const [selectedGroupForEmail, setSelectedGroupForEmail] = useState(null);
   const [companyProfile, setCompanyProfile] = useState<{ name: string; address: string; phone: string; email: string; siret: string; logo_url: string }>({ name: "MBX", address: "", phone: "", email: "", siret: "", logo_url: "" });
+  const [logoBase64, setLogoBase64] = useState<string>("");
 
   /* -------------------------------------------------------------
      1️⃣ Chargement du taux de TVA par client
@@ -68,7 +69,22 @@ export default function FacturesPage() {
       ]);
       if (profileResult.data) {
         const p = profileResult.data;
-        setCompanyProfile({ name: p.company_name?.replace(/\s*réparations?\s*/i, "").trim() || "MBX", address: p.contact_address || "", phone: p.contact_phone || "", email: p.email || "", siret: p.siret || "", logo_url: p.logo_url || "" });
+        const profile = { name: p.company_name?.replace(/\s*réparations?\s*/i, "").trim() || "MBX", address: p.contact_address || "", phone: p.contact_phone || "", email: p.email || "", siret: p.siret || "", logo_url: p.logo_url || "" };
+        setCompanyProfile(profile);
+        // Convertir logo en base64 via canvas pour éviter CORS dans la popup d'impression
+        if (p.logo_url) {
+          const img = new Image();
+          img.crossOrigin = "anonymous";
+          img.onload = () => {
+            const canvas = document.createElement("canvas");
+            canvas.width = img.naturalWidth;
+            canvas.height = img.naturalHeight;
+            canvas.getContext("2d")!.drawImage(img, 0, 0);
+            try { setLogoBase64(canvas.toDataURL("image/png")); } catch (_) { setLogoBase64(""); }
+          };
+          img.onerror = () => setLogoBase64("");
+          img.src = p.logo_url;
+        }
       }
 
       // Construire le map TVA directement (pas via state = pas de stale closure)
@@ -216,7 +232,7 @@ export default function FacturesPage() {
   /* -------------------------------------------------------------
      6️⃣ Impression PDF
      ------------------------------------------------------------- */
-  const printInvoice = async (group) => {
+  const printInvoice = (group) => {
     const win = window.open("", "_blank", "height=900,width=1000");
     if (!win) { alert("Autorisez les pop-ups pour imprimer."); return; }
 
@@ -227,20 +243,6 @@ export default function FacturesPage() {
     const totalTva = group.totalTtc - totalHt;
     const date = new Date().toLocaleDateString("fr-FR");
     const isSolde = group.totalRemaining <= 0;
-
-    // Convertir le logo en base64 pour éviter les blocages cross-origin dans la popup
-    let logoBase64 = "";
-    if (cp.logo_url) {
-      try {
-        const res = await fetch(cp.logo_url);
-        const blob = await res.blob();
-        logoBase64 = await new Promise<string>((resolve) => {
-          const reader = new FileReader();
-          reader.onload = () => resolve(reader.result as string);
-          reader.readAsDataURL(blob);
-        });
-      } catch (_) { /* logo non chargeable, on utilise le texte */ }
-    }
 
     const logoHtml = logoBase64
       ? `<img src="${logoBase64}" style="height:52px;max-width:180px;object-fit:contain;display:block" alt="logo"/>`

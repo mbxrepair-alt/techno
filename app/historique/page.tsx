@@ -828,6 +828,20 @@ export default function HistoriquePage() {
               >
                 🔧 Voir et modifier
               </button>
+              {!["📦 Rendu", "❌ KO", "🚫 Refus client"].includes(selectedRepair.status) && (
+                <button
+                  onClick={async () => {
+                    const { error } = await supabase.from("repairs").update({ status: "📦 Rendu", return_date: new Date().toISOString() }).eq("id", selectedRepair.id);
+                    if (!error) {
+                      setSelectedRepair({ ...selectedRepair, status: "📦 Rendu", return_date: new Date().toISOString() });
+                      setRepairs((prev) => prev.map((r) => r.id === selectedRepair.id ? { ...r, status: "📦 Rendu" } : r));
+                    }
+                  }}
+                  className="flex-1 bg-gray-600 hover:bg-gray-500 text-white py-2.5 rounded-xl font-semibold text-sm transition-all"
+                >
+                  📦 Marquer Rendu
+                </button>
+              )}
               <button onClick={closeDetails} className="flex-1 bg-white/5 hover:bg-white/10 text-gray-300 py-2.5 rounded-xl font-medium text-sm border border-white/10 transition-all">
                 Fermer
               </button>

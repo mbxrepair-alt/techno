@@ -1611,22 +1611,37 @@ export default function Dashboard() {
               <button onClick={() => setShowDetailModal(false)} className="w-8 h-8 bg-white/10 hover:bg-white/20 rounded-full flex items-center justify-center text-gray-400 transition text-sm">✕</button>
             </div>
             <div className="p-5 space-y-4">
+              {/* Statut */}
+              <div className="flex items-center gap-2">
+                <span className={`px-3 py-1 rounded-full text-xs font-bold text-white ${statusColors[selectedRepairDetail.status] || "bg-gray-500"}`}>
+                  {selectedRepairDetail.status || "📥 Réceptionné"}
+                </span>
+                <span className="text-xs text-gray-500">#{selectedRepairDetail.id}</span>
+              </div>
+              {/* Client */}
               <div className="bg-black/20 border border-white/10 rounded-xl p-4 space-y-1.5">
                 <div className="font-semibold text-white">👤 {selectedRepairClient.name}</div>
                 {selectedRepairClient.phone !== "NC" && <div className="text-sm text-gray-400">📞 {selectedRepairClient.phone}</div>}
                 {selectedRepairClient.email !== "NC" && <div className="text-sm text-gray-400">✉️ {selectedRepairClient.email}</div>}
                 {selectedRepairClient.client_code && <div className="text-sm font-mono text-blue-400">🔑 Code : {selectedRepairClient.client_code}</div>}
               </div>
+              {/* Réparation */}
               <div className="bg-black/20 border border-white/10 rounded-xl overflow-hidden">
-                <div className="grid grid-cols-2 border-b border-white/10">
-                  <div className="px-4 py-3 text-gray-400 text-xs font-semibold uppercase tracking-widest bg-white/5">📱 Appareil</div>
-                  <div className="px-4 py-3 text-white text-sm">{selectedRepairDetail.device}</div>
-                </div>
-                <div className="grid grid-cols-2">
-                  <div className="px-4 py-3 text-gray-400 text-xs font-semibold uppercase tracking-widest bg-white/5">🔧 Panne</div>
-                  <div className="px-4 py-3 text-white text-sm">{selectedRepairDetail.issue}</div>
-                </div>
+                {[
+                  { label: "📱 Appareil", value: selectedRepairDetail.device },
+                  { label: "🔧 Panne", value: selectedRepairDetail.issue },
+                  selectedRepairDetail.imei && selectedRepairDetail.imei !== "NC" ? { label: "🔍 IMEI", value: selectedRepairDetail.imei } : null,
+                  selectedRepairDetail.technician ? { label: "👷 Technicien", value: selectedRepairDetail.technician } : null,
+                  { label: "💰 Prix estimé", value: selectedRepairDetail.estimated_price ? `${Number(selectedRepairDetail.estimated_price).toFixed(2)} €` : "—" },
+                  selectedRepairDetail.final_price ? { label: "✅ Prix final", value: `${Number(selectedRepairDetail.final_price).toFixed(2)} €` } : null,
+                ].filter(Boolean).map((row, i, arr) => (
+                  <div key={i} className={`grid grid-cols-2 ${i < arr.length - 1 ? "border-b border-white/10" : ""}`}>
+                    <div className="px-4 py-2.5 text-gray-400 text-xs font-semibold uppercase tracking-widest bg-white/5">{row!.label}</div>
+                    <div className="px-4 py-2.5 text-white text-sm">{row!.value}</div>
+                  </div>
+                ))}
               </div>
+              {/* Boutons */}
               <div className="flex gap-2 flex-wrap">
                 <button onClick={async () => {
                   const { data: clientData } = await supabase.from("clients").select("*").eq("id", selectedRepairDetail.client_id).single();
@@ -1637,23 +1652,27 @@ export default function Dashboard() {
                 }} className="flex-1 bg-gradient-to-r from-blue-600 to-blue-500 text-white py-2.5 rounded-xl font-semibold text-sm hover:from-blue-500 hover:to-blue-400 transition-all duration-200">
                   🖨️ Imprimer ticket
                 </button>
-                {selectedRepairDetail.status === "✅ Terminé" && (
-                  <button onClick={async () => {
-                    const { error } = await supabase.from("repairs").update({ status: "📦 Rendu" }).eq("id", selectedRepairDetail.id);
-                    if (!error) {
-                      setSelectedRepairDetail({ ...selectedRepairDetail, status: "📦 Rendu" });
-                      setAllRepairs((prev) => prev.map((r) => r.id === selectedRepairDetail.id ? { ...r, status: "📦 Rendu" } : r));
-                      showMessage("✅ Statut mis à jour : Rendu", "success");
-                    }
-                  }} className="flex-1 bg-gray-600 hover:bg-gray-500 text-white py-2.5 rounded-xl font-semibold text-sm transition-all duration-200">
-                    📦 Marquer Rendu
-                  </button>
-                )}
-                <button onClick={() => setShowDetailModal(false)}
-                  className="flex-1 bg-white/5 hover:bg-white/10 text-gray-300 py-2.5 rounded-xl font-semibold text-sm border border-white/10 transition-all duration-200">
-                  Fermer
+                <button onClick={() => { setShowDetailModal(false); window.location.href = `/repairs/${selectedRepairDetail.id}`; }}
+                  className="flex-1 bg-gradient-to-r from-orange-600 to-orange-500 text-white py-2.5 rounded-xl font-semibold text-sm hover:from-orange-500 hover:to-orange-400 transition-all duration-200">
+                  🔧 Ouvrir fiche
                 </button>
               </div>
+              {!["📦 Rendu", "❌ KO", "🚫 Refus client"].includes(selectedRepairDetail.status) && (
+                <button onClick={async () => {
+                  const { error } = await supabase.from("repairs").update({ status: "📦 Rendu" }).eq("id", selectedRepairDetail.id);
+                  if (!error) {
+                    setSelectedRepairDetail({ ...selectedRepairDetail, status: "📦 Rendu" });
+                    setAllRepairs((prev) => prev.map((r) => r.id === selectedRepairDetail.id ? { ...r, status: "📦 Rendu" } : r));
+                    showMessage("✅ Statut mis à jour : Rendu", "success");
+                  }
+                }} className="w-full bg-gray-600 hover:bg-gray-500 text-white py-2.5 rounded-xl font-semibold text-sm transition-all duration-200">
+                  📦 Marquer comme Rendu au client
+                </button>
+              )}
+              <button onClick={() => setShowDetailModal(false)}
+                className="w-full bg-white/5 hover:bg-white/10 text-gray-300 py-2 rounded-xl font-semibold text-sm border border-white/10 transition-all duration-200">
+                Fermer
+              </button>
             </div>
           </div>
         </div>

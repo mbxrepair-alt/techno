@@ -96,8 +96,7 @@ export default function FacturesPage() {
 
       setRepairs(repairsWithDetails);
     } catch (e) {
-      console.error("Erreur chargement:", e);
-      alert("❌ Erreur lors du chargement.");
+      console.error("Erreur chargement factures:", e);
     } finally {
       setLoading(false);
     }
@@ -201,9 +200,8 @@ export default function FacturesPage() {
       setShowPaymentModal(false);
       setPaymentAmount("");
       setSelectedGroup(null);
-      alert(`✅ Paiement de ${amount.toFixed(2)}€ enregistré.`);
     } catch (e) {
-      alert("❌ Erreur");
+      console.error("registerPayment error:", e);
     } finally {
       setIsSending(false);
     }
@@ -444,13 +442,11 @@ export default function FacturesPage() {
       );
 
       console.log("✅ EmailJS réponse:", result);
-      alert("✅ Email de facture envoyé avec succès !");
       setShowEmailModal(false);
       setEmailTo("");
       setSelectedGroupForEmail(null);
     } catch (e) {
-      console.error("❌ Erreur EmailJS:", e);
-      alert("❌ Erreur lors de l'envoi: " + (e.text || e.message));
+      console.error("sendEmailInvoice error:", e);
     } finally {
       setIsSending(false);
     }
@@ -513,8 +509,13 @@ export default function FacturesPage() {
             <div className="text-3xl font-black mt-1">{totalRemaining.toFixed(2)} €</div>
           </div>
           <div className="bg-[#16161d] border border-white/5 rounded-2xl p-5">
-            <div className="text-xs font-medium text-gray-500 uppercase tracking-wider">Clients</div>
-            <div className="text-3xl font-black mt-1 text-purple-400">{unpaidGroups.length + paidGroups.length}</div>
+            <div className="text-xs font-medium text-gray-500 uppercase tracking-wider">Recouvrement</div>
+            <div className="text-3xl font-black mt-1 text-purple-400">
+              {totalTtc > 0 ? Math.round((totalPaid / totalTtc) * 100) : 0}%
+            </div>
+            <div className="mt-2 h-1.5 bg-white/5 rounded-full overflow-hidden">
+              <div className="h-full bg-gradient-to-r from-purple-500 to-violet-400 rounded-full transition-all" style={{ width: `${totalTtc > 0 ? Math.min(100, Math.round((totalPaid / totalTtc) * 100)) : 0}%` }} />
+            </div>
           </div>
         </div>
 

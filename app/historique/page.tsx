@@ -170,9 +170,6 @@ export default function HistoriquePage() {
 
       setEmailToNameMap(emailMap);
       setUserNameToNameMap(nameMap);
-
-      console.log("Map email -> nom:", emailMap);
-      console.log("Map user_name -> nom:", nameMap);
     } catch (error) {
       console.error("Erreur chargement techniciens:", error);
     }
@@ -531,6 +528,34 @@ export default function HistoriquePage() {
           </div>
         </div>
 
+        {/* KPI STATS */}
+        {(() => {
+          const total = repairs.length;
+          const terminees = repairs.filter(r => r.status === "✅ Terminé").length;
+          const enCours = repairs.filter(r => !["✅ Terminé","📦 Rendu","🚫 Refus client","❌ KO"].includes(r.status)).length;
+          const caTotal = repairs.reduce((s, r) => s + (r.final_price || 0), 0);
+          return (
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-5">
+              <div className="bg-[#16161d] border border-white/5 rounded-2xl p-4">
+                <div className="text-xs text-gray-500 uppercase tracking-wider">Total réparations</div>
+                <div className="text-2xl font-black text-amber-400 mt-1">{total}</div>
+              </div>
+              <div className="bg-[#16161d] border border-white/5 rounded-2xl p-4">
+                <div className="text-xs text-gray-500 uppercase tracking-wider">En cours</div>
+                <div className="text-2xl font-black text-blue-400 mt-1">{enCours}</div>
+              </div>
+              <div className="bg-[#16161d] border border-white/5 rounded-2xl p-4">
+                <div className="text-xs text-gray-500 uppercase tracking-wider">Terminées</div>
+                <div className="text-2xl font-black text-green-400 mt-1">{terminees}</div>
+              </div>
+              <div className="bg-gradient-to-br from-amber-500 to-yellow-600 rounded-2xl p-4 text-white">
+                <div className="text-xs text-white/70 uppercase tracking-wider">CA total HT</div>
+                <div className="text-2xl font-black mt-1">{caTotal.toFixed(0)} €</div>
+              </div>
+            </div>
+          );
+        })()}
+
         {/* Barre de recherche */}
         <div className="bg-[#16161d] border border-white/5 rounded-2xl p-4 mb-5">
           <div className="grid grid-cols-1 md:grid-cols-4 gap-3">
@@ -601,53 +626,40 @@ export default function HistoriquePage() {
             filteredAndSortedRepairs.map((repair) => (
               <div
                 key={repair.id}
-                className="bg-[#16161d] border border-white/5 hover:border-amber-500/30 rounded-2xl transition-all duration-150 cursor-pointer"
+                className="bg-[#16161d] border border-white/5 hover:border-amber-500/40 hover:bg-[#1a1d2e] rounded-2xl transition-all duration-150 cursor-pointer group"
                 onClick={() => openDetails(repair)}
               >
-                <div className="p-4">
-                  <div className="flex flex-wrap justify-between items-start gap-2">
-                    <div className="flex-1">
-                      <div className="flex items-center gap-2 flex-wrap">
-                        <span className="font-mono font-bold text-amber-400 text-sm bg-amber-500/10 px-2 py-0.5 rounded-lg">#{repair.id}</span>
-                        {getStatusBadge(repair.status)}
-                      </div>
-                      <h3 className="font-semibold text-white mt-1.5">
-                        {repair.client?.name || "Client inconnu"}
-                      </h3>
-                      <div className="flex flex-wrap gap-3 mt-1 text-sm">
-                        <span className="text-gray-400">📱 {repair.device || "-"}</span>
-                        <span className="text-gray-600">|</span>
-                        <span className="text-gray-400">🔧 {repair.issue || "-"}</span>
-                      </div>
-                    </div>
-                    <div className="text-right">
-                      <div className="text-lg font-bold text-amber-400">
-                        {repair.final_price ? `${repair.final_price}€` : "-"}
-                      </div>
-                      <div className="text-xs text-gray-500">
-                        {formatDateTime(repair.created_at)}
-                      </div>
-                    </div>
+                <div className="p-4 flex items-start gap-4">
+                  {/* ID Badge */}
+                  <div className="min-w-[52px] text-center">
+                    <div className="font-mono font-black text-amber-400 text-base bg-amber-500/10 px-2 py-1 rounded-xl">#{repair.id}</div>
                   </div>
-
-                  {/* Photos */}
-                  {repair.photos && repair.photos.length > 0 && (
-                    <div className="flex gap-1 mt-3">
-                      {repair.photos.slice(0, 3).map((photo, idx) => (
-                        <img
-                          key={idx}
-                          src={photo}
-                          className="w-8 h-8 rounded object-cover cursor-pointer"
-                          alt={`Photo ${idx + 1}`}
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            setSelectedPhoto(photo);
-                            setShowPhotoModal(true);
-                          }}
-                        />
-                      ))}
+                  {/* Infos */}
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-2 flex-wrap mb-1">
+                      <span className="font-bold text-white text-sm truncate">{repair.client?.name || "Client inconnu"}</span>
+                      {repair.client?.phone && <span className="text-xs text-gray-500">{repair.client.phone}</span>}
+                      {getStatusBadge(repair.status)}
                     </div>
-                  )}
+                    <div className="text-sm text-blue-300 font-medium truncate">{repair.device || "-"}</div>
+                    <div className="text-sm text-gray-500 truncate mt-0.5">{repair.issue || "-"}</div>
+                    {repair.technician && <div className="text-xs text-gray-600 mt-1">🔧 {repair.technician}</div>}
+                  </div>
+                  {/* Prix + Date */}
+                  <div className="text-right shrink-0">
+                    <div className="text-base font-black text-amber-400">
+                      {repair.final_price ? `${Number(repair.final_price).toFixed(0)} €` : repair.estimated_price ? `~${Number(repair.estimated_price).toFixed(0)} €` : "—"}
+                    </div>
+                    <div className="text-xs text-gray-600 mt-0.5">{new Date(repair.created_at).toLocaleDateString("fr-FR")}</div>
+                    {repair.photos?.length > 0 && (
+                      <div className="flex gap-0.5 mt-2 justify-end">
+                        {repair.photos.slice(0, 3).map((photo, idx) => (
+                          <img key={idx} src={photo} className="w-7 h-7 rounded-lg object-cover cursor-pointer opacity-70 hover:opacity-100 transition"
+                            onClick={(e) => { e.stopPropagation(); setSelectedPhoto(photo); setShowPhotoModal(true); }} alt="" />
+                        ))}
+                      </div>
+                    )}
+                  </div>
                 </div>
               </div>
             ))

@@ -112,10 +112,32 @@ export default function PaiementsPage() {
   });
 
   const totalGlobal = filteredPayments.reduce((sum, p) => sum + p.amount, 0);
+  const totalFacture = filteredPayments.reduce((sum, p) => sum + p.totalTtc, 0);
   const totalByMethod = filteredPayments.reduce((acc, p) => {
     acc[p.method] = (acc[p.method] ?? 0) + p.amount;
     return acc;
   }, {});
+
+  const exportCSV = () => {
+    const header = ["Date", "Client", "Ticket", "Appareil", "Panne", "Montant TTC", "Encaissé", "Méthode", "Statut"];
+    const rows = filteredPayments.map(p => [
+      p.date ? p.date.toLocaleDateString("fr-FR") : "—",
+      p.client.name,
+      p.ticketLabel,
+      p.device,
+      p.issue,
+      p.totalTtc.toFixed(2),
+      p.amount.toFixed(2),
+      p.method,
+      p.status,
+    ]);
+    const csv = [header, ...rows].map(r => r.map(v => `"${String(v).replace(/"/g, '""')}"`).join(";")).join("\n");
+    const blob = new Blob(["﻿" + csv], { type: "text/csv;charset=utf-8;" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url; a.download = `paiements-${new Date().toISOString().slice(0,10)}.csv`; a.click();
+    URL.revokeObjectURL(url);
+  };
 
   if (loading) {
     return (
@@ -145,19 +167,22 @@ export default function PaiementsPage() {
             <div className="text-xs font-medium text-white/70 uppercase tracking-wider">Total encaissé</div>
             <div className="text-3xl font-black mt-1">{totalGlobal.toFixed(2)} €</div>
           </div>
+          <div className="bg-gradient-to-br from-purple-500 to-violet-600 rounded-2xl p-5 text-white shadow-lg shadow-purple-500/25">
+            <div className="text-xs font-medium text-white/70 uppercase tracking-wider">Total facturé TTC</div>
+            <div className="text-3xl font-black mt-1">{totalFacture.toFixed(2)} €</div>
+            {totalFacture > 0 && <div className="text-xs text-white/60 mt-1">{Math.round((totalGlobal/totalFacture)*100)}% encaissé</div>}
+          </div>
           <div className="bg-gradient-to-br from-green-500 to-green-600 rounded-2xl p-5 text-white shadow-lg shadow-green-500/25">
             <div className="text-xs font-medium text-white/70 uppercase tracking-wider">Transactions</div>
             <div className="text-3xl font-black mt-1">{filteredPayments.length}</div>
-          </div>
-          <div className="bg-gradient-to-br from-rose-500 to-pink-600 rounded-2xl p-5 text-white shadow-lg shadow-rose-500/25">
-            <div className="text-xs font-medium text-white/70 uppercase tracking-wider">Clients distincts</div>
-            <div className="text-3xl font-black mt-1">{new Set(filteredPayments.map((p) => p.client.id)).size}</div>
+            <div className="text-xs text-white/60 mt-1">{new Set(filteredPayments.map((p) => p.client.id)).size} client(s)</div>
           </div>
           <div className="bg-[#16161d] border border-white/5 rounded-2xl p-5">
             <div className="text-xs font-medium text-gray-500 uppercase tracking-wider">Montant moyen</div>
             <div className="text-3xl font-black mt-1 text-pink-400">
               {filteredPayments.length > 0 ? (totalGlobal / filteredPayments.length).toFixed(2) : "0"} €
             </div>
+            <button onClick={exportCSV} className="mt-2 text-xs bg-pink-500/15 hover:bg-pink-500/25 text-pink-400 px-2 py-1 rounded-lg transition-all">⬇️ Export CSV</button>
           </div>
         </div>
 
@@ -176,7 +201,7 @@ export default function PaiementsPage() {
               className="bg-[#1a1d2e] border border-white/10 rounded-xl px-3 py-2.5 text-white text-sm outline-none focus:border-pink-500/60 focus:ring-2 focus:ring-pink-500/15 transition-all">
               <option value="all">Toutes méthodes</option>
               <option value="Espèces">💰 Espèces</option>
-              <option value="CB">💳 Carte Bancaire</option>
+              <option value="Carte Bancaire">💳 Carte Bancaire</option>
               <option value="Virement">🏦 Virement</option>
               <option value="Chèque">📝 Chèque</option>
             </select>
@@ -215,7 +240,8 @@ export default function PaiementsPage() {
                   <th className="px-4 py-3 text-left text-xs font-bold text-pink-400 uppercase tracking-widest">Ticket</th>
                   <th className="px-4 py-3 text-left text-xs font-bold text-pink-400 uppercase tracking-widest">Appareil</th>
                   <th className="px-4 py-3 text-left text-xs font-bold text-pink-400 uppercase tracking-widest">Panne</th>
-                  <th className="px-4 py-3 text-right text-xs font-bold text-pink-400 uppercase tracking-widest">Montant</th>
+                  <th className="px-4 py-3 text-right text-xs font-bold text-pink-400 uppercase tracking-widest">Facturé TTC</th>
+                  <th className="px-4 py-3 text-right text-xs font-bold text-pink-400 uppercase tracking-widest">Encaissé</th>
                   <th className="px-4 py-3 text-center text-xs font-bold text-pink-400 uppercase tracking-widest">Méthode</th>
                   <th className="px-4 py-3 text-center text-xs font-bold text-pink-400 uppercase tracking-widest">Statut</th>
                 </tr>
@@ -223,7 +249,7 @@ export default function PaiementsPage() {
               <tbody className="divide-y divide-white/5">
                 {filteredPayments.length === 0 ? (
                   <tr>
-                    <td colSpan={8} className="px-4 py-8 text-center text-gray-500 text-sm">Aucun paiement trouvé</td>
+                    <td colSpan={9} className="px-4 py-8 text-center text-gray-500 text-sm">Aucun paiement trouvé</td>
                   </tr>
                 ) : (
                   filteredPayments.map((p) => (
@@ -236,6 +262,7 @@ export default function PaiementsPage() {
                       <td className="px-4 py-3 font-mono text-sm font-bold text-pink-400">{p.ticketLabel}</td>
                       <td className="px-4 py-3 text-sm text-gray-300">{p.device}</td>
                       <td className="px-4 py-3 text-sm text-gray-500 italic">{p.issue}</td>
+                      <td className="px-4 py-3 text-right text-gray-400 text-sm">{p.totalTtc.toFixed(2)} €</td>
                       <td className="px-4 py-3 text-right font-bold text-green-400">{p.amount.toFixed(2)} €</td>
                       <td className="px-4 py-3 text-center">
                         <span className="px-2 py-1 bg-pink-500/10 text-pink-400 rounded-full text-xs">{p.method}</span>

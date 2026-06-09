@@ -115,6 +115,7 @@ export default function FacturesPage() {
           remainingTtc: remaining,
           isFullyPaid: remaining <= 0,
           payment_date: r.payment_date,
+          payment_method: r.payment_method || "",
         };
       });
 
@@ -245,6 +246,10 @@ export default function FacturesPage() {
     const totalTva = group.totalTtc - totalHt;
     const date = new Date().toLocaleDateString("fr-FR");
     const isSolde = group.totalRemaining <= 0;
+    // Mode de paiement : on prend celui de la 1re réparation payée du groupe
+    const payMethod = group.repairs.find((r) => r.payment_method)?.payment_method || "";
+    const payMethodLabel: Record<string, string> = { "Espèces": "💵 Espèces", "Carte Bancaire": "💳 Carte Bancaire", "Virement": "🏦 Virement", "Chèque": "📄 Chèque" };
+    const payMethodDisplay = payMethodLabel[payMethod] || payMethod;
 
     const logoHtml = logoBase64
       ? `<img src="${logoBase64}" style="height:52px;max-width:180px;object-fit:contain;display:block" alt="logo"/>`
@@ -402,6 +407,7 @@ export default function FacturesPage() {
             <div class="totals-row ttc-row"><span>Total TTC</span><span>${group.totalTtc.toFixed(2)} €</span></div>
             ${group.totalPaid > 0 ? `<div class="totals-row paid-row"><span>Déjà réglé</span><span>− ${group.totalPaid.toFixed(2)} €</span></div>` : ""}
             <div class="totals-row due-row"><span>${isSolde ? "✓ Soldée" : "Reste à payer"}</span><span>${group.totalRemaining.toFixed(2)} €</span></div>
+            ${isSolde && payMethodDisplay ? `<div class="totals-row" style="background:#f8fafc;font-size:12px;color:#6b7280"><span>Mode de règlement</span><span style="font-weight:600;color:#374151">${payMethodDisplay}</span></div>` : ""}
           </div>
         </div>
 

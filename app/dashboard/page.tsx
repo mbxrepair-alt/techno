@@ -903,15 +903,12 @@ export default function Dashboard() {
         <div class="ticket-id">MBX-${ticket.id}</div>
         <div class="row">
           <div class="info-block">
-            <div><span class="lbl">Client</span><br><span class="val">${escapeHtml(client.name).substring(0, 30)}</span></div>
-            <div style="margin-top:2mm"><span class="lbl">Téléphone</span><br><span class="val">${escapeHtml(client.phone) || "—"}</span></div>
-            <div style="margin-top:2mm"><span class="lbl">Appareil</span><br><span class="val">${escapeHtml(ticket.device).substring(0, 28)}</span></div>
-            <div style="margin-top:2mm"><span class="lbl">Panne</span><br><span class="val">${escapeHtml(ticket.issue).substring(0, 32)}</span></div>
-            ${ticket.imei && ticket.imei !== "NC" ? `<div style="margin-top:2mm"><span class="lbl">IMEI</span><br><span class="val">${ticket.imei}</span></div>` : ""}
-            ${codeValue
-              ? `<div class="code-box">🔑 Code : ${escapeHtml(codeValue)}</div>`
-              : `<div class="code-box no-code">⚠️ NON FOURNI — test impossible, pas pris en garantie</div>`
-            }
+            <div style="font-size:11px;font-weight:900;color:#1e293b;line-height:1.2">${escapeHtml(client.name).substring(0, 30)}</div>
+            <div style="font-size:10px;font-weight:800;color:#1e3a8a;margin-top:1.5mm">${escapeHtml(ticket.device).substring(0, 28)}</div>
+            <div style="font-size:9.5px;font-weight:700;color:#374151;margin-top:1mm;margin-bottom:2mm">${escapeHtml(ticket.issue).substring(0, 35)}</div>
+            <div style="font-size:8px;color:#64748b">${escapeHtml(client.phone) || ""}</div>
+            ${ticket.imei && ticket.imei !== "NC" ? `<div style="font-size:7.5px;color:#94a3b8;margin-top:1mm">IMEI : ${ticket.imei}</div>` : ""}
+            ${codeValue ? `<div class="code-box">🔑 Code : ${escapeHtml(codeValue)}</div>` : ""}
             <div class="note-box">📝 ${note}</div>
           </div>
           <div class="qr-tech-area">
@@ -941,6 +938,7 @@ export default function Dashboard() {
           <div class="client-info-block">
             <div><span class="lbl">Client</span><br>${escapeHtml(client.name).substring(0, 28)}</div>
             <div style="margin-top:2mm"><span class="lbl">Panne déclarée</span><br>${escapeHtml(ticket.issue).substring(0, 30)}</div>
+            ${!codeValue ? `<div style="font-size:7.5px;background:#fef2f2;border-left:2px solid #ef4444;color:#991b1b;font-weight:700;padding:1.5mm 2mm;border-radius:2mm;margin-top:2mm">⚠️ Appareil non testé — pas pris en garantie (code non fourni)</div>` : ""}
             <div style="margin-top:2mm">
               <span class="lbl">Votre code de suivi</span>
               <div class="client-code-big">${client.client_code || "—"}</div>

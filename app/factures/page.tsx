@@ -62,14 +62,16 @@ export default function FacturesPage() {
 
       // Charger le profil entreprise + TVA + réparations en parallèle
       const [profileResult, tvaResult, repairsResult, clientsResult] = await Promise.all([
-        supabase.from("profiles").select("company_name, contact_phone, contact_address, email, siret, logo_url").eq("id", user.id).single(),
+        supabase.from("profiles").select("*").eq("id", user.id).single(),
         supabase.from("clients").select("id, default_tva_rate").eq("user_id", user.id),
         supabase.from("repairs").select("*, clients(*)").eq("user_id", user.id).in("status", ["✅ Terminé", "📦 Rendu", "🚫 Refus client"]).order("created_at", { ascending: false }),
         supabase.from("clients").select("*").eq("user_id", user.id),
       ]);
+      if (profileResult.error) console.error("Profil erreur:", profileResult.error);
       if (profileResult.data) {
         const p = profileResult.data;
-        const profile = { name: p.company_name?.replace(/\s*réparations?\s*/i, "").trim() || "MBX", address: p.contact_address || "", phone: p.contact_phone || "", email: p.email || "", siret: p.siret || "", logo_url: p.logo_url || "" };
+        console.log("Profil chargé:", p);
+        const profile = { name: (p.company_name || "MBX").replace(/\s*réparations?\s*/i, "").trim() || "MBX", address: p.contact_address || p.address || "", phone: p.contact_phone || p.phone || "", email: p.email || "", siret: p.siret || "", logo_url: p.logo_url || "" };
         setCompanyProfile(profile);
         // Convertir logo en base64 via canvas pour éviter CORS dans la popup d'impression
         if (p.logo_url) {

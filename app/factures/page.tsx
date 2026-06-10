@@ -8,17 +8,6 @@ import { useEffect, useState } from "react";
 import { supabase, getCurrentUser } from "../../lib/supabase";
 import { useRouter } from "next/navigation";
 import Layout from "../../components/Layout";
-import emailjs from "@emailjs/browser";
-
-/* -------------------------------------------------------------
-   Variables d’environnement (exposées côté client)
-   ------------------------------------------------------------- */
-const EMAILJS_SERVICE_ID = process.env.NEXT_PUBLIC_EMAILJS_SERVICE_ID;
-const EMAILJS_TEMPLATE_ID = process.env.NEXT_PUBLIC_EMAILJS_TEMPLATE_ID;
-const EMAILJS_PUBLIC_KEY = process.env.NEXT_PUBLIC_EMAILJS_PUBLIC_KEY;
-
-const COMPANY_NAME = process.env.NEXT_PUBLIC_COMPANY_NAME || "MBX Réparations";
-const FROM_EMAIL = process.env.NEXT_PUBLIC_FROM_EMAIL || "no-reply@mbx-reparations.fr";
 
 /* -------------------------------------------------------------
    Constantes générales
@@ -42,6 +31,8 @@ export default function FacturesPage() {
   const [showEmailModal, setShowEmailModal] = useState(false);
   const [emailTo, setEmailTo] = useState("");
   const [selectedGroupForEmail, setSelectedGroupForEmail] = useState(null);
+  const [selectedRepairIds, setSelectedRepairIds] = useState<Set<number>>(new Set());
+  const [expandedClients, setExpandedClients] = useState<Set<string>>(new Set());
   const [companyProfile, setCompanyProfile] = useState<{ name: string; address: string; phone: string; email: string; siret: string; logo_url: string }>({ name: "MBX", address: "", phone: "", email: "", siret: "", logo_url: "" });
   const [logoBase64, setLogoBase64] = useState<string>("");
 
@@ -120,6 +111,15 @@ export default function FacturesPage() {
       });
 
       setRepairs(repairsWithDetails);
+
+      // Ouvrir automatiquement les groupes clients en attente
+      const clientIds = new Set<string>();
+      (repairsResult.data || []).forEach((r) => {
+        if (!r.paid_amount || r.paid_amount < (r.final_price ?? r.estimated_price ?? 0)) {
+          clientIds.add(String(r.client_id));
+        }
+      });
+      setExpandedClients(clientIds);
     } catch (e) {
       console.error("Erreur chargement factures:", e);
     } finally {
@@ -426,116 +426,64 @@ export default function FacturesPage() {
   };
 
   /* -------------------------------------------------------------
-     7️⃣ Envoi email
+     7️⃣ Envoi email (via API route nodemailer — pas EmailJS)
      ------------------------------------------------------------- */
   const sendEmailInvoice = async () => {
-    if (!selectedGroupForEmail) {
-      alert("Aucun groupe sélectionné!");
-      return;
-    }
-
-    const recipient = selectedGroupForEmail.client?.email || emailTo;
-    if (!recipient) {
-      alert("Email manquant");
-      return;
-    }
-
-    if (!EMAILJS_SERVICE_ID || !EMAILJS_TEMPLATE_ID || !EMAILJS_PUBLIC_KEY) {
-      alert("Erreur de configuration EmailJS");
-      return;
-    }
+    if (!selectedGroupForEmail) return;
+    const recipient = emailTo || selectedGroupForEmail.client?.email;
+    if (!recipient) { alert("Email manquant"); return; }
 
     setIsSending(true);
     try {
-      // Construction du tableau HTML des réparations
-      const repairRows = selectedGroupForEmail.repairs
-        .map(
-          (r) => `
-      <tr>
-        <td style="padding:8px;border-bottom:1px solid #eee;">MBX-${r.id}</td>
-        <td style="padding:8px;border-bottom:1px solid #eee;">${r.device}</td>
-        <td style="padding:8px;border-bottom:1px solid #eee;">${r.issue}</td>
-        <td style="padding:8px;border-bottom:1px solid #eee;text-align:right;">${r.priceHt.toFixed(2)} €</td>
-        <td style="padding:8px;border-bottom:1px solid #eee;text-align:right;">${r.tvaRate}%</td>
-        <td style="padding:8px;border-bottom:1px solid #eee;text-align:right;">${r.totalTtc.toFixed(2)} €</td>
-      </tr>
-    `
-        )
-        .join("");
+      const totalHt = selectedGroupForEmail.repairs.reduce((s, r) => s + r.priceHt, 0);
+      const totalTva = selectedGroupForEmail.totalTtc - totalHt;
+      const invoiceRef = `FACT-${String(selectedGroupForEmail.client?.id || "").padStart(4, "0")}-${Date.now().toString().slice(-5)}`;
 
-      const repairDetailsHtml = `
-      <table style="width:100%;border-collapse:collapse;">
-        <thead>
-          <tr style="background:#f3f3f3;">
-            <th style="padding:8px;text-align:left;">Ticket</th>
-            <th style="padding:8px;text-align:left;">Appareil</th>
-            <th style="padding:8px;text-align:left;">Panne</th>
-            <th style="padding:8px;text-align:right;">Montant HT</th>
-            <th style="padding:8px;text-align:right;">TVA</th>
-            <th style="padding:8px;text-align:right;">Montant TTC</th>
-          </tr>
-        </thead>
-        <tbody>
-          ${repairRows}
-        </tbody>
-        <tfoot>
-          <tr style="border-top:2px solid #ddd;">
-            <td colspan="3" style="padding:8px;text-align:right;"><strong>Total HT:</strong></td>
-            <td style="padding:8px;text-align:right;"><strong>${selectedGroupForEmail.repairs.reduce((s, r) => s + r.priceHt, 0).toFixed(2)} €</strong></td>
-            <td style="padding:8px;text-align:right;"></td>
-            <td style="padding:8px;text-align:right;"></td>
-          </tr>
-          <tr>
-            <td colspan="3" style="padding:8px;text-align:right;"><strong>TVA (20%):</strong></td>
-            <td style="padding:8px;text-align:right;"><strong>${(selectedGroupForEmail.totalTtc - selectedGroupForEmail.repairs.reduce((s, r) => s + r.priceHt, 0)).toFixed(2)} €</strong></td>
-            <td style="padding:8px;text-align:right;"></td>
-            <td style="padding:8px;text-align:right;"></td>
-          </tr>
-          <tr>
-            <td colspan="3" style="padding:8px;text-align:right;"><strong>Total TTC:</strong></td>
-            <td style="padding:8px;text-align:right;"></td>
-            <td style="padding:8px;text-align:right;"></td>
-            <td style="padding:8px;text-align:right;"><strong>${selectedGroupForEmail.totalTtc.toFixed(2)} €</strong></td>
-          </tr>
-        </tfoot>
-      </table>
-    `;
+      // Sauvegarder l'email dans la fiche client si différent ou manquant
+      const clientId = selectedGroupForEmail.client?.id;
+      if (clientId && recipient !== selectedGroupForEmail.client?.email) {
+        await supabase.from("clients").update({ email: recipient }).eq("id", clientId);
+      }
 
-      const emailData = {
-        to_email: recipient,
-        client_name: selectedGroupForEmail.client?.name || "Client",
-        company_name: COMPANY_NAME,
-        from_email: FROM_EMAIL,
-        invoice_date: new Date().toLocaleDateString("fr-FR"),
-        invoice_reference: `FACT-${selectedGroupForEmail.client?.id}-${Date.now().toString().slice(-6)}`,
-        repair_details: repairDetailsHtml,
-        invoice_total_ht: selectedGroupForEmail.repairs
-          .reduce((s, r) => s + r.priceHt, 0)
-          .toFixed(2),
-        invoice_total_vat: (
-          selectedGroupForEmail.totalTtc -
-          selectedGroupForEmail.repairs.reduce((s, r) => s + r.priceHt, 0)
-        ).toFixed(2),
-        invoice_total_ttc: selectedGroupForEmail.totalTtc.toFixed(2),
-        invoice_amount_due: selectedGroupForEmail.totalRemaining.toFixed(2),
-        tracking_url: `https://technophone.vercel.app/suivi-client?code=${selectedGroupForEmail.client?.client_code || ""}`,
-        year: new Date().getFullYear(),
-      };
+      const res = await fetch("/api/send-invoice-email", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          to: recipient,
+          clientName: selectedGroupForEmail.client?.name || "Client",
+          repairs: selectedGroupForEmail.repairs.map((r) => ({
+            id: r.id,
+            device: r.device,
+            issue: r.issue,
+            priceHt: r.priceHt,
+            tvaRate: r.tvaRate,
+            totalTtc: r.totalTtc,
+          })),
+          totalHt,
+          totalTva,
+          totalTtc: selectedGroupForEmail.totalTtc,
+          totalRemaining: selectedGroupForEmail.totalRemaining,
+          invoiceRef,
+          companyName: companyProfile.name,
+          companyAddress: companyProfile.address,
+          companyPhone: companyProfile.phone,
+          companyEmail: companyProfile.email,
+          trackingCode: selectedGroupForEmail.client?.client_code || "",
+        }),
+      });
 
-      console.log("📤 Envoi EmailJS avec:", emailData);
+      if (!res.ok) {
+        const err = await res.json();
+        console.error("API send-invoice-email erreur:", err);
+        throw new Error(err.error || "Erreur serveur");
+      }
 
-      const result = await emailjs.send(
-        EMAILJS_SERVICE_ID,
-        EMAILJS_TEMPLATE_ID,
-        emailData,
-        EMAILJS_PUBLIC_KEY
-      );
-
-      console.log("✅ EmailJS réponse:", result);
       setShowEmailModal(false);
       setEmailTo("");
       setSelectedGroupForEmail(null);
-    } catch (e) {
+    } catch (e: unknown) {
+      const msg = e instanceof Error ? e.message : "Erreur inconnue";
+      alert(`❌ Envoi échoué : ${msg}`);
       console.error("sendEmailInvoice error:", e);
     } finally {
       setIsSending(false);
@@ -575,206 +523,311 @@ export default function FacturesPage() {
   return (
     <Layout>
       <div className="max-w-7xl mx-auto">
+
         {/* HEADER */}
-        <div className="relative overflow-hidden bg-gradient-to-r from-purple-500 to-violet-600 rounded-2xl px-6 py-5 mb-6">
-          <div className="absolute inset-0 opacity-[0.06]" style={{ backgroundImage: "radial-gradient(circle, white 1px, transparent 1px)", backgroundSize: "18px 18px" }} />
-          <div className="relative">
-            <h1 className="text-2xl font-black text-white tracking-tight">💰 Factures</h1>
-            <p className="text-xs text-white/60 uppercase tracking-widest mt-1">Gestion des paiements · réparations terminées</p>
+        <div className="flex items-center justify-between mb-6">
+          <div>
+            <h1 className="text-xl font-bold text-white tracking-tight">Factures</h1>
+            <p className="text-xs text-gray-500 mt-0.5">Gestion des paiements · réparations terminées &amp; rendues</p>
           </div>
+          <button onClick={loadData} className="px-3 py-2 bg-white/5 hover:bg-white/10 text-gray-400 rounded-xl text-sm border border-white/10 transition-all">
+            🔄 Actualiser
+          </button>
         </div>
 
-        {/* STATISTIQUES */}
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
-          <div className="bg-gradient-to-br from-purple-500 to-violet-600 rounded-2xl p-5 text-white shadow-lg shadow-purple-500/25">
-            <div className="text-xs font-medium text-white/70 uppercase tracking-wider">Total TTC facturé</div>
-            <div className="text-3xl font-black mt-1">{totalTtc.toFixed(2)} €</div>
+        {/* STATS */}
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-6">
+          <div className="bg-[#16161d] border border-white/8 rounded-2xl p-4">
+            <div className="text-[10px] font-semibold text-gray-500 uppercase tracking-widest mb-1">Facturé TTC</div>
+            <div className="text-2xl font-black text-white">{totalTtc.toFixed(0)} €</div>
           </div>
-          <div className="bg-gradient-to-br from-green-500 to-green-600 rounded-2xl p-5 text-white shadow-lg shadow-green-500/25">
-            <div className="text-xs font-medium text-white/70 uppercase tracking-wider">Total payé</div>
-            <div className="text-3xl font-black mt-1">{totalPaid.toFixed(2)} €</div>
+          <div className="bg-[#16161d] border border-green-500/20 rounded-2xl p-4">
+            <div className="text-[10px] font-semibold text-green-500/70 uppercase tracking-widest mb-1">Encaissé</div>
+            <div className="text-2xl font-black text-green-400">{totalPaid.toFixed(0)} €</div>
           </div>
-          <div className={`bg-gradient-to-br rounded-2xl p-5 text-white shadow-lg ${totalRemaining > 500 ? "from-red-500 to-red-600 shadow-red-500/25" : "from-violet-500 to-purple-600 shadow-violet-500/25"}`}>
-            <div className="text-xs font-medium text-white/70 uppercase tracking-wider">Reste à payer</div>
-            <div className="text-3xl font-black mt-1">{totalRemaining.toFixed(2)} €</div>
+          <div className={`bg-[#16161d] border rounded-2xl p-4 ${totalRemaining > 0 ? "border-amber-500/20" : "border-white/8"}`}>
+            <div className="text-[10px] font-semibold text-amber-500/70 uppercase tracking-widest mb-1">Reste à encaisser</div>
+            <div className={`text-2xl font-black ${totalRemaining > 0 ? "text-amber-400" : "text-gray-500"}`}>{totalRemaining.toFixed(0)} €</div>
           </div>
-          <div className="bg-[#16161d] border border-white/5 rounded-2xl p-5">
-            <div className="text-xs font-medium text-gray-500 uppercase tracking-wider">Recouvrement</div>
-            <div className="text-3xl font-black mt-1 text-purple-400">
-              {totalTtc > 0 ? Math.round((totalPaid / totalTtc) * 100) : 0}%
-            </div>
-            <div className="mt-2 h-1.5 bg-white/5 rounded-full overflow-hidden">
-              <div className="h-full bg-gradient-to-r from-purple-500 to-violet-400 rounded-full transition-all" style={{ width: `${totalTtc > 0 ? Math.min(100, Math.round((totalPaid / totalTtc) * 100)) : 0}%` }} />
+          <div className="bg-[#16161d] border border-white/8 rounded-2xl p-4">
+            <div className="text-[10px] font-semibold text-gray-500 uppercase tracking-widest mb-1">Recouvrement</div>
+            <div className="text-2xl font-black text-white">{totalTtc > 0 ? Math.round((totalPaid / totalTtc) * 100) : 0}%</div>
+            <div className="mt-2 h-1 bg-white/5 rounded-full overflow-hidden">
+              <div className="h-full bg-green-500 rounded-full transition-all" style={{ width: `${totalTtc > 0 ? Math.min(100, Math.round((totalPaid / totalTtc) * 100)) : 0}%` }} />
             </div>
           </div>
         </div>
 
         {/* RECHERCHE */}
-        <div className="flex gap-3 mb-6 p-4 bg-[#16161d] border border-white/5 rounded-2xl">
+        <div className="mb-6">
           <input
             type="text"
-            placeholder="🔍 Rechercher un client..."
+            placeholder="Rechercher un client..."
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
-            className="flex-1 bg-[#1a1d2e] border border-white/10 rounded-xl px-4 py-2.5 text-white placeholder-gray-600 text-sm outline-none focus:border-purple-500/60 focus:ring-2 focus:ring-purple-500/15 transition-all duration-200"
+            className="w-full bg-[#16161d] border border-white/8 rounded-xl px-4 py-2.5 text-white placeholder-gray-600 text-sm outline-none focus:border-white/20 transition-all"
           />
-          <button
-            onClick={loadData}
-            className="px-4 py-2.5 bg-white/5 hover:bg-white/10 text-gray-400 rounded-xl text-sm border border-white/10 transition-all"
-          >
-            🔄 Actualiser
-          </button>
         </div>
 
-        {/* SECTION FACTURES IMPAYÉES */}
-        <div className="mb-10">
-          <h2 className="text-sm font-bold text-gray-400 uppercase tracking-widest mb-4">
-            📋 Factures en attente ({unpaidGroups.length} client(s))
-          </h2>
-          <div className="space-y-4">
+        {/* FACTURES EN ATTENTE */}
+        <div className="mb-8">
+          <div className="flex items-center justify-between mb-3">
+            <div className="flex items-center gap-2">
+              <span className="w-1.5 h-1.5 rounded-full bg-amber-400"></span>
+              <h2 className="text-xs font-bold text-gray-400 uppercase tracking-widest">
+                En attente · {unpaidGroups.filter(g => g.client?.name?.toLowerCase().includes(searchTerm.toLowerCase())).length} client(s)
+              </h2>
+            </div>
+            {selectedRepairIds.size > 0 && (
+              <div className="flex items-center gap-2">
+                <span className="text-xs text-amber-400 font-semibold">{selectedRepairIds.size} sélectionnée(s)</span>
+                <button
+                  onClick={() => {
+                    const sel = repairs.filter(r => selectedRepairIds.has(r.id));
+                    const total = sel.reduce((s, r) => s + r.remainingTtc, 0);
+                    const g = { client: sel[0]?.client, repairs: sel, totalRemaining: total, totalTtc: sel.reduce((s,r)=>s+r.totalTtc,0), totalPaid: sel.reduce((s,r)=>s+r.paidTtc,0), tvaRate: sel[0]?.tvaRate ?? 0 };
+                    setSelectedGroup(g); setPaymentAmount(total.toFixed(2)); setShowPaymentModal(true);
+                  }}
+                  className="px-3 py-1.5 bg-green-600 hover:bg-green-500 text-white rounded-lg text-xs font-bold transition-all"
+                >💰 Encaisser sélection</button>
+                <button
+                  onClick={() => {
+                    const sel = repairs.filter(r => selectedRepairIds.has(r.id));
+                    const g = { client: sel[0]?.client, repairs: sel, totalRemaining: sel.reduce((s,r)=>s+r.remainingTtc,0), totalTtc: sel.reduce((s,r)=>s+r.totalTtc,0), totalPaid: sel.reduce((s,r)=>s+r.paidTtc,0), tvaRate: sel[0]?.tvaRate ?? 0 };
+                    printInvoice(g);
+                  }}
+                  className="px-3 py-1.5 bg-white/8 hover:bg-white/12 text-gray-300 rounded-lg text-xs font-semibold transition-all border border-white/10"
+                >🖨️ Imprimer sélection</button>
+                <button
+                  onClick={() => {
+                    const sel = repairs.filter(r => selectedRepairIds.has(r.id));
+                    const g = { client: sel[0]?.client, repairs: sel, totalRemaining: sel.reduce((s,r)=>s+r.remainingTtc,0), totalTtc: sel.reduce((s,r)=>s+r.totalTtc,0), totalPaid: sel.reduce((s,r)=>s+r.paidTtc,0), tvaRate: sel[0]?.tvaRate ?? 0 };
+                    setSelectedGroupForEmail(g); setEmailTo(sel[0]?.client?.email || ""); setShowEmailModal(true);
+                  }}
+                  className="px-3 py-1.5 bg-white/8 hover:bg-white/12 text-gray-300 rounded-lg text-xs font-semibold transition-all border border-white/10"
+                >✉️ Email sélection</button>
+                <button onClick={() => setSelectedRepairIds(new Set())} className="text-gray-600 hover:text-gray-400 text-xs transition-all">✕ Annuler</button>
+              </div>
+            )}
+          </div>
+
+          <div className="space-y-2">
             {unpaidGroups
               .filter((g) => g.client?.name?.toLowerCase().includes(searchTerm.toLowerCase()))
-              .map((group) => (
-                <div key={group.client?.id} className="bg-[#16161d] border border-white/5 rounded-2xl overflow-hidden">
-                  <div className="px-6 py-4 bg-gradient-to-r from-purple-600 to-violet-600 text-white">
-                    <div className="flex justify-between items-center">
-                      <div>
-                        <h3 className="text-lg font-bold">{group.client?.name}</h3>
-                        <div className="flex items-center gap-2 mt-1">
-                          <span className="text-xs text-white/70">TVA</span>
-                          <select
-                            value={group.tvaRate}
-                            onChange={(e) => updateClientTva(group.client?.id, Number(e.target.value))}
-                            className="bg-white/20 text-white text-xs rounded-lg px-2 py-1 outline-none"
-                          >
-                            {TVA_RATES.map((r) => (
-                              <option key={r} value={r}>{r}%</option>
-                            ))}
-                          </select>
+              .map((group) => {
+                const cid = String(group.client?.id);
+                const isOpen = expandedClients.has(cid);
+                const groupSelectedCount = group.repairs.filter(r => selectedRepairIds.has(r.id)).length;
+                const allSelected = groupSelectedCount === group.repairs.length;
+
+                const toggleClient = () => setExpandedClients(prev => {
+                  const next = new Set(prev);
+                  isOpen ? next.delete(cid) : next.add(cid);
+                  return next;
+                });
+
+                const toggleAllGroup = (e) => {
+                  e.stopPropagation();
+                  setSelectedRepairIds(prev => {
+                    const next = new Set(prev);
+                    if (allSelected) { group.repairs.forEach(r => next.delete(r.id)); }
+                    else { group.repairs.forEach(r => next.add(r.id)); }
+                    return next;
+                  });
+                };
+
+                return (
+                  <div key={cid} className="bg-[#16161d] border border-white/8 rounded-2xl overflow-hidden">
+                    {/* Header accordéon */}
+                    <div
+                      className="px-5 py-4 flex items-center gap-3 cursor-pointer hover:bg-white/3 transition-colors"
+                      onClick={toggleClient}
+                    >
+                      {/* Checkbox groupe */}
+                      <div onClick={toggleAllGroup} className="shrink-0">
+                        <div className={`w-5 h-5 rounded-md border flex items-center justify-center transition-all ${allSelected && group.repairs.length > 0 ? "bg-amber-500 border-amber-500" : groupSelectedCount > 0 ? "bg-amber-500/30 border-amber-500/60" : "border-white/20 hover:border-white/40"}`}>
+                          {allSelected && group.repairs.length > 0 ? <span className="text-white text-xs font-bold">✓</span> : groupSelectedCount > 0 ? <span className="text-amber-300 text-xs">−</span> : null}
                         </div>
                       </div>
-                      <div className="text-right">
-                        <div className="text-xs text-white/70">Total dû</div>
-                        <div className="text-2xl font-black">{group.totalRemaining.toFixed(2)} €</div>
+
+                      <div className="w-9 h-9 rounded-xl bg-amber-500/15 flex items-center justify-center text-amber-400 font-black text-sm shrink-0">
+                        {group.client?.name?.charAt(0).toUpperCase()}
+                      </div>
+
+                      <div className="flex-1 min-w-0">
+                        <div className="font-semibold text-white text-sm">{group.client?.name}</div>
+                        <div className="flex items-center gap-2 mt-0.5">
+                          <span className="text-xs text-gray-500">{group.repairs.length} réparation(s)</span>
+                          <span className="text-gray-700">·</span>
+                          <div className="flex items-center gap-1.5" onClick={e => e.stopPropagation()}>
+                            <span className="text-xs text-gray-500">TVA</span>
+                            <select
+                              value={group.tvaRate}
+                              onChange={(e) => updateClientTva(group.client?.id, Number(e.target.value))}
+                              className="bg-white/5 border border-white/10 text-gray-300 text-xs rounded-md px-1.5 py-0.5 outline-none"
+                            >
+                              {TVA_RATES.map((r) => <option key={r} value={r}>{r}%</option>)}
+                            </select>
+                          </div>
+                        </div>
+                      </div>
+
+                      <div className="text-right shrink-0">
+                        <div className="text-xl font-black text-amber-400">{group.totalRemaining.toFixed(2)} €</div>
+                        <div className="text-[10px] text-gray-600">dû</div>
+                      </div>
+
+                      <div className={`text-gray-600 ml-1 transition-transform duration-200 ${isOpen ? "rotate-180" : ""}`}>
+                        <svg width="14" height="14" viewBox="0 0 14 14" fill="none"><path d="M2 5L7 10L12 5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/></svg>
                       </div>
                     </div>
-                  </div>
-                  <div className="overflow-x-auto">
-                    <table className="w-full">
-                      <thead>
-                        <tr className="bg-purple-500/10 border-b border-white/5">
-                          <th className="px-4 py-2.5 text-left text-xs font-bold text-purple-400 uppercase tracking-widest">Ticket</th>
-                          <th className="px-4 py-2.5 text-left text-xs font-bold text-purple-400 uppercase tracking-widest">Appareil</th>
-                          <th className="px-4 py-2.5 text-left text-xs font-bold text-purple-400 uppercase tracking-widest">Panne</th>
-                          <th className="px-4 py-2.5 text-center text-xs font-bold text-purple-400 uppercase tracking-widest">HT</th>
-                          <th className="px-4 py-2.5 text-center text-xs font-bold text-purple-400 uppercase tracking-widest">TVA</th>
-                          <th className="px-4 py-2.5 text-center text-xs font-bold text-purple-400 uppercase tracking-widest">TTC</th>
-                          <th className="px-4 py-2.5 text-center text-xs font-bold text-purple-400 uppercase tracking-widest">Reste</th>
-                          <th className="px-4 py-2.5 text-center text-xs font-bold text-purple-400 uppercase tracking-widest">Actions</th>
-                        </tr>
-                      </thead>
-                      <tbody className="divide-y divide-white/5">
-                        {group.repairs.map((r) => (
-                          <tr key={r.id} className="hover:bg-white/5 transition-colors">
-                            <td className="px-4 py-3 font-mono text-purple-400 text-sm font-bold">MBX-{r.id}</td>
-                            <td className="px-4 py-3 text-sm text-white">{r.device}</td>
-                            <td className="px-4 py-3 text-sm text-gray-400">{r.issue}</td>
-                            <td className="px-4 py-3 text-center text-white text-sm font-semibold">{r.priceHt.toFixed(2)}€</td>
-                            <td className="px-4 py-3 text-center text-gray-400 text-sm">{r.tvaRate}%</td>
-                            <td className="px-4 py-3 text-center text-gray-300 text-sm">{r.totalTtc.toFixed(2)}€</td>
-                            <td className="px-4 py-3 text-center text-red-400 text-sm font-bold">{r.remainingTtc.toFixed(2)}€</td>
-                            <td className="px-4 py-3 text-center">
-                              <button
-                                onClick={() => { setSelectedGroup({ ...group, repairs: [r], totalRemaining: r.remainingTtc }); setPaymentAmount(r.remainingTtc.toString()); setShowPaymentModal(true); }}
-                                className="px-3 py-1 bg-green-600 hover:bg-green-500 text-white rounded-lg text-xs transition-all font-medium"
+
+                    {/* Réparations (accordéon) */}
+                    {isOpen && (
+                      <>
+                        <div className="border-t border-white/5 divide-y divide-white/5">
+                          {group.repairs.map((r) => {
+                            const isSelected = selectedRepairIds.has(r.id);
+                            const paidPct = r.totalTtc > 0 ? Math.min(100, (r.paidTtc / r.totalTtc) * 100) : 0;
+                            const statusColor = r.status === "✅ Terminé" ? "text-blue-400 bg-blue-500/10" : r.status === "📦 Rendu" ? "text-gray-400 bg-white/8" : "text-pink-400 bg-pink-500/10";
+
+                            return (
+                              <div
+                                key={r.id}
+                                onClick={() => setSelectedRepairIds(prev => {
+                                  const next = new Set(prev);
+                                  isSelected ? next.delete(r.id) : next.add(r.id);
+                                  return next;
+                                })}
+                                className={`px-5 py-3 flex items-center gap-3 cursor-pointer transition-colors ${isSelected ? "bg-amber-500/8 border-l-2 border-amber-500" : "hover:bg-white/3"}`}
                               >
-                                💵 Encaisser
-                              </button>
-                            </td>
-                          </tr>
-                        ))}
-                      </tbody>
-                    </table>
+                                {/* Checkbox */}
+                                <div className={`w-4 h-4 rounded border flex items-center justify-center shrink-0 transition-all ${isSelected ? "bg-amber-500 border-amber-500" : "border-white/20"}`}>
+                                  {isSelected && <span className="text-white text-[10px] font-bold">✓</span>}
+                                </div>
+
+                                <span className="font-mono text-xs font-bold text-indigo-400 bg-indigo-500/10 px-2 py-0.5 rounded-md w-20 text-center shrink-0">MBX-{r.id}</span>
+
+                                <div className="flex-1 min-w-0">
+                                  <div className="flex items-center gap-2">
+                                    <div className="text-sm font-medium text-white truncate">{r.device}</div>
+                                    <span className={`text-[10px] font-semibold px-1.5 py-0.5 rounded-md shrink-0 ${statusColor}`}>{r.status}</span>
+                                  </div>
+                                  <div className="text-xs text-gray-500 truncate">{r.issue}</div>
+                                  {r.paidTtc > 0 && r.remainingTtc > 0 && (
+                                    <div className="mt-1.5 flex items-center gap-2">
+                                      <div className="flex-1 h-1 bg-white/5 rounded-full overflow-hidden">
+                                        <div className="h-full bg-amber-500 rounded-full" style={{ width: `${paidPct}%` }} />
+                                      </div>
+                                      <span className="text-[10px] text-gray-500 shrink-0">{r.paidTtc.toFixed(0)}€ payé</span>
+                                    </div>
+                                  )}
+                                </div>
+
+                                <div className="text-right shrink-0 hidden sm:block">
+                                  <div className="text-xs text-gray-600">{r.priceHt.toFixed(2)} HT</div>
+                                  <div className="text-sm font-semibold text-white">{r.totalTtc.toFixed(2)} €</div>
+                                </div>
+
+                                <div className="text-right shrink-0">
+                                  <div className="text-[10px] text-gray-500">Reste</div>
+                                  <div className="text-sm font-bold text-red-400">{r.remainingTtc.toFixed(2)} €</div>
+                                </div>
+
+                                <button
+                                  onClick={(e) => { e.stopPropagation(); setSelectedGroup({ ...group, repairs: [r], totalRemaining: r.remainingTtc }); setPaymentAmount(r.remainingTtc.toString()); setShowPaymentModal(true); }}
+                                  className="shrink-0 px-3 py-1.5 bg-green-600/20 hover:bg-green-600/40 text-green-400 rounded-lg text-xs font-semibold transition-all border border-green-500/20"
+                                >
+                                  Encaisser
+                                </button>
+                              </div>
+                            );
+                          })}
+                        </div>
+
+                        {/* Actions groupe */}
+                        <div className="px-5 py-3 bg-black/20 flex gap-2 justify-end border-t border-white/5">
+                          <button
+                            onClick={() => { setSelectedGroup(group); setPaymentAmount(group.totalRemaining.toString()); setShowPaymentModal(true); }}
+                            className="px-4 py-2 bg-green-600 hover:bg-green-500 text-white rounded-xl text-xs font-bold transition-all"
+                          >💰 Tout encaisser</button>
+                          <button onClick={() => printInvoice(group)} className="px-4 py-2 bg-white/8 hover:bg-white/12 text-gray-300 rounded-xl text-xs font-semibold transition-all border border-white/10">
+                            🖨️ Imprimer
+                          </button>
+                          <button
+                            onClick={() => { setSelectedGroupForEmail(group); setEmailTo(group.client?.email || ""); setShowEmailModal(true); }}
+                            className="px-4 py-2 bg-white/8 hover:bg-white/12 text-gray-300 rounded-xl text-xs font-semibold transition-all border border-white/10"
+                          >✉️ Email</button>
+                        </div>
+                      </>
+                    )}
                   </div>
-                  <div className="px-4 py-3 border-t border-white/5 flex gap-2 justify-end">
-                    <button
-                      onClick={() => { setSelectedGroup(group); setPaymentAmount(group.totalRemaining.toString()); setShowPaymentModal(true); }}
-                      className="px-4 py-2 bg-green-600 hover:bg-green-500 text-white rounded-xl text-sm font-semibold transition-all"
-                    >
-                      💰 Encaisser le solde
-                    </button>
-                    <button onClick={() => printInvoice(group)} className="px-4 py-2 bg-purple-600 hover:bg-purple-500 text-white rounded-xl text-sm font-semibold transition-all">
-                      🖨️ Imprimer
-                    </button>
-                    <button
-                      onClick={() => { setSelectedGroupForEmail(group); setEmailTo(group.client?.email || ""); setShowEmailModal(true); }}
-                      className="px-4 py-2 bg-violet-600 hover:bg-violet-500 text-white rounded-xl text-sm font-semibold transition-all"
-                    >
-                      ✉️ Email
-                    </button>
-                  </div>
-                </div>
-              ))}
+                );
+              })}
             {unpaidGroups.length === 0 && (
-              <div className="text-center text-gray-500 py-8 bg-[#16161d] border border-white/5 rounded-2xl text-sm">✅ Aucune facture en attente</div>
+              <div className="text-center text-gray-600 py-10 bg-[#16161d] border border-white/5 rounded-2xl text-sm">✅ Aucune facture en attente</div>
             )}
           </div>
         </div>
 
-        {/* SECTION FACTURES PAYÉES */}
+        {/* FACTURES PAYÉES */}
         {paidGroups.length > 0 && (
           <div>
-            <h2 className="text-sm font-bold text-gray-400 uppercase tracking-widest mb-4">
-              ✅ Factures payées ({paidGroups.length} client(s))
-            </h2>
-            <div className="space-y-4">
+            <div className="flex items-center gap-2 mb-3">
+              <span className="w-1.5 h-1.5 rounded-full bg-green-400"></span>
+              <h2 className="text-xs font-bold text-gray-400 uppercase tracking-widest">Soldées · {paidGroups.length} client(s)</h2>
+            </div>
+            <div className="space-y-2">
               {paidGroups
                 .filter((g) => g.client?.name?.toLowerCase().includes(searchTerm.toLowerCase()))
-                .map((group) => (
-                  <div key={group.client?.id} className="bg-[#16161d] border border-green-500/20 rounded-2xl overflow-hidden">
-                    <div className="px-6 py-4 bg-gradient-to-r from-green-700 to-green-600 text-white">
-                      <div className="flex justify-between items-center">
-                        <h3 className="text-lg font-bold">{group.client?.name}</h3>
-                        <div className="text-right">
-                          <div className="text-xs text-white/70">Total payé</div>
-                          <div className="text-2xl font-black">{group.totalPaid.toFixed(2)} €</div>
+                .map((group) => {
+                  const cid = String(group.client?.id) + "-paid";
+                  const isOpen = expandedClients.has(cid);
+                  return (
+                    <div key={cid} className="bg-[#16161d] border border-green-500/15 rounded-2xl overflow-hidden">
+                      <div
+                        className="px-5 py-4 flex items-center gap-3 cursor-pointer hover:bg-white/3 transition-colors"
+                        onClick={() => setExpandedClients(prev => { const next = new Set(prev); isOpen ? next.delete(cid) : next.add(cid); return next; })}
+                      >
+                        <div className="w-9 h-9 rounded-xl bg-green-500/10 flex items-center justify-center text-green-400 font-black text-sm shrink-0">
+                          {group.client?.name?.charAt(0).toUpperCase()}
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <div className="font-semibold text-white text-sm">{group.client?.name}</div>
+                          <div className="text-xs text-gray-500 mt-0.5">{group.repairs.length} réparation(s) soldée(s)</div>
+                        </div>
+                        <div className="text-right shrink-0">
+                          <div className="text-xl font-black text-green-400">{group.totalPaid.toFixed(2)} €</div>
+                          <div className="text-[10px] text-gray-600">payé</div>
+                        </div>
+                        <div className={`text-gray-600 ml-1 transition-transform duration-200 ${isOpen ? "rotate-180" : ""}`}>
+                          <svg width="14" height="14" viewBox="0 0 14 14" fill="none"><path d="M2 5L7 10L12 5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/></svg>
                         </div>
                       </div>
-                    </div>
-                    <div className="overflow-x-auto">
-                      <table className="w-full">
-                        <thead>
-                          <tr className="bg-green-500/10 border-b border-white/5">
-                            <th className="px-4 py-2.5 text-left text-xs font-bold text-green-400 uppercase tracking-widest">Ticket</th>
-                            <th className="px-4 py-2.5 text-left text-xs font-bold text-green-400 uppercase tracking-widest">Appareil</th>
-                            <th className="px-4 py-2.5 text-left text-xs font-bold text-green-400 uppercase tracking-widest">Panne</th>
-                            <th className="px-4 py-2.5 text-center text-xs font-bold text-green-400 uppercase tracking-widest">HT</th>
-                            <th className="px-4 py-2.5 text-center text-xs font-bold text-green-400 uppercase tracking-widest">TVA</th>
-                            <th className="px-4 py-2.5 text-center text-xs font-bold text-green-400 uppercase tracking-widest">TTC</th>
-                            <th className="px-4 py-2.5 text-center text-xs font-bold text-green-400 uppercase tracking-widest">Actions</th>
-                          </tr>
-                        </thead>
-                        <tbody className="divide-y divide-white/5">
+
+                      {isOpen && (
+                        <div className="border-t border-white/5 divide-y divide-white/5">
                           {group.repairs.map((r) => (
-                            <tr key={r.id} className="hover:bg-white/5 transition-colors">
-                              <td className="px-4 py-3 font-mono text-purple-400 text-sm font-bold">MBX-{r.id}</td>
-                              <td className="px-4 py-3 text-sm text-white">{r.device}</td>
-                              <td className="px-4 py-3 text-sm text-gray-400">{r.issue}</td>
-                              <td className="px-4 py-3 text-center text-white text-sm font-semibold">{r.priceHt.toFixed(2)}€</td>
-                              <td className="px-4 py-3 text-center text-gray-400 text-sm">{r.tvaRate}%</td>
-                              <td className="px-4 py-3 text-center text-green-400 text-sm font-bold">{r.totalTtc.toFixed(2)}€</td>
-                              <td className="px-4 py-3 text-center">
-                                <button onClick={() => printInvoice({ ...group, repairs: [r] })} className="px-3 py-1 bg-purple-600 hover:bg-purple-500 text-white rounded-lg text-xs transition-all font-medium">
-                                  🧾 Facture
-                                </button>
-                              </td>
-                            </tr>
+                            <div key={r.id} className="px-5 py-3 flex items-center gap-3 hover:bg-white/3 transition-colors">
+                              <span className="font-mono text-xs font-bold text-indigo-400 bg-indigo-500/10 px-2 py-0.5 rounded-md w-20 text-center shrink-0">MBX-{r.id}</span>
+                              <div className="flex-1 min-w-0">
+                                <div className="text-sm font-medium text-white truncate">{r.device}</div>
+                                <div className="text-xs text-gray-500 truncate">{r.issue}</div>
+                              </div>
+                              {r.payment_method && (
+                                <span className="text-[10px] text-gray-500 bg-white/5 px-2 py-0.5 rounded-md shrink-0">{r.payment_method}</span>
+                              )}
+                              <div className="text-sm font-bold text-green-400 shrink-0">{r.totalTtc.toFixed(2)} €</div>
+                              <button onClick={() => printInvoice({ ...group, repairs: [r] })} className="shrink-0 px-3 py-1.5 bg-white/5 hover:bg-white/10 text-gray-400 rounded-lg text-xs font-medium transition-all border border-white/8">
+                                🧾 Facture
+                              </button>
+                            </div>
                           ))}
-                        </tbody>
-                      </table>
+                        </div>
+                      )}
                     </div>
-                  </div>
-                ))}
+                  );
+                })}
             </div>
           </div>
         )}
@@ -783,7 +836,7 @@ export default function FacturesPage() {
       {/* MODAL PAIEMENT */}
       {showPaymentModal && selectedGroup && (
         <div className="fixed inset-0 bg-black/70 backdrop-blur-sm flex items-center justify-center p-4 z-50">
-          <div className="bg-[#232742] border border-white/10 border-t-2 border-t-purple-500 rounded-2xl max-w-md w-full p-6 shadow-2xl">
+          <div className="bg-[#16161d] border border-white/10 border-t-2 border-t-purple-500 rounded-2xl max-w-md w-full p-6 shadow-2xl">
             <h2 className="text-lg font-bold text-white mb-4">💰 Encaissement</h2>
             <p className="text-gray-400 text-sm"><span className="text-gray-500">Client:</span> <span className="text-white font-medium">{selectedGroup.client?.name}</span></p>
             <p className="text-red-400 font-bold my-3 text-lg">Reste: {selectedGroup.totalRemaining.toFixed(2)} €</p>
@@ -804,7 +857,7 @@ export default function FacturesPage() {
               <option>Virement</option>
               <option>Chèque</option>
             </select>
-            <button onClick={registerPayment} disabled={isSending} className="w-full bg-gradient-to-r from-purple-500 to-violet-600 text-white py-2.5 rounded-xl font-semibold text-sm shadow-[0_4px_0_rgba(0,0,0,0.3)] active:translate-y-0.5 transition-all mt-2 disabled:opacity-50">
+            <button onClick={registerPayment} disabled={isSending} className="w-full bg-green-600 hover:bg-green-500 text-white py-2.5 rounded-xl font-semibold text-sm transition-all mt-2 disabled:opacity-50">
               ✅ Encaisser
             </button>
             <button onClick={() => setShowPaymentModal(false)} className="w-full bg-white/5 hover:bg-white/10 text-gray-300 py-2.5 rounded-xl text-sm border border-white/10 transition-all mt-2">
@@ -817,21 +870,81 @@ export default function FacturesPage() {
       {/* MODAL EMAIL */}
       {showEmailModal && selectedGroupForEmail && (
         <div className="fixed inset-0 bg-black/70 backdrop-blur-sm flex items-center justify-center p-4 z-50">
-          <div className="bg-[#232742] border border-white/10 border-t-2 border-t-purple-500 rounded-2xl max-w-md w-full p-6 shadow-2xl">
-            <h2 className="text-lg font-bold text-white mb-4">✉️ Envoyer la facture</h2>
-            <input
-              type="email"
-              value={emailTo}
-              onChange={(e) => setEmailTo(e.target.value)}
-              placeholder="Email du client"
-              className="w-full bg-[#1a1d2e] border border-white/10 rounded-xl px-4 py-2.5 text-white placeholder-gray-600 text-sm outline-none focus:border-purple-500/60 focus:ring-2 focus:ring-purple-500/15 transition-all mb-4"
-            />
-            <button onClick={sendEmailInvoice} disabled={isSending} className="w-full bg-gradient-to-r from-purple-500 to-violet-600 text-white py-2.5 rounded-xl font-semibold text-sm shadow-[0_4px_0_rgba(0,0,0,0.3)] active:translate-y-0.5 transition-all disabled:opacity-50">
-              Envoyer
-            </button>
-            <button onClick={() => setShowEmailModal(false)} className="w-full bg-white/5 hover:bg-white/10 text-gray-300 py-2.5 rounded-xl text-sm border border-white/10 transition-all mt-2">
-              Annuler
-            </button>
+          <div className="bg-[#16161d] border border-white/10 rounded-2xl max-w-lg w-full shadow-2xl overflow-hidden">
+
+            {/* En-tête */}
+            <div className="px-6 py-4 border-b border-white/8 flex items-center justify-between">
+              <div>
+                <h2 className="text-base font-bold text-white">Envoyer la facture par email</h2>
+                <p className="text-xs text-gray-500 mt-0.5">{selectedGroupForEmail.client?.name}</p>
+              </div>
+              <button onClick={() => setShowEmailModal(false)} className="text-gray-600 hover:text-gray-400 transition-colors text-lg leading-none">✕</button>
+            </div>
+
+            {/* Aperçu réparations */}
+            <div className="px-6 py-4 border-b border-white/8">
+              <div className="text-[10px] font-semibold text-gray-500 uppercase tracking-widest mb-2">Contenu de la facture</div>
+              <div className="space-y-1.5">
+                {selectedGroupForEmail.repairs.map((r) => (
+                  <div key={r.id} className="flex items-center justify-between">
+                    <div className="flex items-center gap-2 min-w-0">
+                      <span className="font-mono text-xs text-indigo-400 shrink-0">MBX-{r.id}</span>
+                      <span className="text-xs text-gray-300 truncate">{r.device} · {r.issue}</span>
+                    </div>
+                    <span className="text-xs font-semibold text-white shrink-0 ml-2">{r.totalTtc.toFixed(2)} €</span>
+                  </div>
+                ))}
+              </div>
+              <div className="mt-3 pt-3 border-t border-white/5 flex items-center justify-between">
+                <span className="text-xs text-gray-500">
+                  {selectedGroupForEmail.totalRemaining > 0
+                    ? `Reste à payer`
+                    : "Facture soldée"}
+                </span>
+                <span className={`text-sm font-black ${selectedGroupForEmail.totalRemaining > 0 ? "text-amber-400" : "text-green-400"}`}>
+                  {selectedGroupForEmail.totalRemaining > 0
+                    ? `${selectedGroupForEmail.totalRemaining.toFixed(2)} €`
+                    : `${selectedGroupForEmail.totalTtc.toFixed(2)} € ✓`}
+                </span>
+              </div>
+            </div>
+
+            {/* Destinataire */}
+            <div className="px-6 py-4">
+              <label className="block text-[10px] font-semibold text-gray-500 uppercase tracking-widest mb-1.5">Destinataire</label>
+              <input
+                type="email"
+                value={emailTo}
+                onChange={(e) => setEmailTo(e.target.value)}
+                placeholder="email@client.fr"
+                className="w-full bg-[#1a1d2e] border border-white/10 rounded-xl px-4 py-2.5 text-white placeholder-gray-600 text-sm outline-none focus:border-white/30 transition-all"
+              />
+              {!emailTo && selectedGroupForEmail.client?.email && (
+                <button
+                  onClick={() => setEmailTo(selectedGroupForEmail.client.email)}
+                  className="mt-1.5 text-xs text-indigo-400 hover:text-indigo-300 transition-colors"
+                >
+                  Utiliser {selectedGroupForEmail.client.email}
+                </button>
+              )}
+            </div>
+
+            {/* Actions */}
+            <div className="px-6 pb-5 flex gap-2">
+              <button
+                onClick={sendEmailInvoice}
+                disabled={isSending || !emailTo}
+                className="flex-1 bg-white text-black py-2.5 rounded-xl font-bold text-sm transition-all disabled:opacity-40 hover:bg-gray-100"
+              >
+                {isSending ? "Envoi en cours…" : "✉️ Envoyer"}
+              </button>
+              <button
+                onClick={() => setShowEmailModal(false)}
+                className="px-4 py-2.5 bg-white/5 hover:bg-white/10 text-gray-400 rounded-xl text-sm border border-white/10 transition-all"
+              >
+                Annuler
+              </button>
+            </div>
           </div>
         </div>
       )}

@@ -153,24 +153,23 @@ export default function PaiementsPage() {
     <Layout>
       <div className="max-w-7xl mx-auto">
         {/* HEADER */}
-        <div className="relative overflow-hidden bg-gradient-to-r from-pink-500 to-rose-600 rounded-2xl px-6 py-5 mb-6">
-          <div className="absolute inset-0 opacity-[0.06]" style={{ backgroundImage: "radial-gradient(circle, white 1px, transparent 1px)", backgroundSize: "18px 18px" }} />
-          <div className="relative">
-            <h1 className="text-2xl font-black text-white tracking-tight">💳 Encaissements</h1>
-            <p className="text-xs text-white/60 uppercase tracking-widest mt-1">Suivi complet des paiements reçus</p>
+        <div className="flex items-center justify-between mb-5">
+          <div>
+            <h1 className="text-xl font-bold text-white tracking-tight">Encaissements</h1>
+            <p className="text-xs text-gray-500 mt-0.5">Suivi complet des paiements reçus</p>
           </div>
         </div>
 
         {/* STATISTIQUES GLOBALES */}
         <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
-          <div className="bg-gradient-to-br from-pink-500 to-rose-600 rounded-2xl p-5 text-white shadow-lg shadow-pink-500/25">
-            <div className="text-xs font-medium text-white/70 uppercase tracking-wider">Total encaissé</div>
-            <div className="text-3xl font-black mt-1">{totalGlobal.toFixed(2)} €</div>
+          <div className="bg-[#16161d] border border-green-500/20 rounded-2xl p-4">
+            <div className="text-[10px] font-semibold text-green-500/70 uppercase tracking-widest mb-1">Total encaissé</div>
+            <div className="text-2xl font-black text-green-400">{totalGlobal.toFixed(2)} €</div>
           </div>
-          <div className="bg-gradient-to-br from-purple-500 to-violet-600 rounded-2xl p-5 text-white shadow-lg shadow-purple-500/25">
-            <div className="text-xs font-medium text-white/70 uppercase tracking-wider">Total facturé TTC</div>
-            <div className="text-3xl font-black mt-1">{totalFacture.toFixed(2)} €</div>
-            {totalFacture > 0 && <div className="text-xs text-white/60 mt-1">{Math.round((totalGlobal/totalFacture)*100)}% encaissé</div>}
+          <div className="bg-[#16161d] border border-white/8 rounded-2xl p-4">
+            <div className="text-[10px] font-semibold text-gray-500 uppercase tracking-widest mb-1">Total facturé TTC</div>
+            <div className="text-2xl font-black text-white">{totalFacture.toFixed(2)} €</div>
+            {totalFacture > 0 && <div className="text-xs text-gray-500 mt-1">{Math.round((totalGlobal/totalFacture)*100)}% encaissé</div>}
           </div>
           <div className="bg-gradient-to-br from-green-500 to-green-600 rounded-2xl p-5 text-white shadow-lg shadow-green-500/25">
             <div className="text-xs font-medium text-white/70 uppercase tracking-wider">Transactions</div>
@@ -285,7 +284,7 @@ export default function PaiementsPage() {
           <button
             onClick={loadPayments}
             disabled={loading}
-            className="px-5 py-2.5 bg-gradient-to-r from-pink-500 to-rose-600 text-white rounded-xl text-sm font-semibold shadow-[0_4px_0_rgba(0,0,0,0.3)] active:translate-y-0.5 transition-all disabled:opacity-50"
+            className="px-5 py-2.5 bg-[#16161d] border border-white/10 text-white rounded-xl text-sm font-semibold hover:bg-white/5 transition-all disabled:opacity-50"
           >
             🔄 Rafraîchir
           </button>

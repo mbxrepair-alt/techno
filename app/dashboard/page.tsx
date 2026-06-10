@@ -3,8 +3,8 @@
 import { useEffect, useState, useRef, useCallback } from "react";
 import { supabase, getCurrentUser } from "../../lib/supabase";
 import { useRouter } from "next/navigation";
+import { DEVICES_LIST, getSmartIssueSuggestions, getQuickIssues } from "../../lib/devices-catalog";
 import Layout from "../../components/Layout";
-import emailjs from "@emailjs/browser";
 import QRCode from "qrcode";
 import ReturnModal from "../../components/ReturnModal";
 import PatternLock from "../../components/PatternLock";
@@ -78,74 +78,34 @@ export default function Dashboard() {
   const [showPhoneSuggestions, setShowPhoneSuggestions] = useState(false);
 
   // MODÈLES, PANNES, CODES
-  const defaultDevices = [
-    "iPhone 16 Pro Max",
-    "iPhone 16 Pro",
-    "iPhone 16 Plus",
-    "iPhone 16",
-    "iPhone 15 Pro Max",
-    "iPhone 15 Pro",
-    "iPhone 15 Plus",
-    "iPhone 15",
-    "iPhone 14 Pro Max",
-    "iPhone 14 Pro",
-    "iPhone 14 Plus",
-    "iPhone 14",
-    "iPhone 13 Pro Max",
-    "iPhone 13 Pro",
-    "iPhone 13",
-    "iPhone 12 Pro Max",
-    "iPhone 12 Pro",
-    "iPhone 12",
-    "iPhone 11 Pro Max",
-    "iPhone 11 Pro",
-    "iPhone 11",
-    "iPhone SE 2022",
-    "iPhone SE 2020",
-    "Galaxy S24 Ultra",
-    "Galaxy S24 Plus",
-    "Galaxy S24",
-    "Galaxy S23 Ultra",
-    "Galaxy S23 Plus",
-    "Galaxy S23",
-    "Galaxy S22 Ultra",
-    "Galaxy S22 Plus",
-    "Galaxy S22",
-    "Galaxy A54",
-    "Galaxy A34",
-    "Galaxy A14",
-    "Xiaomi 14 Ultra",
-    "Xiaomi 14 Pro",
-    "Xiaomi 14",
-    "Xiaomi 13 Pro",
-    "Xiaomi 13",
-    "Pixel 9 Pro",
-    "Pixel 9",
-    "Pixel 8 Pro",
-    "Pixel 8",
-    "OnePlus 12",
-    "OnePlus 11",
-    "Huawei P60 Pro",
-    "Huawei P50",
-    "Oppo Find X6",
-    "Oppo Reno 10",
-  ];
-
+  // → catalogue complet importé depuis lib/devices-catalog.ts
   const [customDevices, setCustomDevices] = useState([]);
-  const allDevices = [...defaultDevices, ...customDevices];
+  const allDevices = [...DEVICES_LIST, ...customDevices];
+
+  // Chargement depuis Supabase (via /api/catalog)
+  const loadCatalog = async () => {
+    try {
+      const res = await fetch("/api/catalog");
+      const data = await res.json();
+      if (data.success) {
+        setCustomDevices(data.customDevices ?? []);
+        setCustomIssues(data.customIssues ?? []);
+        setHiddenIssues(new Set(data.hiddenIssues ?? []));
+      }
+    } catch (err) {
+      console.error("Erreur chargement catalog:", err);
+    }
+  };
 
   useEffect(() => {
-    const savedDevices = localStorage.getItem("mbx_custom_devices");
-    if (savedDevices) setCustomDevices(JSON.parse(savedDevices));
-    const savedIssues = localStorage.getItem("mbx_custom_issues");
-    if (savedIssues) setCustomIssues(JSON.parse(savedIssues));
+    loadCatalog();
     const savedCodes = localStorage.getItem("mbx_custom_codes");
     if (savedCodes) setCustomCodesList(JSON.parse(savedCodes));
   }, []);
 
-  const saveCustomDevices = (newList) => {
+  const saveCustomDevices = async (newList) => {
+    // Utilisé uniquement pour suppression locale — les ajouts passent par addCustomDevice
     setCustomDevices(newList);
-    localStorage.setItem("mbx_custom_devices", JSON.stringify(newList));
   };
 
   const defaultIssues = [
@@ -172,11 +132,30 @@ export default function Dashboard() {
   ];
 
   const [customIssues, setCustomIssues] = useState([]);
-  const allIssues = [...defaultIssues, ...customIssues];
+  const [hiddenIssues, setHiddenIssues] = useState<Set<string>>(new Set());
+  const allIssues = [...defaultIssues, ...customIssues].filter((i) => !hiddenIssues.has(i));
 
-  const saveCustomIssues = (newList) => {
+  const saveCustomIssues = async (newList) => {
+    // Utilisé uniquement pour suppression locale — les ajouts passent par addCustomIssue
     setCustomIssues(newList);
-    localStorage.setItem("mbx_custom_issues", JSON.stringify(newList));
+  };
+
+  const hideIssue = async (issue: string) => {
+    setHiddenIssues((prev) => { const n = new Set(prev); n.add(issue); return n; });
+    await fetch("/api/catalog", {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ label: issue, hidden: true }),
+    });
+  };
+
+  const restoreIssue = async (issue: string) => {
+    setHiddenIssues((prev) => { const n = new Set(prev); n.delete(issue); return n; });
+    await fetch("/api/catalog", {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ label: issue, hidden: false }),
+    });
   };
 
   const defaultCodesList = [
@@ -219,6 +198,8 @@ export default function Dashboard() {
   const [showDeviceSuggestionsMap, setShowDeviceSuggestionsMap] = useState({});
   const [showIssueSuggestionsMap, setShowIssueSuggestionsMap] = useState({});
   const [showCodeSuggestionsMap, setShowCodeSuggestionsMap] = useState({});
+  // ID de la repair card qui a déclenché le modal + (pour rafraîchir les suggestions après ajout)
+  const [addModalSourceRepairId, setAddModalSourceRepairId] = useState<number | null>(null);
   const [deviceCategoryMap, setDeviceCategoryMap] = useState({});
   const [deviceSuggestionIndex, setDeviceSuggestionIndex] = useState({});
   const [issueSuggestionIndex, setIssueSuggestionIndex] = useState({});
@@ -237,10 +218,7 @@ export default function Dashboard() {
   const [showAddIssue, setShowAddIssue] = useState(false);
   const [showAddCode, setShowAddCode] = useState(false);
 
-  // EmailJS
-  const EMAILJS_PUBLIC_KEY = "DezSbYxdfKhdK_HlF";
-  const EMAILJS_SERVICE_ID = "service_1e02n3f";
-  const EMAILJS_TEMPLATE_ID = "template_9q8ge09";
+
 
   // Charger les infos de l'atelier
   useEffect(() => {
@@ -650,22 +628,43 @@ export default function Dashboard() {
     const category = getCategoryFromDevice(device);
     setDeviceCategoryMap((prev) => ({ ...prev, [id]: category }));
     setShowDeviceSuggestionsMap((prev) => ({ ...prev, [id]: false }));
+    // Pré-charger les suggestions intelligentes de panne
+    const quickIssues = getQuickIssues(device);
+    setIssueSuggestionsMap((prev) => ({ ...prev, [id]: quickIssues }));
+    setShowIssueSuggestionsMap((prev) => ({ ...prev, [id]: false }));
   };
 
-  const getIssueSuggestions = (input) => {
-    if (!input.trim()) return [];
-    const lower = input.toLowerCase();
-    return allIssues.filter((i) => i.toLowerCase().includes(lower)).slice(0, 8);
+  const getIssueSuggestions = (input, deviceModel?: string) => {
+    let results: string[];
+    if (deviceModel) {
+      results = getSmartIssueSuggestions(deviceModel, input);
+    } else if (!input.trim()) {
+      return [];
+    } else {
+      const lower = input.toLowerCase();
+      results = allIssues.filter((i) => i.toLowerCase().includes(lower)).slice(0, 8);
+    }
+    // Filtrer les suggestions masquées par l'utilisateur
+    return results.filter((s) => !hiddenIssues.has(s));
   };
 
   const handleIssueSearch = (id, value) => {
     updateRepairField(id, "issue", value);
+    // Chercher le modèle sélectionné pour cette réparation
+    const deviceModel = repairsList.find((r) => r.id === id)?.device || "";
+    if (!value.trim() && deviceModel) {
+      // Champ vide + modèle connu → afficher les quick issues
+      const quick = getQuickIssues(deviceModel);
+      setIssueSuggestionsMap((prev) => ({ ...prev, [id]: quick }));
+      setShowIssueSuggestionsMap((prev) => ({ ...prev, [id]: true }));
+      return;
+    }
     if (!value.trim()) {
       setIssueSuggestionsMap((prev) => ({ ...prev, [id]: [] }));
       setShowIssueSuggestionsMap((prev) => ({ ...prev, [id]: false }));
       return;
     }
-    const filtered = getIssueSuggestions(value);
+    const filtered = getIssueSuggestions(value, deviceModel || undefined);
     setIssueSuggestionsMap((prev) => ({ ...prev, [id]: filtered }));
     setShowIssueSuggestionsMap((prev) => ({ ...prev, [id]: filtered.length > 0 }));
   };
@@ -693,32 +692,65 @@ export default function Dashboard() {
     setShowCodeSuggestionsMap((prev) => ({ ...prev, [repairId]: false }));
   };
 
-  const addCustomDevice = () => {
+  const addCustomDevice = async () => {
     if (!newDeviceInput.trim()) return;
     const newDevice = newDeviceInput.trim();
-    if (allDevices.includes(newDevice)) {
+    const fullList = [...DEVICES_LIST, ...customDevices];
+    if (fullList.some((d) => d.toLowerCase() === newDevice.toLowerCase())) {
       showMessage("Ce modèle existe déjà", "error");
       return;
     }
+    await fetch("/api/catalog", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ type: "device", label: newDevice }),
+    });
     const newList = [...customDevices, newDevice];
-    saveCustomDevices(newList);
+    setCustomDevices(newList);
     setNewDeviceInput("");
     setShowAddDevice(false);
-    showMessage(`Modèle "${newDevice}" ajouté`, "success");
+    showMessage(`✅ "${newDevice}" ajouté`, "success");
+    // Rafraîchir les suggestions de la carte qui a déclenché le +
+    if (addModalSourceRepairId !== null) {
+      const repair = repairsList.find((r) => r.id === addModalSourceRepairId);
+      const currentVal = repair?.device || "";
+      const updatedAll = [...DEVICES_LIST, ...newList];
+      const filtered = currentVal.trim()
+        ? updatedAll.filter((d) => d.toLowerCase().includes(currentVal.toLowerCase())).slice(0, 8)
+        : updatedAll.filter((d) => d.toLowerCase().includes(newDevice.toLowerCase())).slice(0, 8);
+      setDeviceSuggestionsMap((prev) => ({ ...prev, [addModalSourceRepairId]: filtered }));
+      setShowDeviceSuggestionsMap((prev) => ({ ...prev, [addModalSourceRepairId]: filtered.length > 0 }));
+    }
   };
 
-  const addCustomIssue = () => {
+  const addCustomIssue = async () => {
     if (!newIssueInput.trim()) return;
     const newIssue = newIssueInput.trim();
-    if (allIssues.includes(newIssue)) {
+    if (allIssues.some((i) => i.toLowerCase() === newIssue.toLowerCase())) {
       showMessage("Cette panne existe déjà", "error");
       return;
     }
+    await fetch("/api/catalog", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ type: "issue", label: newIssue }),
+    });
     const newList = [...customIssues, newIssue];
-    saveCustomIssues(newList);
+    setCustomIssues(newList);
     setNewIssueInput("");
-    setShowAddIssue(false);
-    showMessage(`Panne "${newIssue}" ajoutée`, "success");
+    // Modal reste ouvert pour voir la panne apparaître dans la liste
+    showMessage(`✅ "${newIssue}" ajoutée`, "success");
+    // Rafraîchir les suggestions de la carte qui a déclenché le +
+    if (addModalSourceRepairId !== null) {
+      const repair = repairsList.find((r) => r.id === addModalSourceRepairId);
+      const currentVal = repair?.issue || "";
+      const deviceModel = repair?.device || "";
+      const filtered = getSmartIssueSuggestions(deviceModel, currentVal || newIssue);
+      // Injecter le nouveau en tête s'il n'y est pas
+      const withNew = [newIssue, ...filtered.filter((i) => i !== newIssue)].slice(0, 10);
+      setIssueSuggestionsMap((prev) => ({ ...prev, [addModalSourceRepairId]: withNew }));
+      setShowIssueSuggestionsMap((prev) => ({ ...prev, [addModalSourceRepairId]: true }));
+    }
   };
 
   const addCustomCode = () => {
@@ -994,52 +1026,41 @@ export default function Dashboard() {
     }
   };
 
-  const sendEmailReceipt = async (tickets, client, recipientEmail, trackingUrl = null) => {
-    if (!recipientEmail || !recipientEmail.trim()) {
+  const sendEmailReceipt = async (tickets, client, recipientEmail, _trackingUrl?: string) => {
+    if (!recipientEmail?.trim()) {
       showMessage("Adresse email requise", "error");
       return false;
     }
     setSendingEmail(true);
     try {
-      const hasCode = (t) => t.unlock_code && t.unlock_code !== "NC" && t.unlock_code !== "Non fourni" && t.unlock_code.trim() !== "";
-      const repairsHtml = tickets
-        .map((t) => `
-          <div style="background:#f8fafc;border-radius:8px;padding:14px 16px;margin-bottom:10px;border-left:3px solid #6c2bd9">
-            <div style="font-weight:700;font-size:15px;color:#1e293b">MBX-${t.id} · ${escapeHtml(t.device)}</div>
-            <div style="color:#64748b;font-size:13px;margin-top:4px">${escapeHtml(t.issue)}</div>
-            ${t.imei && t.imei !== "NC" ? `<div style="color:#94a3b8;font-size:12px;margin-top:4px">IMEI : ${escapeHtml(t.imei)}</div>` : ""}
-            ${!hasCode(t) ? `<div style="background:#fef2f2;border-left:3px solid #ef4444;padding:8px 10px;border-radius:4px;margin-top:8px;color:#991b1b;font-size:12px;font-weight:700">⚠️ Appareil non testé — pas pris en garantie (code non fourni)</div>` : ""}
-          </div>
-        `)
-        .join("");
-
-      const templateParams = {
-        company_name: companyInfo.name,
-        company_address: companyInfo.address,
-        company_phone: companyInfo.phone,
-        company_email: companyInfo.email,
-        company_siret: companyInfo.siret,
-        client_name: client.name,
-        client_phone: client.phone,
-        client_email: client.email,
-        client_code: client.client_code,
-        date: new Date().toLocaleString("fr-FR"),
-        repairs_html: repairsHtml,
-        tracking_url: trackingUrl || "",
-        to_email: recipientEmail.trim(),
-        year: new Date().getFullYear(),
-      };
-      await emailjs.send(
-        EMAILJS_SERVICE_ID,
-        EMAILJS_TEMPLATE_ID,
-        templateParams,
-        EMAILJS_PUBLIC_KEY
+      // Envoyer un ticket par réparation via l'API centralisée
+      const results = await Promise.all(
+        tickets.map((t) =>
+          fetch("/api/send-ticket-email", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              ticketId: String(t.id),
+              email: recipientEmail.trim(),
+              atelierName: companyInfo.name,
+              atelierPhone: companyInfo.phone,
+              atelierAddress: companyInfo.address,
+              atelierEmail: companyInfo.email,
+            }),
+          })
+        )
       );
-      showMessage(`✅ Email envoyé à ${recipientEmail}`, "success");
-      return true;
+      const allOk = results.every((r) => r.ok);
+      if (allOk) {
+        showMessage(`✅ Email envoyé à ${recipientEmail}`, "success");
+        return true;
+      } else {
+        showMessage("❌ Échec envoi email", "error");
+        return false;
+      }
     } catch (err) {
-      console.error("Erreur EmailJS:", err);
-      showMessage(`❌ Échec envoi email`, "error");
+      console.error("sendEmailReceipt error:", err);
+      showMessage("❌ Échec envoi email", "error");
       return false;
     } finally {
       setSendingEmail(false);
@@ -1243,7 +1264,7 @@ export default function Dashboard() {
       {/* ── SUCCESS MODAL ── */}
       {showSuccessModal && recentTickets.length > 0 && (
         <div className="fixed inset-0 bg-black/70 backdrop-blur-sm flex items-center justify-center p-4 z-50">
-          <div className="bg-[#232742] border-t-2 border-t-blue-500 border border-white/10 rounded-2xl shadow-2xl p-6 max-w-md w-full">
+          <div className="bg-[#16161d] border-t-2 border-t-blue-500 border border-white/10 rounded-2xl shadow-2xl p-6 max-w-md w-full">
             <div className="text-center mb-5">
               <div className="w-16 h-16 bg-green-500/20 rounded-full flex items-center justify-center text-4xl mx-auto mb-3 border border-green-500/30 animate-pulse">🎉</div>
               <h2 className="text-xl font-black text-white tracking-tight">{recentTickets.length} ticket(s) créé(s)</h2>
@@ -1303,18 +1324,15 @@ export default function Dashboard() {
       {/* ════════════════ HEADER ════════════════ */}
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-8">
         <div>
-          {companyInfo.phone && (
-            <span className="text-xs text-gray-400 bg-white/5 border border-white/10 rounded-full px-3 py-1">📞 {companyInfo.phone}</span>
-          )}
         </div>
         <div ref={searchContainerRef} className="relative w-full sm:w-96">
-          <div className="flex items-center gap-3 bg-[#232742] border border-white/10 rounded-xl px-4 py-3 focus-within:border-blue-500/50 focus-within:ring-2 focus-within:ring-blue-500/10 transition-all duration-200">
+          <div className="flex items-center gap-3 bg-[#16161d] border border-white/10 rounded-xl px-4 py-3 focus-within:border-blue-500/50 focus-within:ring-2 focus-within:ring-blue-500/10 transition-all duration-200">
             <input ref={searchInputRef} className="flex-1 bg-transparent text-white placeholder-gray-600 text-sm outline-none"
               placeholder="Rechercher client, appareil, ticket..." value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} />
             {searchQuery && <button className="text-gray-500 hover:text-gray-300 transition flex-shrink-0" onClick={() => setSearchQuery("")}>✕</button>}
           </div>
           {showResults && searchResults.length > 0 && (
-            <div className="absolute top-full left-0 right-0 mt-2 bg-[#232742] border border-white/10 rounded-2xl shadow-2xl z-30 max-h-80 overflow-y-auto">
+            <div className="absolute top-full left-0 right-0 mt-2 bg-[#16161d] border border-white/10 rounded-2xl shadow-2xl z-30 max-h-80 overflow-y-auto">
               <div className="px-4 py-2.5 border-b border-white/5">
                 <span className="text-xs text-gray-500 font-semibold uppercase tracking-widest">{searchResults.length} résultat(s)</span>
               </div>
@@ -1345,7 +1363,7 @@ export default function Dashboard() {
       </div>
 
       {/* ════════════════ FORM ════════════════ */}
-      <div ref={formRef} className="bg-[#232742] border border-white/5 rounded-2xl overflow-hidden shadow-xl mb-6">
+      <div ref={formRef} className="bg-[#16161d] border border-white/5 rounded-2xl overflow-hidden shadow-xl mb-6">
 
         {/* FORM HEADER */}
         <div className="relative overflow-hidden bg-gradient-to-r from-blue-600 via-purple-600 to-blue-600 px-6 py-5">
@@ -1449,7 +1467,11 @@ export default function Dashboard() {
                 <div className="px-5 pb-5 space-y-3">
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                     <div>
-                      <label className="block text-xs font-semibold text-gray-400 uppercase tracking-widest mb-1.5">Modèle *</label>
+                      <label className="flex items-center gap-1.5 text-xs font-semibold text-gray-400 uppercase tracking-widest mb-1.5">
+                        Modèle *
+                        <button type="button" onClick={() => { setAddModalSourceRepairId(repair.id); setNewDeviceInput(repair.device || ""); setShowAddDevice(true); }}
+                          className="w-4 h-4 rounded-full bg-white/10 hover:bg-blue-500/30 hover:text-blue-400 text-gray-500 flex items-center justify-center text-[10px] font-black transition-colors leading-none">+</button>
+                      </label>
                       <div className="relative">
                         <input className={inputCls} placeholder="iPhone 15 Pro Max..." value={repair.device}
                           onChange={(e) => handleDeviceSearch(repair.id, e.target.value)} />
@@ -1466,16 +1488,50 @@ export default function Dashboard() {
                       </div>
                     </div>
                     <div>
-                      <label className="block text-xs font-semibold text-gray-400 uppercase tracking-widest mb-1.5">Panne *</label>
+                      <label className="flex items-center gap-1.5 text-xs font-semibold text-gray-400 uppercase tracking-widest mb-1.5">
+                        Panne *
+                        <button type="button" onClick={() => { setAddModalSourceRepairId(repair.id); setNewIssueInput(repair.issue || ""); setShowAddIssue(true); }}
+                          className="w-4 h-4 rounded-full bg-white/10 hover:bg-blue-500/30 hover:text-blue-400 text-gray-500 flex items-center justify-center text-[10px] font-black transition-colors leading-none">+</button>
+                        {repair.device && (
+                          <span className="text-[10px] font-bold text-blue-400 bg-blue-500/10 border border-blue-500/20 px-1.5 py-0.5 rounded-full normal-case tracking-normal">
+                            ✨ Suggestions auto
+                          </span>
+                        )}
+                      </label>
                       <div className="relative">
-                        <input className={inputCls} placeholder="Écran cassé, batterie..." value={repair.issue}
-                          onChange={(e) => handleIssueSearch(repair.id, e.target.value)} />
+                        <input
+                          className={inputCls}
+                          placeholder={repair.device ? "Tapez ou cliquez pour voir les pannes fréquentes…" : "Écran cassé, batterie…"}
+                          value={repair.issue}
+                          onChange={(e) => handleIssueSearch(repair.id, e.target.value)}
+                          onFocus={() => {
+                            if (repair.device) {
+                              const quick = getQuickIssues(repair.device).filter((s) => !hiddenIssues.has(s));
+                              setIssueSuggestionsMap((prev) => ({ ...prev, [repair.id]: quick }));
+                              setShowIssueSuggestionsMap((prev) => ({ ...prev, [repair.id]: true }));
+                            }
+                          }}
+                          onBlur={() => setTimeout(() => setShowIssueSuggestionsMap((prev) => ({ ...prev, [repair.id]: false })), 150)}
+                        />
                         {showIssueSuggestionsMap[repair.id] && issueSuggestionsMap[repair.id]?.length > 0 && (
-                          <div className="absolute z-20 top-full left-0 right-0 mt-1 bg-[#2d3159] border border-white/10 rounded-xl shadow-2xl max-h-40 overflow-auto">
+                          <div className="absolute z-20 top-full left-0 right-0 mt-1 bg-[#16161d] border border-white/10 rounded-xl shadow-2xl max-h-52 overflow-auto">
+                            {repair.device && !repair.issue && (
+                              <div className="px-3 pt-2 pb-1 text-[10px] font-bold text-blue-400/70 uppercase tracking-widest border-b border-white/5">
+                                Pannes fréquentes — {repair.device}
+                              </div>
+                            )}
                             <div className="divide-y divide-white/5 p-1">
                               {issueSuggestionsMap[repair.id].map((iss, i) => (
-                                <div key={i} className="py-2.5 px-4 rounded-lg cursor-pointer hover:bg-blue-500/10 hover:text-blue-400 text-gray-300 text-sm transition-colors duration-150"
-                                  onMouseDown={() => selectIssue(repair.id, iss)}>🔧 {iss}</div>
+                                <div
+                                  key={i}
+                                  className="py-2 px-3 rounded-lg cursor-pointer hover:bg-blue-500/10 hover:text-blue-300 text-gray-300 text-sm transition-colors duration-100 flex items-center gap-2"
+                                  onMouseDown={() => selectIssue(repair.id, iss)}
+                                >
+                                  <span className="text-[11px] text-blue-400/50">
+                                    {iss.startsWith("Remplacement") ? "🔩" : "🔧"}
+                                  </span>
+                                  {iss}
+                                </div>
                               ))}
                             </div>
                           </div>
@@ -1520,6 +1576,7 @@ export default function Dashboard() {
                     </div>
                   </div>
 
+
                   <div className="border-t border-white/5 pt-4">
                     <PatternLock
                       onComplete={(pattern) => updateRepairField(repair.id, "unlockPattern", pattern.join("-"))}
@@ -1542,46 +1599,122 @@ export default function Dashboard() {
 
       {/* ── ADD MODALS ── */}
       {showAddDevice && (
-        <div className="fixed inset-0 bg-black/70 backdrop-blur-sm flex items-center justify-center z-50">
-          <div className="bg-[#232742] border-t-2 border-t-blue-500 border border-white/10 rounded-2xl p-6 w-96 shadow-2xl">
+        <div className="fixed inset-0 bg-black/70 backdrop-blur-sm flex items-center justify-center z-50 p-4" onClick={() => setShowAddDevice(false)}>
+          <div className="bg-[#16161d] border-t-2 border-t-blue-500 border border-white/10 rounded-2xl p-5 w-full max-w-sm shadow-2xl" onClick={(e) => e.stopPropagation()}>
             <div className="flex items-center justify-between mb-4">
-              <h3 className="text-base font-bold text-white tracking-tight">➕ Ajouter un modèle</h3>
+              <h3 className="text-sm font-bold text-white tracking-tight">Modèles personnalisés</h3>
               <button onClick={() => setShowAddDevice(false)} className="w-7 h-7 bg-white/10 hover:bg-white/20 rounded-full flex items-center justify-center text-gray-400 transition text-xs">✕</button>
             </div>
-            <label className="block text-xs font-semibold text-gray-400 uppercase tracking-widest mb-1.5">Nom du modèle</label>
-            <input type="text" className={`${inputCls} mb-4`} placeholder="Ex: Samsung Galaxy S25"
-              value={newDeviceInput} onChange={(e) => setNewDeviceInput(e.target.value)}
-              onKeyDown={(e) => e.key === "Enter" && addCustomDevice()} />
-            <div className="flex gap-2">
-              <button onClick={addCustomDevice} className="flex-1 bg-gradient-to-r from-blue-600 to-purple-600 text-white py-2.5 rounded-xl font-semibold text-sm hover:from-blue-500 hover:to-purple-500 transition-all duration-200">Ajouter</button>
-              <button onClick={() => setShowAddDevice(false)} className="flex-1 bg-white/5 hover:bg-white/10 text-gray-300 py-2.5 rounded-xl font-semibold text-sm border border-white/10 transition-all duration-200">Annuler</button>
+            {/* Champ ajout */}
+            <div className="flex gap-2 mb-4">
+              <input type="text" className={`${inputCls} flex-1 !py-2.5`} placeholder="Ex: Samsung Galaxy S25"
+                value={newDeviceInput} onChange={(e) => setNewDeviceInput(e.target.value)}
+                onKeyDown={(e) => e.key === "Enter" && addCustomDevice()} autoFocus />
+              <button onClick={addCustomDevice} className="px-4 bg-blue-600 hover:bg-blue-500 text-white rounded-xl text-sm font-bold transition-colors">+</button>
             </div>
+            {/* Liste custom existante */}
+            {customDevices.length > 0 && (
+              <div>
+                <div className="text-[10px] font-bold text-gray-500 uppercase tracking-widest mb-2">Mes modèles ({customDevices.length})</div>
+                <div className="max-h-52 overflow-auto space-y-1">
+                  {customDevices.map((d, i) => (
+                    <div key={i} className="flex items-center justify-between bg-white/5 rounded-lg px-3 py-2 group">
+                      <span className="text-sm text-gray-300">{d}</span>
+                      <button onClick={async () => {
+                          await fetch("/api/catalog", { method: "DELETE", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ type: "device", label: d }) });
+                          setCustomDevices((prev) => prev.filter((_, j) => j !== i));
+                        }}
+                        className="w-5 h-5 rounded-full bg-red-500/0 hover:bg-red-500/20 text-gray-600 hover:text-red-400 flex items-center justify-center text-xs transition-colors opacity-0 group-hover:opacity-100">✕</button>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+            {customDevices.length === 0 && (
+              <p className="text-xs text-gray-600 text-center py-2">Aucun modèle personnalisé</p>
+            )}
           </div>
         </div>
       )}
 
-      {showAddIssue && (
-        <div className="fixed inset-0 bg-black/70 backdrop-blur-sm flex items-center justify-center z-50">
-          <div className="bg-[#232742] border-t-2 border-t-blue-500 border border-white/10 rounded-2xl p-6 w-96 shadow-2xl">
-            <div className="flex items-center justify-between mb-4">
-              <h3 className="text-base font-bold text-white tracking-tight">➕ Ajouter une panne</h3>
-              <button onClick={() => setShowAddIssue(false)} className="w-7 h-7 bg-white/10 hover:bg-white/20 rounded-full flex items-center justify-center text-gray-400 transition text-xs">✕</button>
-            </div>
-            <label className="block text-xs font-semibold text-gray-400 uppercase tracking-widest mb-1.5">Nom de la panne</label>
-            <input type="text" className={`${inputCls} mb-4`} placeholder="Ex: Circuit audio HS"
-              value={newIssueInput} onChange={(e) => setNewIssueInput(e.target.value)}
-              onKeyDown={(e) => e.key === "Enter" && addCustomIssue()} />
-            <div className="flex gap-2">
-              <button onClick={addCustomIssue} className="flex-1 bg-gradient-to-r from-blue-600 to-purple-600 text-white py-2.5 rounded-xl font-semibold text-sm hover:from-blue-500 hover:to-purple-500 transition-all duration-200">Ajouter</button>
-              <button onClick={() => setShowAddIssue(false)} className="flex-1 bg-white/5 hover:bg-white/10 text-gray-300 py-2.5 rounded-xl font-semibold text-sm border border-white/10 transition-all duration-200">Annuler</button>
+      {showAddIssue && (() => {
+        // Toutes les suggestions visibles pour la carte source
+        const sourceRepair = repairsList.find((r) => r.id === addModalSourceRepairId);
+        const deviceModel = sourceRepair?.device || "";
+        const catalogSuggestions = deviceModel
+          ? getSmartIssueSuggestions(deviceModel, "")
+          : [...defaultIssues];
+        // Ajouter les pannes custom qui ne sont pas déjà dans le catalogue
+        const allSuggestions = [
+          ...customIssues.filter((c) => !catalogSuggestions.includes(c)),
+          ...catalogSuggestions,
+        ];
+        const visibleSuggestions = allSuggestions.filter((s) => !hiddenIssues.has(s));
+        const hiddenList = allSuggestions.filter((s) => hiddenIssues.has(s));
+        return (
+          <div className="fixed inset-0 bg-black/70 backdrop-blur-sm flex items-center justify-center z-50 p-4" onClick={() => setShowAddIssue(false)}>
+            <div className="bg-[#16161d] border-t-2 border-t-blue-500 border border-white/10 rounded-2xl p-5 w-full max-w-md shadow-2xl max-h-[85vh] flex flex-col" onClick={(e) => e.stopPropagation()}>
+              <div className="flex items-center justify-between mb-4 shrink-0">
+                <div>
+                  <h3 className="text-sm font-bold text-white tracking-tight">Gérer les pannes</h3>
+                  {deviceModel && <p className="text-[10px] text-blue-400/70 mt-0.5">{deviceModel}</p>}
+                </div>
+                <button onClick={() => setShowAddIssue(false)} className="w-7 h-7 bg-white/10 hover:bg-white/20 rounded-full flex items-center justify-center text-gray-400 transition text-xs">✕</button>
+              </div>
+
+              {/* Champ ajout */}
+              <div className="flex gap-2 mb-4 shrink-0">
+                <input type="text" className={`${inputCls} flex-1 !py-2.5`} placeholder="Ajouter une panne…"
+                  value={newIssueInput} onChange={(e) => setNewIssueInput(e.target.value)}
+                  onKeyDown={(e) => e.key === "Enter" && addCustomIssue()} autoFocus />
+                <button onClick={addCustomIssue} className="px-4 bg-blue-600 hover:bg-blue-500 text-white rounded-xl text-sm font-bold transition-colors">+</button>
+              </div>
+
+              <div className="overflow-auto flex-1 space-y-3">
+                {/* Suggestions actives */}
+                {visibleSuggestions.length > 0 && (
+                  <div>
+                    <div className="text-[10px] font-bold text-gray-500 uppercase tracking-widest mb-1.5">
+                      Suggestions actives ({visibleSuggestions.length})
+                    </div>
+                    <div className="space-y-1">
+                      {visibleSuggestions.map((iss, i) => (
+                        <div key={i} className="flex items-center justify-between bg-white/5 rounded-lg px-3 py-2 group hover:bg-white/8">
+                          <span className="text-sm text-gray-300 flex-1 mr-2">{iss}</span>
+                          <button onClick={() => hideIssue(iss)}
+                            className="w-5 h-5 rounded-full bg-red-500/0 hover:bg-red-500/20 text-gray-600 hover:text-red-400 flex items-center justify-center text-xs transition-all opacity-0 group-hover:opacity-100 shrink-0">✕</button>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {/* Suggestions masquées */}
+                {hiddenList.length > 0 && (
+                  <div>
+                    <div className="text-[10px] font-bold text-gray-500 uppercase tracking-widest mb-1.5">
+                      Masquées ({hiddenList.length}) — clic pour restaurer
+                    </div>
+                    <div className="space-y-1">
+                      {hiddenList.map((iss, i) => (
+                        <div key={i} className="flex items-center justify-between bg-white/3 rounded-lg px-3 py-2 group hover:bg-white/6 opacity-50 hover:opacity-80 cursor-pointer"
+                          onClick={() => restoreIssue(iss)}>
+                          <span className="text-sm text-gray-500 line-through flex-1 mr-2">{iss}</span>
+                          <span className="text-[10px] text-gray-600 group-hover:text-blue-400 transition-colors shrink-0">↩ restaurer</span>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </div>
             </div>
           </div>
-        </div>
-      )}
+        );
+      })()}
 
       {showAddCode && (
         <div className="fixed inset-0 bg-black/70 backdrop-blur-sm flex items-center justify-center z-50">
-          <div className="bg-[#232742] border-t-2 border-t-blue-500 border border-white/10 rounded-2xl p-6 w-96 shadow-2xl">
+          <div className="bg-[#16161d] border-t-2 border-t-blue-500 border border-white/10 rounded-2xl p-6 w-96 shadow-2xl">
             <div className="flex items-center justify-between mb-4">
               <h3 className="text-base font-bold text-white tracking-tight">➕ Ajouter un code</h3>
               <button onClick={() => setShowAddCode(false)} className="w-7 h-7 bg-white/10 hover:bg-white/20 rounded-full flex items-center justify-center text-gray-400 transition text-xs">✕</button>
@@ -1601,9 +1734,9 @@ export default function Dashboard() {
       {/* ── DETAIL MODAL ── */}
       {showDetailModal && selectedRepairDetail && selectedRepairClient && (
         <div className="fixed inset-0 bg-black/70 backdrop-blur-sm flex items-center justify-center p-4 z-50" onClick={() => setShowDetailModal(false)}>
-          <div className="bg-[#232742] border-t-2 border-t-blue-500 border border-white/10 rounded-2xl w-full max-w-2xl max-h-[90vh] overflow-auto shadow-2xl"
+          <div className="bg-[#16161d] border-t-2 border-t-blue-500 border border-white/10 rounded-2xl w-full max-w-2xl max-h-[90vh] overflow-auto shadow-2xl"
             onClick={(e) => e.stopPropagation()}>
-            <div className="sticky top-0 bg-[#232742] border-b border-white/10 px-5 py-4 flex items-center justify-between">
+            <div className="sticky top-0 bg-[#16161d] border-b border-white/10 px-5 py-4 flex items-center justify-between">
               <div>
                 <h2 className="text-lg font-bold text-white tracking-tight">🔧 Détail MBX-{selectedRepairDetail.id}</h2>
                 <p className="text-gray-400 text-sm">{selectedRepairClient.name}</p>

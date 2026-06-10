@@ -4,7 +4,6 @@ import { useEffect, useState, useRef } from "react";
 import { supabase, getCurrentUser } from "../../../lib/supabase";
 import { useRouter, useParams } from "next/navigation";
 import Layout from "../../../components/Layout";
-import emailjs from "@emailjs/browser";
 import SmartTextarea from "../../../components/SmartTextarea";
 import QRCode from "qrcode";
 
@@ -48,6 +47,7 @@ export default function RepairDetailPage() {
   const [showPartModal, setShowPartModal] = useState(false);
   const [showEmailModal, setShowEmailModal] = useState(false);
   const [emailTo, setEmailTo] = useState("");
+  const [companyInfo, setCompanyInfo] = useState({ name: "", phone: "", address: "", email: "" });
 
   // Pour éviter les doublons d'historique
   const lastSavedRef = useRef({
@@ -57,10 +57,6 @@ export default function RepairDetailPage() {
     testsPassed: "",
     finalPrice: 0,
   });
-
-  const EMAILJS_PUBLIC_KEY = "DezSbYxdfKhdK_HlF";
-  const EMAILJS_SERVICE_ID = "service_1e02n3f";
-  const EMAILJS_TEMPLATE_ID = "template_9q8ge09";
 
   const quickActions = [
     {
@@ -115,6 +111,20 @@ export default function RepairDetailPage() {
       const user = await getCurrentUser();
       if (user) {
         setCurrentUserId(user.id);
+        // Load company profile for email sending
+        const { data: profile } = await supabase
+          .from("profiles")
+          .select("company_name, contact_phone, contact_address, email")
+          .eq("id", user.id)
+          .single();
+        if (profile) {
+          setCompanyInfo({
+            name: profile.company_name || "",
+            phone: profile.contact_phone || "",
+            address: profile.contact_address || "",
+            email: profile.email || "",
+          });
+        }
       }
       if (id) {
         await loadRepair();
@@ -516,30 +526,27 @@ export default function RepairDetailPage() {
     }
     setSendingEmail(true);
     try {
-      const repairsHtml = `<div>🔧 Ticket #${repair.id}<br/>📱 ${repair.device}<br/>🔧 ${repair.issue}<br/>💰 ${finalPrice || 0}€</div>`;
-      const templateParams = {
-        company_name: "MBX Réparations",
-        company_address: "",
-        company_phone: "",
-        company_email: "",
-        client_name: client?.name || "Client",
-        client_phone: client?.phone || "Non renseigné",
-        client_email: emailTo,
-        date: new Date().toLocaleString("fr-FR"),
-        repairs_html: repairsHtml,
-        to_email: emailTo,
-      };
-      await emailjs.send(
-        EMAILJS_SERVICE_ID,
-        EMAILJS_TEMPLATE_ID,
-        templateParams,
-        EMAILJS_PUBLIC_KEY
-      );
+      const res = await fetch("/api/send-ticket-email", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          ticketId: String(repair.id),
+          email: emailTo,
+          atelierName: companyInfo.name || "MBX Réparations",
+          atelierPhone: companyInfo.phone || "",
+          atelierAddress: companyInfo.address || "",
+          atelierEmail: companyInfo.email || "",
+        }),
+      });
+      if (!res.ok) {
+        const data = await res.json();
+        throw new Error(data.error || "Erreur envoi");
+      }
       await ajouterHistorique("commentaire", `✉️ Email envoyé à ${emailTo}`);
       showMessage(`✅ Email envoyé`, "success");
       setShowEmailModal(false);
     } catch (err) {
-      showMessage(`❌ Échec envoi`, "error");
+      showMessage(`❌ Échec envoi: ${err.message}`, "error");
     } finally {
       setSendingEmail(false);
     }

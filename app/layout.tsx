@@ -12,6 +12,11 @@ export const metadata: Metadata = {
     "Application professionnelle de gestion d'atelier de réparation de téléphones et appareils électroniques",
   generator: "Next.js",
   manifest: "/manifest.json",
+  appleWebApp: {
+    capable: true,
+    statusBarStyle: "black-translucent",
+    title: "MBX Repair",
+  },
   icons: {
     icon: [
       {
@@ -23,7 +28,9 @@ export const metadata: Metadata = {
         media: "(prefers-color-scheme: dark)",
       },
     ],
-    apple: "/apple-icon.png",
+    apple: [
+      { url: "/apple-icon.png", sizes: "180x180" },
+    ],
   },
 };
 

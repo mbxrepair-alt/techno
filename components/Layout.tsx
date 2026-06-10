@@ -74,9 +74,9 @@ export default function Layout({ children }: LayoutProps) {
   if (!user) return <></>;
 
   return (
-    <div className="min-h-screen bg-[#1a1d2e] lg:flex lg:items-start">
+    <div className="min-h-screen bg-[#0f0f13] lg:flex lg:items-start">
       <Navigation user={user} permissions={permissions} />
-      <main className="flex-1 min-w-0 px-6 py-6 overflow-x-hidden">{children}</main>
+      <main className="flex-1 min-w-0 px-4 lg:px-6 py-4 lg:py-6 pb-24 lg:pb-6 overflow-x-hidden">{children}</main>
       <InstallPWA />
       <AssistantPro />
     </div>

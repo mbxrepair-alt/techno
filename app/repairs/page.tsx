@@ -3,6 +3,7 @@
 import { useEffect, useState, useMemo } from "react";
 import { supabase, getCurrentUser } from "../../lib/supabase";
 import { useRouter } from "next/navigation";
+import { Wrench, Search, SlidersHorizontal, RotateCcw, Plus, AlertTriangle, UserCheck, Pencil } from "lucide-react";
 import Layout from "../../components/Layout";
 import { addHistoriqueAction, getCurrentTechnician } from "../../lib/historique";
 
@@ -79,10 +80,10 @@ const STATUS_STYLE = {
 };
 
 const PERIOD_OPTIONS = [
-  { value: "all", label: "📅 Toute la période", days: null },
-  { value: "today", label: "📅 Aujourd'hui", days: 1 },
-  { value: "week", label: "📅 Cette semaine", days: 7 },
-  { value: "month", label: "📅 Ce mois", days: 30 },
+  { value: "all", label: "Toute la période", days: null },
+  { value: "today", label: "Aujourd'hui", days: 1 },
+  { value: "week", label: "Cette semaine", days: 7 },
+  { value: "month", label: "Ce mois", days: 30 },
 ];
 
 export default function RepairsPage() {
@@ -339,186 +340,224 @@ export default function RepairsPage() {
   return (
     <Layout>
       <div className="w-full">
+
         {/* HEADER */}
-        <div className="relative overflow-hidden bg-gradient-to-r from-orange-500 to-orange-600 rounded-2xl px-6 py-5 mb-6">
-          <div className="absolute inset-0 opacity-[0.06]" style={{ backgroundImage: "radial-gradient(circle, white 1px, transparent 1px)", backgroundSize: "18px 18px" }} />
-          <div className="relative flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
-            <div>
-              <h1 className="text-2xl font-black text-white tracking-tight">🔧 Flux Atelier</h1>
-              <p className="text-xs text-white/60 uppercase tracking-widest mt-1">Gestion en temps réel</p>
-              {currentTechnician && (
-                <div className="mt-2 flex items-center gap-2">
-                  <div className="w-6 h-6 rounded-full bg-white/20 flex items-center justify-center text-white text-xs font-bold">
-                    {currentTechnician.name?.charAt(0)}
-                  </div>
-                  <span className="text-xs text-white/80 font-medium">
-                    ✓ {currentTechnician.name}{currentTechnician.is_gerant && " (Gérant)"}
-                  </span>
-                </div>
-              )}
-            </div>
-            <div className="relative w-full md:w-80">
-              <input
-                type="text"
-                placeholder="Rechercher ticket, nom, modèle, panne..."
-                className="w-full bg-white/15 border border-white/30 rounded-xl px-4 py-2.5 text-white placeholder-white/50 text-sm outline-none focus:bg-white/20 focus:border-white/50 transition-all duration-200"
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-              />
-            </div>
+        <div className="flex items-center justify-between mb-5">
+          <div>
+            <h1 className="text-xl font-bold text-white tracking-tight flex items-center gap-2">
+              <Wrench size={18} className="text-orange-400" />
+              Réparations
+            </h1>
+            <p className="text-xs text-gray-500 mt-0.5">
+              {totalRepairs} fiche(s)
+              {currentTechnician && <span> · <span className="text-orange-400">{currentTechnician.name}{currentTechnician.is_gerant ? " · Gérant" : ""}</span></span>}
+            </p>
           </div>
+          <button
+            onClick={() => router.push("/repairs/new")}
+            className="flex items-center gap-2 px-4 py-2.5 bg-orange-500 hover:bg-orange-400 text-white rounded-xl text-sm font-bold transition-all active:scale-95"
+          >
+            <Plus size={16} />
+            <span className="hidden sm:inline">Nouvelle</span>
+          </button>
         </div>
 
-        {/* FILTRES */}
-        <div className="flex flex-wrap items-center gap-3 mb-5">
-          <select
-            value={filterStatus}
-            onChange={(e) => setFilterStatus(e.target.value)}
-            className="bg-[#16161d] border border-white/10 rounded-xl px-3 py-2 text-sm text-white outline-none focus:border-orange-500/60 focus:ring-2 focus:ring-orange-500/15 transition-all duration-200"
-          >
-            <option value="all">📊 Tous ({totalRepairs})</option>
-            {Object.keys(STATUS_ORDER).map((status) => (
-              <option key={status} value={status}>
-                {status} ({statsByStatus[status] || 0})
-              </option>
-            ))}
-          </select>
+        {/* BARRE FILTRES */}
+        <div className="flex flex-wrap items-center gap-2 mb-4">
+          {/* Recherche */}
+          <div className="flex items-center gap-2 flex-1 min-w-48 bg-[#16161d] border border-white/8 rounded-xl px-3 py-2">
+            <Search size={14} className="text-gray-500 shrink-0" />
+            <input
+              type="text"
+              placeholder="Ticket, nom, modèle, panne..."
+              className="flex-1 bg-transparent text-white placeholder-gray-600 text-sm outline-none"
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+            />
+          </div>
 
-          <select
-            value={filterPeriod}
-            onChange={(e) => setFilterPeriod(e.target.value)}
-            className="bg-[#16161d] border border-white/10 rounded-xl px-3 py-2 text-sm text-white outline-none focus:border-orange-500/60 focus:ring-2 focus:ring-orange-500/15 transition-all duration-200"
-          >
-            {PERIOD_OPTIONS.map((option) => (
-              <option key={option.value} value={option.value}>
-                {option.label}
-              </option>
-            ))}
-          </select>
+          {/* Statut */}
+          <div className="flex items-center gap-1.5 bg-[#16161d] border border-white/8 rounded-xl px-3 py-2">
+            <SlidersHorizontal size={13} className="text-gray-500 shrink-0" />
+            <select
+              value={filterStatus}
+              onChange={(e) => setFilterStatus(e.target.value)}
+              className="bg-transparent text-sm text-white outline-none cursor-pointer"
+            >
+              <option value="all">Tous ({totalRepairs})</option>
+              {Object.keys(STATUS_ORDER).map((status) => (
+                <option key={status} value={status}>{status} ({statsByStatus[status] || 0})</option>
+              ))}
+            </select>
+          </div>
+
+          {/* Période */}
+          <div className="bg-[#16161d] border border-white/8 rounded-xl px-3 py-2">
+            <select
+              value={filterPeriod}
+              onChange={(e) => setFilterPeriod(e.target.value)}
+              className="bg-transparent text-sm text-white outline-none cursor-pointer"
+            >
+              {PERIOD_OPTIONS.map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
+            </select>
+          </div>
 
           {(searchTerm || filterStatus !== "all" || filterPeriod !== "all") && (
-            <button onClick={resetFilters} className="text-sm text-orange-400 hover:text-orange-300 transition-colors">
-              🔄 Réinitialiser
+            <button onClick={resetFilters} className="flex items-center gap-1.5 text-xs text-orange-400 hover:text-orange-300 transition-colors px-2 py-2">
+              <RotateCcw size={13} />
+              Réinitialiser
             </button>
           )}
         </div>
 
-        {/* TABLEAU */}
-        <div className="bg-[#16161d] rounded-2xl border border-white/5 overflow-hidden">
-          <div className="grid grid-cols-12 bg-orange-500/10 px-4 py-3 text-xs font-bold text-orange-400 uppercase tracking-widest border-b border-white/5">
+        {/* LISTE — TABLE desktop / CARTES mobile */}
+
+        {/* Table desktop */}
+        <div className="hidden md:block bg-[#16161d] rounded-2xl border border-white/5 overflow-hidden">
+          <div className="grid grid-cols-12 bg-white/3 px-4 py-2.5 text-[10px] font-bold text-gray-500 uppercase tracking-widest border-b border-white/5">
             <div className="col-span-1">Ticket</div>
             <div className="col-span-3">Client / Appareil</div>
             <div className="col-span-2">Panne</div>
-            <div className="col-span-1">Âge</div>
+            <div className="col-span-1">Délai</div>
             <div className="col-span-2">Technicien</div>
             <div className="col-span-2">Statut</div>
             <div className="col-span-1 text-right">Prix</div>
           </div>
-
           <div className="divide-y divide-white/5">
             {sortedRepairs.length === 0 ? (
-              <div className="text-center py-16 text-gray-500 text-sm">Aucune réparation</div>
-            ) : (
-              sortedRepairs.map((repair) => {
-                const dateObj = new Date(repair.created_at);
-                const formattedDate = dateObj.toLocaleDateString("fr-FR", { day: "2-digit", month: "2-digit" });
-                const ageMs = Date.now() - dateObj.getTime();
-                const ageDays = Math.floor(ageMs / 86400000);
-                const ageLabel = ageDays === 0 ? "Auj." : ageDays === 1 ? "1j" : `${ageDays}j`;
-                const ageColor = ageDays >= 7 ? "text-red-400" : ageDays >= 3 ? "text-amber-400" : "text-gray-400";
-                const isActive = !["✅ Terminé","📦 Rendu","🚫 Refus client","❌ KO"].includes(repair.status);
-                return (
-                  <div
-                    key={repair.id}
-                    onClick={() => handleRowClick(repair)}
-                    className={`grid grid-cols-12 items-center px-4 py-3 cursor-pointer hover:bg-white/5 transition-colors duration-150 ${!repair.technician && isActive ? "bg-amber-500/5" : ""}`}
-                  >
-                    <div className="col-span-1">
-                      <span className="font-mono font-bold text-orange-400 text-sm bg-orange-500/10 px-2 py-1 rounded-lg">
-                        #{repair.id}
-                      </span>
-                    </div>
+              <div className="text-center py-16 text-gray-600 text-sm">Aucune réparation</div>
+            ) : sortedRepairs.map((repair) => {
+              const dateObj = new Date(repair.created_at);
+              const ageDays = Math.floor((Date.now() - dateObj.getTime()) / 86400000);
+              const ageLabel = ageDays === 0 ? "Auj." : ageDays === 1 ? "1j" : `${ageDays}j`;
+              const ageColor = ageDays >= 7 ? "text-red-400" : ageDays >= 3 ? "text-amber-400" : "text-gray-500";
+              const isActive = !["✅ Terminé","📦 Rendu","🚫 Refus client","❌ KO"].includes(repair.status);
+              return (
+                <div
+                  key={repair.id}
+                  onClick={() => handleRowClick(repair)}
+                  className={`grid grid-cols-12 items-center px-4 py-3 cursor-pointer hover:bg-white/4 transition-colors ${!repair.technician && isActive ? "bg-amber-500/4" : ""}`}
+                >
+                  <div className="col-span-1">
+                    <span className="font-mono font-bold text-orange-400 text-xs bg-orange-500/10 px-2 py-1 rounded-lg">#{repair.id}</span>
+                  </div>
+                  <div className="col-span-3 min-w-0">
+                    <div className="font-semibold text-white text-sm truncate">{repair.clients?.name || "—"}</div>
+                    <div className="text-xs text-gray-400 truncate">{repair.device || "?"}</div>
+                  </div>
+                  <div className="col-span-2 min-w-0">
+                    <div className="text-xs text-gray-500 truncate">{repair.issue || "—"}</div>
+                  </div>
+                  <div className="col-span-1">
+                    <span className={`text-xs font-semibold ${ageColor}`}>{ageLabel}</span>
+                  </div>
+                  <div className="col-span-2">
+                    {repair.technician ? (
+                      <div className="flex items-center gap-1.5 min-w-0">
+                        <div className="w-5 h-5 shrink-0 rounded-full bg-orange-500/15 flex items-center justify-center text-orange-400 text-[10px] font-bold">{repair.technician.charAt(0)}</div>
+                        <span className="text-xs text-gray-300 truncate">{repair.technician}</span>
+                        {currentTechnician?.is_gerant && (
+                          <button onClick={(e) => openChangeTechModal(repair, e)} className="shrink-0 text-gray-600 hover:text-orange-400 transition-colors ml-0.5">
+                            <Pencil size={11} />
+                          </button>
+                        )}
+                      </div>
+                    ) : (
+                      <span className="text-[10px] text-amber-400 bg-amber-500/10 px-2 py-0.5 rounded-full border border-amber-500/20">Non assigné</span>
+                    )}
+                  </div>
+                  <div className="col-span-2">
+                    <span className={`inline-block px-2 py-0.5 rounded-lg text-[10px] font-bold border ${STATUS_STYLE[repair.status] || "bg-gray-700 text-gray-300 border-gray-600"}`}>
+                      {repair.status}
+                    </span>
+                  </div>
+                  <div className="col-span-1 text-right font-bold text-orange-400 text-sm">
+                    {repair.final_price ? `${Number(repair.final_price).toFixed(0)}€` : repair.estimated_price ? `~${Number(repair.estimated_price).toFixed(0)}€` : "—"}
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </div>
 
-                    <div className="col-span-3 min-w-0">
-                      <div className="font-semibold text-white text-sm truncate">{repair.clients?.name || "Client inconnu"}</div>
-                      <div className="text-xs text-blue-300 truncate">{repair.device || "?"}</div>
-                    </div>
-
-                    <div className="col-span-2 min-w-0">
-                      <div className="text-xs text-gray-400 truncate">{repair.issue || "—"}</div>
-                    </div>
-
-                    <div className="col-span-1">
-                      <span className={`text-xs font-semibold ${ageColor}`} title={formattedDate}>{ageLabel}</span>
-                    </div>
-
-                    <div className="col-span-2">
-                      {repair.technician ? (
-                        <div className="flex items-center gap-1.5 min-w-0">
-                          <div className="w-5 h-5 shrink-0 rounded-full bg-orange-500/20 flex items-center justify-center text-orange-400 text-xs font-bold">
-                            {repair.technician.charAt(0)}
-                          </div>
-                          <span className="text-xs font-medium text-gray-300 truncate">{repair.technician}</span>
-                          {currentTechnician?.is_gerant && (
-                            <button onClick={(e) => openChangeTechModal(repair, e)} className="shrink-0 text-gray-600 hover:text-orange-400 transition-colors text-xs">✏️</button>
-                          )}
-                        </div>
-                      ) : (
-                        <span className="text-xs text-amber-400 bg-amber-500/10 px-2 py-0.5 rounded-full">⚠️ Non assigné</span>
-                      )}
-                    </div>
-
-                    <div className="col-span-2">
-                      <span className={`inline-block px-2 py-1 rounded-lg text-[10px] font-bold border truncate max-w-full ${STATUS_STYLE[repair.status] || "bg-gray-700 text-gray-300 border-gray-600"}`}>
-                        {repair.status}
-                      </span>
-                    </div>
-
-                    <div className="col-span-1 text-right font-bold text-orange-400 text-sm">
-                      {repair.final_price ? `${Number(repair.final_price).toFixed(0)}€` : repair.estimated_price ? `~${Number(repair.estimated_price).toFixed(0)}€` : "—"}
+        {/* Cartes mobile */}
+        <div className="md:hidden space-y-2">
+          {sortedRepairs.length === 0 ? (
+            <div className="text-center py-16 text-gray-600 text-sm bg-[#16161d] rounded-2xl border border-white/5">Aucune réparation</div>
+          ) : sortedRepairs.map((repair) => {
+            const ageDays = Math.floor((Date.now() - new Date(repair.created_at).getTime()) / 86400000);
+            const ageLabel = ageDays === 0 ? "Aujourd'hui" : ageDays === 1 ? "1 jour" : `${ageDays} jours`;
+            const ageColor = ageDays >= 7 ? "text-red-400" : ageDays >= 3 ? "text-amber-400" : "text-gray-500";
+            const isActive = !["✅ Terminé","📦 Rendu","🚫 Refus client","❌ KO"].includes(repair.status);
+            return (
+              <div
+                key={repair.id}
+                onClick={() => handleRowClick(repair)}
+                className={`bg-[#16161d] border rounded-2xl p-4 cursor-pointer active:scale-[0.99] transition-all ${!repair.technician && isActive ? "border-amber-500/20" : "border-white/8"}`}
+              >
+                <div className="flex items-start justify-between gap-3 mb-2">
+                  <div className="flex items-center gap-2 min-w-0">
+                    <span className="font-mono text-xs font-bold text-orange-400 bg-orange-500/10 px-2 py-0.5 rounded-md shrink-0">#{repair.id}</span>
+                    <div className="min-w-0">
+                      <div className="font-semibold text-white text-sm truncate">{repair.clients?.name || "—"}</div>
+                      <div className="text-xs text-gray-400 truncate">{repair.device}</div>
                     </div>
                   </div>
-                );
-              })
-            )}
-          </div>
+                  <div className="text-right shrink-0">
+                    <div className="font-bold text-orange-400 text-sm">
+                      {repair.final_price ? `${Number(repair.final_price).toFixed(0)}€` : repair.estimated_price ? `~${Number(repair.estimated_price).toFixed(0)}€` : "—"}
+                    </div>
+                    <div className={`text-[10px] ${ageColor}`}>{ageLabel}</div>
+                  </div>
+                </div>
+                {repair.issue && <div className="text-xs text-gray-500 mb-2.5 truncate">{repair.issue}</div>}
+                <div className="flex items-center justify-between">
+                  <span className={`px-2 py-0.5 rounded-lg text-[10px] font-bold border ${STATUS_STYLE[repair.status] || "bg-gray-700 text-gray-300 border-gray-600"}`}>
+                    {repair.status}
+                  </span>
+                  {repair.technician ? (
+                    <div className="flex items-center gap-1.5">
+                      <div className="w-5 h-5 rounded-full bg-orange-500/15 flex items-center justify-center text-orange-400 text-[10px] font-bold">{repair.technician.charAt(0)}</div>
+                      <span className="text-xs text-gray-400">{repair.technician}</span>
+                    </div>
+                  ) : (
+                    <span className="text-[10px] text-amber-400 bg-amber-500/10 px-2 py-0.5 rounded-full border border-amber-500/20">Non assigné</span>
+                  )}
+                </div>
+              </div>
+            );
+          })}
         </div>
 
         {/* MODAL AVERTISSEMENT */}
         {showWarningModal && pendingRepair && (
-          <div className="fixed inset-0 bg-black/70 backdrop-blur-sm flex items-center justify-center z-50">
-            <div className="bg-[#232742] border border-white/10 border-t-2 border-t-orange-500 rounded-2xl p-6 w-96 shadow-2xl">
-              <div className="text-center mb-4">
-                <div className="w-14 h-14 bg-orange-500/20 rounded-full flex items-center justify-center mx-auto mb-3">
-                  <span className="text-2xl">⚠️</span>
+          <div className="fixed inset-0 bg-black/70 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+            <div className="bg-[#16161d] border border-white/10 rounded-2xl p-6 w-full max-w-sm shadow-2xl">
+              <div className="flex items-center gap-3 mb-4">
+                <div className="w-10 h-10 bg-amber-500/15 rounded-xl flex items-center justify-center shrink-0">
+                  <AlertTriangle size={20} className="text-amber-400" />
                 </div>
-                <h3 className="text-lg font-bold text-white">Attention !</h3>
-              </div>
-              <p className="text-gray-400 text-sm text-center mb-2">Cette réparation est déjà assignée à :</p>
-              <div className="bg-white/5 border border-white/10 rounded-xl p-3 text-center mb-4">
-                <div className="flex items-center justify-center gap-2">
-                  <div className="w-8 h-8 rounded-full bg-orange-500/20 flex items-center justify-center text-orange-400 font-bold text-sm">
-                    {pendingRepair.technician?.charAt(0)}
-                  </div>
-                  <span className="font-semibold text-white">{pendingRepair.technician}</span>
+                <div>
+                  <h3 className="text-base font-bold text-white">Réparation assignée</h3>
+                  <p className="text-xs text-gray-500">Déjà prise en charge par un technicien</p>
                 </div>
               </div>
-              <p className="text-gray-400 text-sm text-center mb-5">
-                Voulez-vous prendre la main sur cette réparation ?<br />
-                <span className="text-xs text-gray-500">Le précédent technicien n'aura plus accès</span>
-              </p>
-              <div className="flex gap-3">
-                <button
-                  onClick={() => { setShowWarningModal(false); setPendingRepair(null); }}
-                  className="flex-1 bg-white/5 hover:bg-white/10 text-gray-300 py-2.5 rounded-xl font-medium text-sm border border-white/10 transition-all"
-                >
-                  ❌ Annuler
+              <div className="bg-white/5 border border-white/8 rounded-xl p-3 flex items-center gap-3 mb-4">
+                <div className="w-8 h-8 rounded-full bg-orange-500/15 flex items-center justify-center text-orange-400 font-bold text-sm shrink-0">
+                  {pendingRepair.technician?.charAt(0)}
+                </div>
+                <span className="font-semibold text-white text-sm">{pendingRepair.technician}</span>
+              </div>
+              <p className="text-gray-500 text-xs text-center mb-5">Prendre la main désassignera le technicien précédent.</p>
+              <div className="flex gap-2">
+                <button onClick={() => { setShowWarningModal(false); setPendingRepair(null); }}
+                  className="flex-1 bg-white/5 hover:bg-white/10 text-gray-300 py-2.5 rounded-xl font-medium text-sm border border-white/10 transition-all">
+                  Annuler
                 </button>
-                <button
-                  onClick={takeOverRepair}
-                  className="flex-1 bg-gradient-to-r from-orange-500 to-orange-600 text-white py-2.5 rounded-xl font-semibold text-sm shadow-[0_4px_0_rgba(0,0,0,0.3)] active:translate-y-0.5 active:shadow-[0_2px_0_rgba(0,0,0,0.3)] transition-all"
-                >
-                  ✅ Prendre la main
+                <button onClick={takeOverRepair}
+                  className="flex-1 flex items-center justify-center gap-2 bg-orange-500 hover:bg-orange-400 text-white py-2.5 rounded-xl font-semibold text-sm transition-all">
+                  <UserCheck size={15} />
+                  Prendre la main
                 </button>
               </div>
             </div>
@@ -527,14 +566,14 @@ export default function RepairsPage() {
 
         {/* MODAL CHANGEMENT TECHNICIEN */}
         {showChangeTechModal && changingRepair && currentTechnician?.is_gerant && (
-          <div className="fixed inset-0 bg-black/70 backdrop-blur-sm flex items-center justify-center z-50">
-            <div className="bg-[#232742] border border-white/10 border-t-2 border-t-orange-500 rounded-2xl p-6 w-96 shadow-2xl">
-              <h3 className="text-base font-bold text-white mb-1">👨‍🔧 Changer le technicien</h3>
-              <p className="text-sm text-gray-400 mb-4">Réparation #{changingRepair.id}</p>
+          <div className="fixed inset-0 bg-black/70 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+            <div className="bg-[#16161d] border border-white/10 rounded-2xl p-6 w-full max-w-sm shadow-2xl">
+              <h3 className="text-base font-bold text-white mb-0.5">Changer le technicien</h3>
+              <p className="text-sm text-gray-500 mb-4">Réparation #{changingRepair.id}</p>
               <select
                 value={selectedNewTech}
                 onChange={(e) => setSelectedNewTech(e.target.value)}
-                className="w-full bg-[#1a1d2e] border border-white/10 rounded-xl px-4 py-2.5 text-white text-sm outline-none focus:border-orange-500/60 focus:ring-2 focus:ring-orange-500/15 mb-4 transition-all"
+                className="w-full bg-[#1a1d2e] border border-white/10 rounded-xl px-4 py-2.5 text-white text-sm outline-none focus:border-orange-500/60 mb-4 transition-all"
               >
                 <option value="">-- Sélectionner --</option>
                 {technicians.map((tech) => (
@@ -544,7 +583,7 @@ export default function RepairsPage() {
               <div className="flex gap-2">
                 <button
                   onClick={changeTechnician}
-                  className="flex-1 bg-gradient-to-r from-orange-500 to-orange-600 text-white py-2.5 rounded-xl font-semibold text-sm shadow-[0_4px_0_rgba(0,0,0,0.3)] active:translate-y-0.5 active:shadow-[0_2px_0_rgba(0,0,0,0.3)] transition-all"
+                  className="flex-1 bg-orange-500 hover:bg-orange-400 text-white py-2.5 rounded-xl font-semibold text-sm transition-all"
                 >
                   Confirmer
                 </button>

@@ -498,35 +498,33 @@ export default function ClientsPage() {
         )}
 
         {/* HEADER */}
-        <div className="relative overflow-hidden bg-gradient-to-r from-emerald-500 to-green-600 rounded-2xl px-6 py-5 mb-6">
-          <div className="absolute inset-0 opacity-[0.06]" style={{ backgroundImage: "radial-gradient(circle, white 1px, transparent 1px)", backgroundSize: "18px 18px" }} />
-          <div className="relative flex justify-between items-center">
-            <div>
-              <h1 className="text-2xl font-black text-white tracking-tight">👥 Clients</h1>
-              <p className="text-xs text-white/60 uppercase tracking-widest mt-1">Gérez vos clients et codes d'accès</p>
-            </div>
-            <button
-              onClick={() => { resetForm(); setShowAddModal(true); }}
-              className="bg-white/20 hover:bg-white/30 text-white px-5 py-2.5 rounded-xl font-semibold text-sm shadow-[0_4px_0_rgba(0,0,0,0.3)] active:translate-y-0.5 active:shadow-[0_2px_0_rgba(0,0,0,0.3)] transition-all duration-150 border border-white/30"
-            >
-              + Nouveau client
-            </button>
+        <div className="flex items-center justify-between mb-5">
+          <div>
+            <h1 className="text-xl font-bold text-white tracking-tight">Clients</h1>
+            <p className="text-xs text-gray-500 mt-0.5">Gérez vos clients et codes d'accès</p>
           </div>
+          <button
+            onClick={() => { resetForm(); setShowAddModal(true); }}
+            className="flex items-center gap-2 px-4 py-2.5 bg-emerald-600 hover:bg-emerald-500 text-white rounded-xl font-semibold text-sm transition-all active:scale-95"
+          >
+            <span className="text-base leading-none">+</span>
+            <span className="hidden sm:inline">Nouveau client</span>
+          </button>
         </div>
 
         {/* STAT CARDS */}
         <div className="grid grid-cols-3 gap-4 mb-6">
-          <div className="bg-gradient-to-br from-emerald-500 to-green-600 rounded-2xl p-4 text-white shadow-lg shadow-emerald-500/25">
-            <div className="text-xs font-medium text-white/70 uppercase tracking-wider">Total</div>
-            <div className="text-3xl font-black mt-1">{stats.total}</div>
+          <div className="bg-[#16161d] border border-emerald-500/20 rounded-2xl p-4 text-white">
+            <div className="text-xs font-medium text-white/50 uppercase tracking-wider">Total</div>
+            <div className="text-3xl font-black mt-1 text-emerald-400">{stats.total}</div>
           </div>
-          <div className="bg-gradient-to-br from-blue-500 to-blue-700 rounded-2xl p-4 text-white shadow-lg shadow-blue-500/25">
-            <div className="text-xs font-medium text-white/70 uppercase tracking-wider">Professionnels</div>
-            <div className="text-3xl font-black mt-1">{stats.pro}</div>
+          <div className="bg-[#16161d] border border-blue-500/20 rounded-2xl p-4 text-white">
+            <div className="text-xs font-medium text-white/50 uppercase tracking-wider">Professionnels</div>
+            <div className="text-3xl font-black mt-1 text-blue-400">{stats.pro}</div>
           </div>
-          <div className="bg-gradient-to-br from-teal-400 to-cyan-600 rounded-2xl p-4 text-white shadow-lg shadow-teal-400/25">
-            <div className="text-xs font-medium text-white/70 uppercase tracking-wider">Particuliers</div>
-            <div className="text-3xl font-black mt-1">{stats.particulier}</div>
+          <div className="bg-[#16161d] border border-cyan-500/20 rounded-2xl p-4 text-white">
+            <div className="text-xs font-medium text-white/50 uppercase tracking-wider">Particuliers</div>
+            <div className="text-3xl font-black mt-1 text-cyan-400">{stats.particulier}</div>
           </div>
         </div>
 
@@ -604,7 +602,7 @@ export default function ClientsPage() {
       {/* MODAL AJOUT CLIENT */}
       {showAddModal && (
         <div className="fixed inset-0 bg-black/70 backdrop-blur-sm flex items-center justify-center z-50 p-4" onClick={() => setShowAddModal(false)}>
-          <div className="bg-[#232742] border border-white/10 border-t-2 border-t-emerald-500 rounded-2xl max-w-2xl w-full p-6 max-h-[90vh] overflow-y-auto" onClick={(e) => e.stopPropagation()}>
+          <div className="bg-[#16161d] border border-white/10 border-t-2 border-t-emerald-500 rounded-2xl max-w-2xl w-full p-6 max-h-[90vh] overflow-y-auto" onClick={(e) => e.stopPropagation()}>
             <div className="flex justify-between items-center mb-5">
               <h2 className="text-lg font-black text-white">➕ Nouveau client</h2>
               <button onClick={() => setShowAddModal(false)} className="text-gray-500 hover:text-white transition-colors text-xl w-8 h-8 flex items-center justify-center rounded-lg hover:bg-white/10">✕</button>
@@ -697,7 +695,7 @@ export default function ClientsPage() {
                     onChange={(e) => { setFormData({ ...formData, address: e.target.value }); searchAddress(e.target.value); }}
                   />
                   {showAddressSuggestions && addressSuggestions.length > 0 && (
-                    <div className="absolute z-10 w-full mt-1 bg-[#232742] border border-white/10 rounded-xl shadow-2xl max-h-48 overflow-y-auto">
+                    <div className="absolute z-10 w-full mt-1 bg-[#16161d] border border-white/10 rounded-xl shadow-2xl max-h-48 overflow-y-auto">
                       {addressSuggestions.map((suggestion) => (
                         <button key={suggestion.id} type="button" className="w-full text-left px-4 py-2.5 hover:bg-emerald-500/10 text-sm text-gray-300 hover:text-white transition-colors" onClick={() => selectAddress(suggestion)}>
                           {suggestion.label}
@@ -724,7 +722,7 @@ export default function ClientsPage() {
       {/* MODAL MODIFICATION CLIENT */}
       {showEditModal && selectedClient && (
         <div className="fixed inset-0 bg-black/70 backdrop-blur-sm flex items-center justify-center z-50 p-4" onClick={() => setShowEditModal(false)}>
-          <div className="bg-[#232742] border border-white/10 border-t-2 border-t-emerald-500 rounded-2xl max-w-2xl w-full p-6 max-h-[90vh] overflow-y-auto" onClick={(e) => e.stopPropagation()}>
+          <div className="bg-[#16161d] border border-white/10 border-t-2 border-t-emerald-500 rounded-2xl max-w-2xl w-full p-6 max-h-[90vh] overflow-y-auto" onClick={(e) => e.stopPropagation()}>
             <div className="flex justify-between items-center mb-5">
               <h2 className="text-lg font-black text-white">✏️ Modifier {selectedClient.name}</h2>
               <button onClick={() => setShowEditModal(false)} className="text-gray-500 hover:text-white transition-colors text-xl w-8 h-8 flex items-center justify-center rounded-lg hover:bg-white/10">✕</button>
@@ -802,7 +800,7 @@ export default function ClientsPage() {
                     onChange={(e) => { setFormData({ ...formData, address: e.target.value }); searchAddress(e.target.value); }}
                   />
                   {showAddressSuggestions && addressSuggestions.length > 0 && (
-                    <div className="absolute z-10 w-full mt-1 bg-[#232742] border border-white/10 rounded-xl shadow-2xl max-h-48 overflow-y-auto">
+                    <div className="absolute z-10 w-full mt-1 bg-[#16161d] border border-white/10 rounded-xl shadow-2xl max-h-48 overflow-y-auto">
                       {addressSuggestions.map((suggestion) => (
                         <button key={suggestion.id} type="button" className="w-full text-left px-4 py-2.5 hover:bg-emerald-500/10 text-sm text-gray-300 hover:text-white transition-colors" onClick={() => selectAddress(suggestion)}>
                           {suggestion.label}
@@ -828,7 +826,7 @@ export default function ClientsPage() {
       {/* MODAL CONFIRMATION SUPPRESSION */}
       {showPasswordModal && clientToDelete && (
         <div className="fixed inset-0 bg-black/70 backdrop-blur-sm flex items-center justify-center z-50 p-4">
-          <div className="bg-[#232742] border border-white/10 border-t-2 border-t-red-500 rounded-2xl max-w-md w-full p-6">
+          <div className="bg-[#16161d] border border-white/10 border-t-2 border-t-red-500 rounded-2xl max-w-md w-full p-6">
             <div className="flex justify-between items-center mb-5">
               <h2 className="text-lg font-black text-red-400">⚠️ Suppression client</h2>
               <button onClick={() => setShowPasswordModal(false)} className="text-gray-500 hover:text-white transition-colors text-xl w-8 h-8 flex items-center justify-center rounded-lg hover:bg-white/10">✕</button>

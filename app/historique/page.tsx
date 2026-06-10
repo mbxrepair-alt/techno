@@ -520,11 +520,10 @@ export default function HistoriquePage() {
 
       <div className="max-w-6xl mx-auto">
         {/* HEADER */}
-        <div className="relative overflow-hidden bg-gradient-to-r from-amber-500 to-yellow-600 rounded-2xl px-6 py-5 mb-6">
-          <div className="absolute inset-0 opacity-[0.06]" style={{ backgroundImage: "radial-gradient(circle, white 1px, transparent 1px)", backgroundSize: "18px 18px" }} />
-          <div className="relative">
-            <h1 className="text-2xl font-black text-white tracking-tight">📜 Historique</h1>
-            <p className="text-xs text-white/60 uppercase tracking-widest mt-1">Suivi complet des réparations</p>
+        <div className="flex items-center justify-between mb-5">
+          <div>
+            <h1 className="text-xl font-bold text-white tracking-tight">Historique</h1>
+            <p className="text-xs text-gray-500 mt-0.5">Suivi complet des réparations</p>
           </div>
         </div>
 
@@ -548,9 +547,9 @@ export default function HistoriquePage() {
                 <div className="text-xs text-gray-500 uppercase tracking-wider">Terminées</div>
                 <div className="text-2xl font-black text-green-400 mt-1">{terminees}</div>
               </div>
-              <div className="bg-gradient-to-br from-amber-500 to-yellow-600 rounded-2xl p-4 text-white">
-                <div className="text-xs text-white/70 uppercase tracking-wider">CA total HT</div>
-                <div className="text-2xl font-black mt-1">{caTotal.toFixed(0)} €</div>
+              <div className="bg-[#16161d] border border-amber-500/20 rounded-2xl p-4 text-white">
+                <div className="text-xs text-white/50 uppercase tracking-wider">CA total HT</div>
+                <div className="text-2xl font-black mt-1 text-amber-400">{caTotal.toFixed(0)} €</div>
               </div>
             </div>
           );

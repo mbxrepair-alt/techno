@@ -1,6 +1,46 @@
 @import "tailwindcss";
 
 /* ============================================
+   SAFE AREA (PWA / iPhone notch)
+   ============================================ */
+.pb-safe {
+  padding-bottom: env(safe-area-inset-bottom, 0px);
+}
+
+/* ============================================
+   BOTTOM SHEET ANIMATION
+   ============================================ */
+@keyframes slideUp {
+  from { opacity: 0; transform: translateY(100%); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+.animate-slideUp {
+  animation: slideUp 0.25s cubic-bezier(0.32, 0.72, 0, 1);
+}
+
+/* ============================================
+   SCROLLBAR DARK
+   ============================================ */
+::-webkit-scrollbar { width: 4px; height: 4px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.08); border-radius: 4px; }
+::-webkit-scrollbar-thumb:hover { background: rgba(255,255,255,0.15); }
+
+/* ============================================
+   BODY
+   ============================================ */
+body {
+  background: #0f0f13;
+  color: #f8fafc;
+  font-family: "Inter", system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  -webkit-font-smoothing: antialiased;
+}
+
+/* Nav height utility */
+.h-13 { height: 3.25rem; }
+
+
+/* ============================================
    THEME 1 - MODERNE BLEU/VIOLET (Défaut)
    ============================================ */
 :root {

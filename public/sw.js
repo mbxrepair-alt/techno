@@ -4,11 +4,10 @@ const STATIC_CACHE  = `${CACHE_VERSION}-static`;
 const PAGES_CACHE   = `${CACHE_VERSION}-pages`;
 
 // Ressources mises en cache immédiatement à l'installation
+// ⚠️ Ne pas précacher les routes protégées (dashboard, repairs, clients)
+// — elles nécessitent une auth et renvoient un redirect si non connecté
 const PRECACHE_URLS = [
-  "/",
-  "/dashboard",
-  "/repairs",
-  "/clients",
+  "/login",
   "/offline",
   "/manifest.json",
   "/icons/icon-192x192.png",

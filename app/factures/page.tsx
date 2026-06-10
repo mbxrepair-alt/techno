@@ -252,177 +252,175 @@ export default function FacturesPage() {
     const payMethodDisplay = payMethodLabel[payMethod] || payMethod;
 
     const logoHtml = logoBase64
-      ? `<img src="${logoBase64}" style="height:52px;max-width:180px;object-fit:contain;display:block" alt="logo"/>`
-      : `<div style="font-size:34px;font-weight:900;letter-spacing:-2px;color:#fff;line-height:1">${shortName}</div>`;
+      ? `<img src="${logoBase64}" style="height:48px;max-width:160px;object-fit:contain;display:block" alt="logo"/>`
+      : `<span style="font-size:28px;font-weight:900;letter-spacing:-1px;color:#0f172a">${shortName}</span>`;
 
     win.document.write(`<!DOCTYPE html><html><head><meta charset="UTF-8">
     <title>Facture ${invoiceRef}</title>
     <style>
       *{box-sizing:border-box;margin:0;padding:0}
-      @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;900&display=swap');
-      body{font-family:'Inter','Segoe UI',Arial,sans-serif;background:#eef0f6;min-height:100vh;padding:28px 20px;color:#111827}
-      .page{max-width:820px;margin:auto;background:#fff;border-radius:16px;overflow:hidden;box-shadow:0 8px 40px rgba(0,0,0,.13)}
+      body{font-family:'Segoe UI',system-ui,Arial,sans-serif;background:#f1f5f9;color:#0f172a;padding:32px 20px;min-height:100vh}
+      .page{max-width:800px;margin:auto;background:#fff;box-shadow:0 4px 32px rgba(0,0,0,.10)}
+
+      /* ── BARRE ACCENT ── */
+      .accent-bar{height:4px;background:linear-gradient(90deg,#6366f1,#8b5cf6,#06b6d4)}
 
       /* ── HEADER ── */
-      .header{display:flex;min-height:110px;border-bottom:3px solid #312e81}
-      .header-left{flex:1;background:#fff;padding:24px 32px;display:flex;align-items:center;gap:18px}
-      .header-logo-wrap{display:flex;flex-direction:column;gap:6px}
-      .header-name{font-size:22px;font-weight:900;color:#1e1b4b;letter-spacing:-0.5px;line-height:1}
-      .header-subtitle{font-size:10px;color:#9ca3af;text-transform:uppercase;letter-spacing:2px}
-      .header-right{width:240px;background:linear-gradient(135deg,#1e1b4b 0%,#312e81 60%,#4c1d95 100%);padding:22px 28px;display:flex;flex-direction:column;justify-content:center;align-items:flex-end;gap:8px}
-      .invoice-label{font-size:10px;font-weight:600;letter-spacing:3px;text-transform:uppercase;color:rgba(255,255,255,.45)}
-      .invoice-number{font-size:16px;font-weight:700;color:#fff;font-family:monospace;letter-spacing:1px}
-      .invoice-date{font-size:11px;color:rgba(255,255,255,.55)}
-      .status-badge{display:inline-flex;align-items:center;gap:5px;padding:5px 12px;border-radius:20px;font-size:11px;font-weight:700;letter-spacing:.3px}
-      .status-due{background:#fef2f2;color:#dc2626}
-      .status-paid{background:#dcfce7;color:#16a34a}
+      .header{display:flex;justify-content:space-between;align-items:flex-start;padding:32px 40px 24px}
+      .header-logo{display:flex;flex-direction:column;gap:8px}
+      .header-contact{font-size:11.5px;color:#64748b;line-height:1.8;margin-top:10px}
+      .header-right{text-align:right}
+      .header-facture-label{font-size:36px;font-weight:800;color:#e2e8f0;letter-spacing:-1px;line-height:1;margin-bottom:6px}
+      .header-ref{font-size:13px;font-weight:600;color:#6366f1;font-family:monospace;letter-spacing:.5px}
+      .header-date{font-size:11.5px;color:#94a3b8;margin-top:4px}
+      .status-pill{display:inline-flex;align-items:center;gap:5px;margin-top:10px;padding:5px 14px;border-radius:99px;font-size:11px;font-weight:700;letter-spacing:.4px}
+      .pill-due{background:#fef2f2;color:#dc2626;border:1px solid #fecaca}
+      .pill-paid{background:#f0fdf4;color:#16a34a;border:1px solid #bbf7d0}
 
-      /* ── BODY ── */
-      .body{padding:32px 36px}
+      /* ── SEPARATOR ── */
+      .sep{height:1px;background:#e2e8f0;margin:0 40px}
 
       /* ── PARTIES ── */
-      .parties{display:grid;grid-template-columns:1fr 1fr;gap:20px;margin-bottom:32px}
-      .party-box{border-radius:12px;padding:18px 20px}
-      .party-box.emetteur{background:#f5f3ff;border:1px solid #e0d7ff}
-      .party-box.client{background:#f0fdf4;border:1px solid #bbf7d0}
-      .party-label{font-size:9px;font-weight:700;letter-spacing:2px;text-transform:uppercase;margin-bottom:10px;padding-bottom:6px;border-bottom:1px solid rgba(0,0,0,.08)}
-      .party-box.emetteur .party-label{color:#6c2bd9}
-      .party-box.client .party-label{color:#16a34a}
-      .party-name{font-size:16px;font-weight:800;color:#111827;margin-bottom:6px}
-      .party-info{font-size:12.5px;color:#6b7280;line-height:1.75}
-      .party-info strong{color:#374151;font-weight:600}
+      .parties{display:grid;grid-template-columns:1fr 1fr;padding:24px 40px;gap:0;border-bottom:1px solid #f1f5f9}
+      .party{padding-right:32px}
+      .party+.party{padding-right:0;padding-left:32px;border-left:1px solid #f1f5f9}
+      .party-tag{font-size:9px;font-weight:700;letter-spacing:2.5px;text-transform:uppercase;color:#94a3b8;margin-bottom:8px}
+      .party-name{font-size:17px;font-weight:800;color:#0f172a;margin-bottom:6px;line-height:1.2}
+      .party-info{font-size:12px;color:#64748b;line-height:1.9}
 
       /* ── TABLE ── */
-      table{width:100%;border-collapse:collapse;margin-bottom:28px;border-radius:12px;overflow:hidden;border:1px solid #e5e7eb}
-      thead{background:linear-gradient(to right,#1e1b4b,#312e81)}
-      th{padding:12px 14px;text-align:left;font-size:10px;font-weight:600;text-transform:uppercase;letter-spacing:1.2px;color:rgba(255,255,255,.85)}
+      .table-wrap{padding:0 40px;margin-bottom:0}
+      table{width:100%;border-collapse:collapse;margin-top:24px}
+      thead tr{border-bottom:2px solid #0f172a}
+      th{padding:0 12px 10px;text-align:left;font-size:9.5px;font-weight:700;text-transform:uppercase;letter-spacing:1.5px;color:#94a3b8}
       th.r{text-align:right}
-      td{padding:13px 14px;font-size:13px;color:#374151;border-bottom:1px solid #f3f4f6}
-      tr:last-child td{border-bottom:none}
-      tr:nth-child(even) td{background:#fafafa}
-      .ticket-ref{font-family:'Courier New',monospace;font-weight:700;color:#4c1d95;background:#f5f3ff;padding:2px 7px;border-radius:5px;font-size:12px}
-      .device-name{font-weight:600;color:#111827}
-      .issue-text{color:#6b7280;font-size:12px}
-      td.r{text-align:right}
-      td.price{font-weight:600;color:#111827}
+      tbody tr{border-bottom:1px solid #f1f5f9}
+      tbody tr:last-child{border-bottom:none}
+      td{padding:14px 12px;font-size:13px;color:#334155;vertical-align:middle}
+      td.r{text-align:right;font-variant-numeric:tabular-nums}
+      .ref-chip{font-family:monospace;font-size:11px;font-weight:700;color:#6366f1;background:#eef2ff;padding:3px 8px;border-radius:4px}
+      .dev{font-weight:600;color:#0f172a;margin-bottom:2px}
+      .iss{font-size:11.5px;color:#94a3b8}
+      .amount{font-weight:600;color:#0f172a}
 
       /* ── TOTAUX ── */
-      .totals-wrap{display:flex;justify-content:flex-end;margin-bottom:28px}
-      .totals-box{width:300px;border:1px solid #e5e7eb;border-radius:12px;overflow:hidden}
-      .totals-row{display:flex;justify-content:space-between;align-items:center;padding:10px 16px;font-size:13px;color:#6b7280;border-bottom:1px solid #f3f4f6}
-      .totals-row:last-child{border-bottom:none}
-      .totals-row.head{background:#f9fafb;font-weight:600;color:#374151}
-      .totals-row.ttc-row{background:#1e1b4b;color:#fff;font-size:15px;font-weight:700}
-      .totals-row.paid-row{background:#f0fdf4;color:#16a34a;font-weight:600}
-      .totals-row.due-row{background:${isSolde ? "#f0fdf4" : "#fef2f2"};color:${isSolde ? "#16a34a" : "#dc2626"};font-weight:800;font-size:15px}
+      .bottom-wrap{display:flex;justify-content:flex-end;padding:24px 40px 32px;border-top:1px solid #f1f5f9}
+      .totals{width:280px}
+      .t-row{display:flex;justify-content:space-between;font-size:12.5px;color:#64748b;padding:5px 0;border-bottom:1px solid #f8fafc}
+      .t-row:last-child{border-bottom:none}
+      .t-row.ht{color:#94a3b8}
+      .t-row.tva-row{color:#94a3b8}
+      .t-row.ttc{border-top:2px solid #0f172a;margin-top:6px;padding-top:12px;font-size:18px;font-weight:800;color:#0f172a}
+      .t-row.paid{color:#16a34a;font-weight:600}
+      .t-row.due{font-size:15px;font-weight:800;padding-top:10px;border-top:1px dashed ${isSolde ? "#bbf7d0" : "#fecaca"};color:${isSolde ? "#16a34a" : "#dc2626"}}
+      .t-row.method{font-size:11px;color:#94a3b8;padding-top:8px}
+      .t-row.method span:last-child{font-weight:600;color:#475569}
 
       /* ── FOOTER ── */
-      .footer{background:#f8f9ff;border-top:1px solid #e5e7eb;padding:16px 36px;display:grid;grid-template-columns:1fr auto;gap:12px;align-items:center}
-      .footer-left{font-size:11.5px;color:#9ca3af;line-height:1.6}
-      .footer-left strong{color:#6b7280}
-      .footer-ref{font-family:monospace;font-size:10px;color:#c4b5fd;background:#1e1b4b;padding:4px 10px;border-radius:6px;white-space:nowrap}
+      .footer{background:#f8fafc;border-top:1px solid #e2e8f0;padding:14px 40px;display:flex;justify-content:space-between;align-items:center}
+      .footer-txt{font-size:10.5px;color:#94a3b8}
+      .footer-ref{font-family:monospace;font-size:10px;background:#0f172a;color:#94a3b8;padding:3px 10px;border-radius:4px}
 
-      @media print{body{padding:0;background:#fff}.page{box-shadow:none;border-radius:0}.no-print{display:none!important}}
-      .print-btn{display:flex;align-items:center;justify-content:center;gap:8px;margin:24px auto;padding:13px 40px;background:linear-gradient(135deg,#312e81,#4c1d95);color:#fff;border:none;border-radius:10px;font-size:14px;font-weight:700;cursor:pointer;letter-spacing:.3px;width:fit-content}
+      @media print{
+        body{background:#fff;padding:0}
+        .page{box-shadow:none}
+        .no-print{display:none!important}
+      }
+      .print-btn{display:flex;align-items:center;justify-content:center;gap:8px;margin:28px auto 0;padding:12px 40px;background:#0f172a;color:#fff;border:none;border-radius:8px;font-size:13px;font-weight:600;cursor:pointer;letter-spacing:.2px;width:fit-content}
     </style></head><body>
     <div class="page">
 
+      <div class="accent-bar"></div>
+
       <!-- HEADER -->
       <div class="header">
-        <div class="header-left">
-          <div class="header-logo-wrap">
-            ${logoHtml}
-          </div>
-          <div>
-            <div class="header-name">${shortName}</div>
-            <div class="header-subtitle">Atelier de réparation</div>
-            ${cp.address || cp.phone ? `<div style="margin-top:6px;font-size:11px;color:#6b7280;line-height:1.6">${cp.address ? `${cp.address}<br>` : ""}${cp.phone ? cp.phone : ""}${cp.email ? ` · ${cp.email}` : ""}</div>` : ""}
+        <div class="header-logo">
+          ${logoHtml}
+          <div class="header-contact">
+            ${cp.address ? `${cp.address}<br>` : ""}
+            ${cp.phone ? `${cp.phone}` : ""}${cp.email ? `${cp.phone ? " &nbsp;·&nbsp; " : ""}${cp.email}` : ""}
+            ${cp.siret ? `<br>SIRET ${cp.siret}` : ""}
           </div>
         </div>
         <div class="header-right">
-          <div class="invoice-label">Facture</div>
-          <div class="invoice-number">${invoiceRef}</div>
-          <div class="invoice-date">Émise le ${date}</div>
-          <div class="status-badge ${isSolde ? "status-paid" : "status-due"}">${isSolde ? "✓ SOLDÉE" : "⚠ À RÉGLER"}</div>
+          <div class="header-facture-label">FACTURE</div>
+          <div class="header-ref">${invoiceRef}</div>
+          <div class="header-date">Émise le ${date}</div>
+          <div><span class="status-pill ${isSolde ? "pill-paid" : "pill-due"}">${isSolde ? "✓ Soldée" : "⚠ À régler"}</span></div>
         </div>
       </div>
 
-      <!-- BODY -->
-      <div class="body">
+      <div class="sep"></div>
 
-        <!-- PARTIES -->
-        <div class="parties">
-          <div class="party-box emetteur">
-            <div class="party-label">Prestataire</div>
-            <div class="party-name">${shortName}</div>
-            <div class="party-info">
-              ${cp.address ? `${cp.address}<br>` : ""}
-              ${cp.phone ? `<strong>Tél</strong> ${cp.phone}<br>` : ""}
-              ${cp.email ? `<strong>Email</strong> ${cp.email}<br>` : ""}
-              ${cp.siret ? `<strong>SIRET</strong> ${cp.siret}` : "Atelier de réparation mobile"}
-            </div>
-          </div>
-          <div class="party-box client">
-            <div class="party-label">Client</div>
-            <div class="party-name">${group.client?.name || "—"}</div>
-            <div class="party-info">
-              ${group.client?.phone && group.client.phone !== "NC" ? `<strong>Tél</strong> ${group.client.phone}<br>` : ""}
-              ${group.client?.email && group.client.email !== "NC" ? `<strong>Email</strong> ${group.client.email}<br>` : ""}
-              ${group.client?.client_code ? `<strong>Réf client</strong> ${group.client.client_code}` : ""}
-            </div>
+      <!-- PARTIES -->
+      <div class="parties">
+        <div class="party">
+          <div class="party-tag">Prestataire</div>
+          <div class="party-name">${shortName}</div>
+          <div class="party-info">
+            ${cp.address ? `${cp.address}<br>` : ""}
+            ${cp.phone ? `${cp.phone}<br>` : ""}
+            ${cp.email ? `${cp.email}` : ""}
           </div>
         </div>
+        <div class="party">
+          <div class="party-tag">Facturé à</div>
+          <div class="party-name">${group.client?.name || "—"}</div>
+          <div class="party-info">
+            ${group.client?.phone && group.client.phone !== "NC" ? `${group.client.phone}<br>` : ""}
+            ${group.client?.email && group.client.email !== "NC" ? `${group.client.email}<br>` : ""}
+            ${group.client?.client_code ? `Réf. ${group.client.client_code}` : ""}
+          </div>
+        </div>
+      </div>
 
-        <!-- TABLE -->
+      <!-- TABLE -->
+      <div class="table-wrap">
         <table>
           <thead>
             <tr>
-              <th style="width:100px">Réf.</th>
-              <th>Appareil &amp; Prestation</th>
-              <th class="r" style="width:90px">Prix HT</th>
-              <th class="r" style="width:70px">TVA</th>
-              <th class="r" style="width:100px">Total TTC</th>
+              <th style="width:90px">Réf.</th>
+              <th>Prestation</th>
+              <th class="r" style="width:85px">HT</th>
+              <th class="r" style="width:60px">TVA</th>
+              <th class="r" style="width:95px">TTC</th>
             </tr>
           </thead>
           <tbody>
             ${group.repairs.map((r) => `
               <tr>
-                <td><span class="ticket-ref">MBX-${r.id}</span></td>
-                <td>
-                  <div class="device-name">${r.device}</div>
-                  <div class="issue-text">${r.issue}</div>
-                </td>
+                <td><span class="ref-chip">MBX-${r.id}</span></td>
+                <td><div class="dev">${r.device}</div><div class="iss">${r.issue}</div></td>
                 <td class="r">${r.priceHt.toFixed(2)} €</td>
-                <td class="r">${r.tvaRate > 0 ? r.tvaRate + "%" : "<span style='color:#9ca3af'>—</span>"}</td>
-                <td class="r price">${r.totalTtc.toFixed(2)} €</td>
+                <td class="r">${r.tvaRate > 0 ? r.tvaRate + "%" : `<span style="color:#cbd5e1">—</span>`}</td>
+                <td class="r amount">${r.totalTtc.toFixed(2)} €</td>
               </tr>`).join("")}
           </tbody>
         </table>
+      </div>
 
-        <!-- TOTAUX -->
-        <div class="totals-wrap">
-          <div class="totals-box">
-            <div class="totals-row head"><span>Sous-total HT</span><span>${totalHt.toFixed(2)} €</span></div>
-            ${totalTva > 0.01 ? `<div class="totals-row"><span>TVA</span><span>${totalTva.toFixed(2)} €</span></div>` : `<div class="totals-row"><span>TVA</span><span style="color:#9ca3af">Non applicable</span></div>`}
-            <div class="totals-row ttc-row"><span>Total TTC</span><span>${group.totalTtc.toFixed(2)} €</span></div>
-            ${group.totalPaid > 0 ? `<div class="totals-row paid-row"><span>Déjà réglé</span><span>− ${group.totalPaid.toFixed(2)} €</span></div>` : ""}
-            <div class="totals-row due-row"><span>${isSolde ? "✓ Soldée" : "Reste à payer"}</span><span>${group.totalRemaining.toFixed(2)} €</span></div>
-            ${isSolde && payMethodDisplay ? `<div class="totals-row" style="background:#f8fafc;font-size:12px;color:#6b7280"><span>Mode de règlement</span><span style="font-weight:600;color:#374151">${payMethodDisplay}</span></div>` : ""}
-          </div>
+      <!-- TOTAUX -->
+      <div class="bottom-wrap">
+        <div class="totals">
+          <div class="t-row ht"><span>Sous-total HT</span><span>${totalHt.toFixed(2)} €</span></div>
+          ${totalTva > 0.01
+            ? `<div class="t-row tva-row"><span>TVA</span><span>${totalTva.toFixed(2)} €</span></div>`
+            : `<div class="t-row tva-row"><span>TVA</span><span style="color:#cbd5e1">—</span></div>`}
+          <div class="t-row ttc"><span>Total TTC</span><span>${group.totalTtc.toFixed(2)} €</span></div>
+          ${group.totalPaid > 0 ? `<div class="t-row paid"><span>Déjà réglé</span><span>− ${group.totalPaid.toFixed(2)} €</span></div>` : ""}
+          <div class="t-row due"><span>${isSolde ? "✓ Soldée" : "Reste à payer"}</span><span>${group.totalRemaining.toFixed(2)} €</span></div>
+          ${isSolde && payMethodDisplay ? `<div class="t-row method"><span>Règlement</span><span>${payMethodDisplay}</span></div>` : ""}
         </div>
-
-      </div><!-- /body -->
+      </div>
 
       <!-- FOOTER -->
       <div class="footer">
-        <div class="footer-left">
-          <strong>Conditions de paiement</strong> : à réception de facture
-        </div>
-        <div class="footer-ref">${invoiceRef} · ${date}</div>
+        <span class="footer-txt">Conditions de paiement : à réception de facture</span>
+        <span class="footer-ref">${invoiceRef} · ${date}</span>
       </div>
 
-    </div><!-- /page -->
-    <button class="print-btn no-print" onclick="window.print()">🖨️ Imprimer / Enregistrer en PDF</button>
+    </div>
+    <button class="print-btn no-print" onclick="window.print()">🖨️ Imprimer / PDF</button>
     </body></html>`);
     win.document.close();
   };

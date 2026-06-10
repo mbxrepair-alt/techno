@@ -318,34 +318,33 @@ export default function AssistantPro() {
         }`}
       />
 
-      {/* ── Floating toggle button ── */}
-      <div className="fixed bottom-6 right-6 z-50">
-        {!isOpen && (
-          <>
-            <span className="absolute inset-0 rounded-full bg-orange-500/50 animate-ping" />
-            <span
-              className="absolute inset-0 rounded-full bg-orange-400/25 animate-ping"
-              style={{ animationDelay: "600ms" }}
-            />
-          </>
-        )}
+      {/* ── Side tab trigger ── */}
+      <div className="fixed top-1/2 -translate-y-1/2 right-0 z-50">
         <button
           onClick={() => setIsOpen((o) => !o)}
           aria-label={isOpen ? "Fermer l'assistant" : "Ouvrir l'assistant"}
-          className="relative w-14 h-14 rounded-full bg-gradient-to-br from-orange-500 to-orange-600 text-white flex items-center justify-center shadow-[0_0_30px_rgba(249,115,22,0.55)] hover:shadow-[0_0_50px_rgba(249,115,22,0.75)] hover:scale-110 active:scale-95 transition-all duration-300"
+          className="relative flex flex-col items-center justify-center gap-1 w-8 py-5 rounded-l-xl bg-gradient-to-b from-orange-500 to-orange-600 text-white shadow-[-4px_0_20px_rgba(249,115,22,0.45)] hover:shadow-[-4px_0_30px_rgba(249,115,22,0.7)] hover:w-10 active:scale-95 transition-all duration-300 group"
         >
-          {isOpen ? (
-            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M9 5l7 7-7 7" />
-            </svg>
-          ) : (
-            <>
-              <span className="text-xs font-black tracking-tight leading-none">✨ IA</span>
-              {hasUnread && (
-                <span className="absolute -top-0.5 -right-0.5 w-4 h-4 rounded-full bg-red-500 border-2 border-white animate-bounce" />
-              )}
-            </>
+          {/* Unread dot */}
+          {hasUnread && !isOpen && (
+            <span className="absolute -top-1 -left-1 w-3 h-3 rounded-full bg-red-500 border-2 border-black animate-bounce" />
           )}
+          {/* Arrow */}
+          <svg
+            className={`w-3.5 h-3.5 transition-transform duration-300 ${isOpen ? "rotate-0" : "rotate-180"}`}
+            fill="none"
+            stroke="currentColor"
+            viewBox="0 0 24 24"
+          >
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M9 5l7 7-7 7" />
+          </svg>
+          {/* Label vertical */}
+          <span
+            className="text-[10px] font-black tracking-widest leading-none"
+            style={{ writingMode: "vertical-rl", textOrientation: "mixed", transform: "rotate(180deg)" }}
+          >
+            ✨ IA
+          </span>
         </button>
       </div>
 

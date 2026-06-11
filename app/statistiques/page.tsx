@@ -1,4 +1,4 @@
-﻿"use client";
+"use client";
 
 import { useState, useEffect } from "react";
 import { supabase, getCurrentUser } from "../../lib/supabase";
@@ -49,7 +49,7 @@ export default function StatistiquesPage() {
   }, [period]);
 
   const loadCurrentTechnician = async () => {
-    const techPermissions = sessionStorage.getItem("technician_permissions");
+    const techPermissions = localStorage.getItem("technician_permissions");
     if (techPermissions) {
       const tech = JSON.parse(techPermissions);
       setCurrentTechnician(tech);

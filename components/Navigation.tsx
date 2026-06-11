@@ -59,7 +59,7 @@ export default function Navigation({ user, permissions }: NavigationProps) {
 
   useEffect(() => {
     setIsGerant(permissions?.is_gerant === true);
-    const techName = sessionStorage.getItem("technician_name");
+    const techName = localStorage.getItem("technician_name");
     if (techName) setTechnicianName(techName);
     else if (user?.email) setTechnicianName(user.email.split("@")[0]);
     loadCompanyInfo();
@@ -84,7 +84,7 @@ export default function Navigation({ user, permissions }: NavigationProps) {
 
   const handleLogout = async () => {
     await supabase.auth.signOut();
-    sessionStorage.clear();
+    localStorage.clear();
     document.cookie = "mbx_token=; path=/; max-age=0";
     document.cookie = "mbx_auth_token=; path=/; max-age=0";
     window.location.href = "/login";

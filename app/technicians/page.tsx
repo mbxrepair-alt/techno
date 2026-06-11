@@ -1,4 +1,4 @@
-﻿"use client";
+"use client";
 
 import { useState, useEffect } from "react";
 import { supabase, getCurrentUser } from "../../lib/supabase";
@@ -18,8 +18,8 @@ export default function TechniciansPage() {
   const [currentTech, setCurrentTech] = useState(null);
 
   useEffect(() => {
-    const storedCompanyId = sessionStorage.getItem("company_id");
-    const storedTech = sessionStorage.getItem("technician_permissions");
+    const storedCompanyId = localStorage.getItem("company_id");
+    const storedTech = localStorage.getItem("technician_permissions");
 
     console.log("company_id récupéré:", storedCompanyId);
     console.log("technician_permissions:", storedTech);

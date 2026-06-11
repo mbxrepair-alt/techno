@@ -298,12 +298,12 @@ export default function RepairDetailPage() {
       const user = await getCurrentUser();
       if (!user) return;
 
-      // Récupérer le vrai nom du technicien connecté depuis sessionStorage
+      // Récupérer le vrai nom du technicien connecté depuis localStorage
       let userName = user.email?.split("@")[0] || "Utilisateur";
       let technicianId = null;
 
       if (typeof window !== "undefined") {
-        const techPermissions = sessionStorage.getItem("technician_permissions");
+        const techPermissions = localStorage.getItem("technician_permissions");
         if (techPermissions) {
           const tech = JSON.parse(techPermissions);
           if (tech && tech.name) {

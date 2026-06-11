@@ -1,4 +1,4 @@
-﻿"use client";
+"use client";
 
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
@@ -101,7 +101,7 @@ export default function LoginPage() {
         return;
       }
 
-      sessionStorage.setItem(
+      localStorage.setItem(
         "technician_permissions",
         JSON.stringify({
           id: tech.id,
@@ -116,8 +116,8 @@ export default function LoginPage() {
         })
       );
 
-      sessionStorage.setItem("technician_name", tech.name);
-      sessionStorage.setItem("company_id", tempUser.id);
+      localStorage.setItem("technician_name", tech.name);
+      localStorage.setItem("company_id", tempUser.id);
 
       document.cookie = `mbx_token=${tech.id}; path=/; max-age=86400`;
       document.cookie = `mbx_auth_token=${tech.id}; path=/; max-age=86400`;
@@ -146,9 +146,9 @@ export default function LoginPage() {
 
   const handleBack = () => {
     clearCookies();
-    sessionStorage.removeItem("technician_permissions");
-    sessionStorage.removeItem("technician_name");
-    sessionStorage.removeItem("company_id");
+    localStorage.removeItem("technician_permissions");
+    localStorage.removeItem("technician_name");
+    localStorage.removeItem("company_id");
     setStep(1);
     setCode("");
     setTempUser(null);

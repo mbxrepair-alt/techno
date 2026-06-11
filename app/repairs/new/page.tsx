@@ -1,4 +1,4 @@
-﻿"use client";
+"use client";
 
 import { useState } from "react";
 import SmartTextarea from "../../../components/SmartTextarea";
@@ -18,7 +18,7 @@ export default function NewRepairPage() {
     try {
       // Récupérer le technicien connecté
       let userName = "Technicien inconnu";
-      const techPermissions = sessionStorage.getItem("technician_permissions");
+      const techPermissions = localStorage.getItem("technician_permissions");
       if (techPermissions) {
         const tech = JSON.parse(techPermissions);
         if (tech && tech.name) {

@@ -36,7 +36,7 @@ export default function Layout({ children }: LayoutProps) {
 
   useEffect(() => {
     const checkAuth = async () => {
-      const techPermissions = sessionStorage.getItem("technician_permissions");
+      const techPermissions = localStorage.getItem("technician_permissions");
       if (techPermissions) {
         setPermissions(JSON.parse(techPermissions));
       }

@@ -1,4 +1,4 @@
-﻿"use client";
+"use client";
 
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
@@ -43,7 +43,7 @@ export default function SettingsPage() {
   const loadData = async () => {
     try {
       // Récupérer les permissions
-      const techPermissions = sessionStorage.getItem("technician_permissions");
+      const techPermissions = localStorage.getItem("technician_permissions");
       if (techPermissions) {
         const tech = JSON.parse(techPermissions);
         setPermissions(tech);

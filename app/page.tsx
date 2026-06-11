@@ -124,11 +124,14 @@ export default function HomePage() {
                   </div>
                 </div>
                 <div className="leading-tight">
-                  <span className="text-white font-black text-2xl tracking-tight drop-shadow-[0_0_15px_rgba(255,255,255,0.3)]">
+                  <span className="text-white font-black text-2xl tracking-tight drop-shadow-[0_0_15px_rgba(255,255,255,0.3)] leading-none block">
                     MBX
                   </span>
-                  <span className="text-orange-400 text-[9px] block -mt-1 font-bold tracking-[0.15em] drop-shadow-[0_0_4px_rgba(249,115,22,0.8)]">
-                    CENTRE DE RÉPARATION
+                  <span className="text-orange-400 text-[10px] block mt-0.5 font-bold tracking-[0.2em] leading-tight drop-shadow-[0_0_4px_rgba(249,115,22,0.8)]">
+                    CENTRE
+                  </span>
+                  <span className="text-orange-400 text-[10px] block font-bold tracking-[0.2em] leading-tight drop-shadow-[0_0_4px_rgba(249,115,22,0.8)]">
+                    DE RÉPARATION
                   </span>
                 </div>
               </div>

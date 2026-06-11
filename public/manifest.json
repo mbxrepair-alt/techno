@@ -1,7 +1,10 @@
 {
+  "id": "/",
   "name": "MBX Réparations",
   "short_name": "MBX",
   "description": "Gestion atelier réparation mobile",
+  "lang": "fr",
+  "dir": "ltr",
   "start_url": "/login",
   "scope": "/",
   "display": "standalone",
@@ -21,7 +24,19 @@
       "src": "/icons/icon-512x512.png",
       "sizes": "512x512",
       "type": "image/png",
-      "purpose": "any maskable"
+      "purpose": "any"
+    },
+    {
+      "src": "/icons/icon-192-maskable.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "maskable"
+    },
+    {
+      "src": "/icons/icon-512-maskable.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "maskable"
     }
   ],
   "shortcuts": [

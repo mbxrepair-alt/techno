@@ -137,49 +137,49 @@ export default function HomePage() {
               <nav className="hidden lg:flex items-center gap-1 bg-white/5 backdrop-blur-xl rounded-full p-1 border border-white/10 shadow-2xl">
                 <a
                   href="/client/soumettre-appareil"
-                  className="relative px-4 py-2 rounded-full text-sm font-medium text-gray-300 hover:text-white transition-all duration-300 group/item overflow-hidden"
+                  className="relative px-3 py-2 rounded-full text-sm font-medium text-gray-300 hover:text-white transition-all duration-300 group/item overflow-hidden"
                 >
                   <span className="absolute inset-0 bg-gradient-to-r from-orange-600 to-orange-500 opacity-0 group-hover/item:opacity-100 transition-opacity duration-300 rounded-full"></span>
                   <span className="relative z-10 flex items-center gap-2">📱 Déclarer</span>
                 </a>
                 <button
                   onClick={openTrackingModal}
-                  className="relative px-4 py-2 rounded-full text-sm font-medium text-gray-300 hover:text-white transition-all duration-300 group/item overflow-hidden"
+                  className="relative px-3 py-2 rounded-full text-sm font-medium text-gray-300 hover:text-white transition-all duration-300 group/item overflow-hidden"
                 >
                   <span className="absolute inset-0 bg-gradient-to-r from-orange-600 to-orange-500 opacity-0 group-hover/item:opacity-100 transition-opacity duration-300 rounded-full"></span>
                   <span className="relative z-10 flex items-center gap-2">🔍 Suivre</span>
                 </button>
                 <a
                   href="#reparations"
-                  className="relative px-4 py-2 rounded-full text-sm font-medium text-gray-300 hover:text-white transition-all duration-300 group/item overflow-hidden"
+                  className="relative px-3 py-2 rounded-full text-sm font-medium text-gray-300 hover:text-white transition-all duration-300 group/item overflow-hidden"
                 >
                   <span className="absolute inset-0 bg-gradient-to-r from-orange-600 to-orange-500 opacity-0 group-hover/item:opacity-100 transition-opacity duration-300 rounded-full"></span>
                   <span className="relative z-10 flex items-center gap-2">⚡ Réparations</span>
                 </a>
                 <a
                   href="#centre"
-                  className="relative px-4 py-2 rounded-full text-sm font-medium text-gray-300 hover:text-white transition-all duration-300 group/item overflow-hidden"
+                  className="relative px-3 py-2 rounded-full text-sm font-medium text-gray-300 hover:text-white transition-all duration-300 group/item overflow-hidden"
                 >
                   <span className="absolute inset-0 bg-gradient-to-r from-orange-600 to-orange-500 opacity-0 group-hover/item:opacity-100 transition-opacity duration-300 rounded-full"></span>
                   <span className="relative z-10 flex items-center gap-2">🔧 Centre</span>
                 </a>
                 <a
                   href="#formation"
-                  className="relative px-4 py-2 rounded-full text-sm font-medium text-gray-300 hover:text-white transition-all duration-300 group/item overflow-hidden"
+                  className="relative px-3 py-2 rounded-full text-sm font-medium text-gray-300 hover:text-white transition-all duration-300 group/item overflow-hidden"
                 >
                   <span className="absolute inset-0 bg-gradient-to-r from-orange-600 to-orange-500 opacity-0 group-hover/item:opacity-100 transition-opacity duration-300 rounded-full"></span>
                   <span className="relative z-10 flex items-center gap-2">🎓 Formation</span>
                 </a>
                 <a
                   href="#envoi"
-                  className="relative px-4 py-2 rounded-full text-sm font-medium text-gray-300 hover:text-white transition-all duration-300 group/item overflow-hidden"
+                  className="relative px-3 py-2 rounded-full text-sm font-medium text-gray-300 hover:text-white transition-all duration-300 group/item overflow-hidden"
                 >
                   <span className="absolute inset-0 bg-gradient-to-r from-orange-600 to-orange-500 opacity-0 group-hover/item:opacity-100 transition-opacity duration-300 rounded-full"></span>
                   <span className="relative z-10">📦 Envoi</span>
                 </a>
                 <a
                   href="#contact"
-                  className="relative px-4 py-2 rounded-full text-sm font-medium text-gray-300 hover:text-white transition-all duration-300 group/item overflow-hidden"
+                  className="relative px-3 py-2 rounded-full text-sm font-medium text-gray-300 hover:text-white transition-all duration-300 group/item overflow-hidden"
                 >
                   <span className="absolute inset-0 bg-gradient-to-r from-orange-600 to-orange-500 opacity-0 group-hover/item:opacity-100 transition-opacity duration-300 rounded-full"></span>
                   <span className="relative z-10 flex items-center gap-2">💬 Contact</span>
@@ -188,18 +188,17 @@ export default function HomePage() {
 
               {/* BOUTONS À DROITE */}
               <div className="flex items-center gap-2">
-              {/* TÉLÉCHARGER L'APP ANDROID */}
+              {/* TÉLÉCHARGER L'APP ANDROID (compact) */}
               <a
                 href="/mbx.apk"
                 download
-                className="relative group/dl flex items-center gap-2 px-4 py-2 bg-white/5 border border-orange-500/40 text-white rounded-full text-sm font-bold tracking-wider transition-all duration-300 hover:bg-orange-500/15 hover:border-orange-500/70 hover:scale-105"
+                className="group/dl flex items-center gap-1.5 px-3 py-1.5 bg-white/5 border border-white/10 text-gray-200 rounded-full text-xs font-semibold transition-all duration-300 hover:bg-orange-500/10 hover:border-orange-500/40 hover:text-white"
                 title="Télécharger l'application Android"
               >
-                <svg className="w-4 h-4 text-orange-400" fill="currentColor" viewBox="0 0 24 24">
+                <svg className="w-3.5 h-3.5 text-orange-400" fill="currentColor" viewBox="0 0 24 24">
                   <path d="M12 16l-5-5h3V4h4v7h3l-5 5zm-7 2h14v2H5v-2z" />
                 </svg>
-                <span className="hidden sm:inline">App Android</span>
-                <span className="inline sm:hidden">App</span>
+                <span className="hidden md:inline">App</span>
               </a>
               {/* ESPACE PRO À DROITE */}
               <Link

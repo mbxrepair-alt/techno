@@ -186,6 +186,21 @@ export default function HomePage() {
                 </a>
               </nav>
 
+              {/* BOUTONS À DROITE */}
+              <div className="flex items-center gap-2">
+              {/* TÉLÉCHARGER L'APP ANDROID */}
+              <a
+                href="/mbx.apk"
+                download
+                className="relative group/dl flex items-center gap-2 px-4 py-2 bg-white/5 border border-orange-500/40 text-white rounded-full text-sm font-bold tracking-wider transition-all duration-300 hover:bg-orange-500/15 hover:border-orange-500/70 hover:scale-105"
+                title="Télécharger l'application Android"
+              >
+                <svg className="w-4 h-4 text-orange-400" fill="currentColor" viewBox="0 0 24 24">
+                  <path d="M12 16l-5-5h3V4h4v7h3l-5 5zm-7 2h14v2H5v-2z" />
+                </svg>
+                <span className="hidden sm:inline">App Android</span>
+                <span className="inline sm:hidden">App</span>
+              </a>
               {/* ESPACE PRO À DROITE */}
               <Link
                 href="/login"
@@ -212,6 +227,7 @@ export default function HomePage() {
                   </svg>
                 </span>
               </Link>
+              </div>
             </div>
 
             {/* MOBILE */}

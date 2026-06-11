@@ -15,6 +15,7 @@ export default function HomePage() {
   const [showVideo, setShowVideo] = useState(false);
   const [showTrackingModal, setShowTrackingModal] = useState(false);
   const [trackingCode, setTrackingCode] = useState("");
+  const [trackingName, setTrackingName] = useState("");
 
   const handleClientTracking = async (e) => {
     e.preventDefault();
@@ -54,16 +55,49 @@ export default function HomePage() {
     setShowTrackingModal(true);
     setError("");
     setTrackingCode("");
+    setTrackingName("");
   };
 
-  const handleTrackSubmit = (e) => {
+  const handleTrackSubmit = async (e) => {
     e.preventDefault();
-    if (trackingCode.trim()) {
-      router.push(`/suivi-client?code=${trackingCode.toUpperCase()}`);
+    if (!trackingName.trim()) {
+      setError("Veuillez entrer votre nom");
+      return;
+    }
+    if (!trackingCode.trim()) {
+      setError("Veuillez entrer votre code de suivi");
+      return;
+    }
+    setLoading(true);
+    setError("");
+    try {
+      const code = trackingCode.toUpperCase().trim();
+      const { data: client, error: clientError } = await supabase
+        .from("clients")
+        .select("name, client_code")
+        .eq("client_code", code)
+        .single();
+      if (clientError || !client) {
+        setError("Code de suivi invalide. Vérifiez votre code.");
+        setLoading(false);
+        return;
+      }
+      // Vérifier que le nom saisi correspond bien au code
+      const saisi = trackingName.trim().toLowerCase();
+      const officiel = (client.name || "").trim().toLowerCase();
+      if (!officiel.includes(saisi) && !saisi.includes(officiel)) {
+        setError("Le nom ne correspond pas à ce code client.");
+        setLoading(false);
+        return;
+      }
+      router.push(`/suivi-client?code=${code}`);
       setShowTrackingModal(false);
       setTrackingCode("");
-    } else {
-      setError("Veuillez entrer votre code de suivi");
+      setTrackingName("");
+    } catch (err) {
+      setError("Erreur de connexion");
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -815,9 +849,17 @@ export default function HomePage() {
                   🔍
                 </div>
                 <h3 className="text-2xl font-bold text-white">Suivi de réparation</h3>
-                <p className="text-gray-400 mt-2">Entrez votre code client</p>
+                <p className="text-gray-400 mt-2">Entrez votre nom et votre code client</p>
               </div>
               <form onSubmit={handleTrackSubmit}>
+                <input
+                  type="text"
+                  value={trackingName}
+                  onChange={(e) => setTrackingName(e.target.value)}
+                  placeholder="👤 Votre nom (ex: Dupont)"
+                  className="w-full px-5 py-3 rounded-xl bg-gray-800/50 border border-gray-700 text-white placeholder-gray-500 mb-4 focus:outline-none focus:ring-2 focus:ring-orange-500"
+                  required
+                />
                 <input
                   type="text"
                   value={trackingCode}

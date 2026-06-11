@@ -127,8 +127,8 @@ export default function HomePage() {
                   <span className="text-white font-black text-2xl tracking-tight drop-shadow-[0_0_15px_rgba(255,255,255,0.3)]">
                     MBX
                   </span>
-                  <span className="text-orange-400 text-[10px] block -mt-1 font-bold tracking-[0.2em] drop-shadow-[0_0_4px_rgba(249,115,22,0.8)]">
-                    RÉPARATIONS
+                  <span className="text-orange-400 text-[9px] block -mt-1 font-bold tracking-[0.15em] drop-shadow-[0_0_4px_rgba(249,115,22,0.8)]">
+                    CENTRE DE RÉPARATION
                   </span>
                 </div>
               </div>

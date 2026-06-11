@@ -7,6 +7,75 @@ import Layout from "../../../components/Layout";
 import SmartTextarea from "../../../components/SmartTextarea";
 import QRCode from "qrcode";
 
+// Schema de deverrouillage (niveau module - evite la re-creation a chaque render)
+function PatternSmall({ pattern }) {
+    if (!pattern) return null;
+    const pointsIds = pattern.split("-").map(Number);
+    const points = [
+      { id: 1, x: 10, y: 10 },
+      { id: 2, x: 50, y: 10 },
+      { id: 3, x: 90, y: 10 },
+      { id: 4, x: 10, y: 50 },
+      { id: 5, x: 50, y: 50 },
+      { id: 6, x: 90, y: 50 },
+      { id: 7, x: 10, y: 90 },
+      { id: 8, x: 50, y: 90 },
+      { id: 9, x: 90, y: 90 },
+    ];
+    const getLines = () => {
+      const lines = [];
+      for (let i = 0; i < pointsIds.length - 1; i++) {
+        const from = points.find((p) => p.id === pointsIds[i]);
+        const to = points.find((p) => p.id === pointsIds[i + 1]);
+        if (from && to) lines.push({ from, to });
+      }
+      return lines;
+    };
+    return (
+      <div className="w-14 h-14 relative">
+        {pointsIds.length > 0 && (
+          <div className="absolute -top-1 -left-1 w-3 h-3 bg-green-500 rounded-full shadow-[0_0_8px_rgba(34,197,94,0.8)] animate-pulse"></div>
+        )}
+        <div className="w-full h-full relative bg-gray-800 rounded-lg border border-gray-700 shadow-sm">
+          <svg className="absolute inset-0 w-full h-full">
+            {getLines().map((line, idx) => (
+              <line
+                key={idx}
+                x1={`${line.from.x}%`}
+                y1={`${line.from.y}%`}
+                x2={`${line.to.x}%`}
+                y2={`${line.to.y}%`}
+                stroke="#3b82f6"
+                strokeWidth="2.5"
+                strokeLinecap="round"
+              />
+            ))}
+          </svg>
+          {points.map((point) => {
+            const isSelected = pointsIds.includes(point.id);
+            const isStart = point.id === pointsIds[0];
+            const isEnd = point.id === pointsIds[pointsIds.length - 1];
+            return (
+              <div
+                key={point.id}
+                className={`absolute w-3.5 h-3.5 -ml-1.5 -mt-1.5 rounded-full transition-all duration-200 ${
+                  isSelected
+                    ? isStart
+                      ? "bg-green-500 ring-2 ring-green-300 shadow-[0_0_10px_rgba(34,197,94,0.6)]"
+                      : isEnd
+                        ? "bg-red-500 ring-2 ring-red-300 shadow-[0_0_10px_rgba(239,68,68,0.6)]"
+                        : "bg-orange-500 ring-2 ring-orange-300 shadow-[0_0_8px_rgba(249,115,22,0.5)]"
+                    : "bg-gray-600 border-2 border-gray-500"
+                }`}
+                style={{ left: `${point.x}%`, top: `${point.y}%` }}
+              />
+            );
+          })}
+        </div>
+      </div>
+    );
+}
+
 export default function RepairDetailPage() {
   const router = useRouter();
   const params = useParams();
@@ -565,73 +634,6 @@ export default function RepairDetailPage() {
   };
   const currentStep = getCurrentStep();
 
-  const PatternSmall = ({ pattern }) => {
-    if (!pattern) return null;
-    const pointsIds = pattern.split("-").map(Number);
-    const points = [
-      { id: 1, x: 10, y: 10 },
-      { id: 2, x: 50, y: 10 },
-      { id: 3, x: 90, y: 10 },
-      { id: 4, x: 10, y: 50 },
-      { id: 5, x: 50, y: 50 },
-      { id: 6, x: 90, y: 50 },
-      { id: 7, x: 10, y: 90 },
-      { id: 8, x: 50, y: 90 },
-      { id: 9, x: 90, y: 90 },
-    ];
-    const getLines = () => {
-      const lines = [];
-      for (let i = 0; i < pointsIds.length - 1; i++) {
-        const from = points.find((p) => p.id === pointsIds[i]);
-        const to = points.find((p) => p.id === pointsIds[i + 1]);
-        if (from && to) lines.push({ from, to });
-      }
-      return lines;
-    };
-    return (
-      <div className="w-14 h-14 relative">
-        {pointsIds.length > 0 && (
-          <div className="absolute -top-1 -left-1 w-3 h-3 bg-green-500 rounded-full shadow-[0_0_8px_rgba(34,197,94,0.8)] animate-pulse"></div>
-        )}
-        <div className="w-full h-full relative bg-gray-800 rounded-lg border border-gray-700 shadow-sm">
-          <svg className="absolute inset-0 w-full h-full">
-            {getLines().map((line, idx) => (
-              <line
-                key={idx}
-                x1={`${line.from.x}%`}
-                y1={`${line.from.y}%`}
-                x2={`${line.to.x}%`}
-                y2={`${line.to.y}%`}
-                stroke="#3b82f6"
-                strokeWidth="2.5"
-                strokeLinecap="round"
-              />
-            ))}
-          </svg>
-          {points.map((point) => {
-            const isSelected = pointsIds.includes(point.id);
-            const isStart = point.id === pointsIds[0];
-            const isEnd = point.id === pointsIds[pointsIds.length - 1];
-            return (
-              <div
-                key={point.id}
-                className={`absolute w-3.5 h-3.5 -ml-1.5 -mt-1.5 rounded-full transition-all duration-200 ${
-                  isSelected
-                    ? isStart
-                      ? "bg-green-500 ring-2 ring-green-300 shadow-[0_0_10px_rgba(34,197,94,0.6)]"
-                      : isEnd
-                        ? "bg-red-500 ring-2 ring-red-300 shadow-[0_0_10px_rgba(239,68,68,0.6)]"
-                        : "bg-orange-500 ring-2 ring-orange-300 shadow-[0_0_8px_rgba(249,115,22,0.5)]"
-                    : "bg-gray-600 border-2 border-gray-500"
-                }`}
-                style={{ left: `${point.x}%`, top: `${point.y}%` }}
-              />
-            );
-          })}
-        </div>
-      </div>
-    );
-  };
 
   if (loading) {
     return (

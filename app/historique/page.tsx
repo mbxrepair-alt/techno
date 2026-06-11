@@ -1,4 +1,4 @@
-﻿"use client";
+"use client";
 
 import { useEffect, useState, useCallback, useMemo } from "react";
 import { supabase, getCurrentUser } from "../../lib/supabase";
@@ -115,6 +115,104 @@ const formatDateTime = (dateString) => {
     second: "2-digit",
   });
 };
+
+// Composant d'affichage de l'historique complet (niveau module - evite la re-creation a chaque render)
+function FullHistoryTimeline({ historique, getUserDisplayName }) {
+    if (!historique || historique.length === 0) {
+      return (
+        <div className="text-center py-8 text-gray-500">
+          <p className="text-2xl mb-2">📭</p>
+          <p className="text-sm">Aucun historique enregistré pour cet appareil</p>
+          <p className="text-xs mt-2 text-gray-600">Les actions seront tracées automatiquement</p>
+        </div>
+      );
+    }
+
+    const getActionIcon = (action) => {
+      const icons = {
+        creation: "📦",
+        modification: "✏️",
+        changement_statut: "🔄",
+        changement_technicien: "👨‍🔧",
+        commentaire: "💬",
+      };
+      return icons[action] || "📌";
+    };
+
+    const getActionColor = (action) => {
+      const colors = {
+        creation: "border-green-500 bg-green-500/10",
+        modification: "border-blue-500 bg-blue-500/10",
+        changement_statut: "border-purple-500 bg-purple-500/10",
+        changement_technicien: "border-amber-500 bg-amber-500/10",
+        commentaire: "border-gray-500 bg-white/5",
+      };
+      return colors[action] || "border-gray-500 bg-white/5";
+    };
+
+    const getActionTitle = (action) => {
+      const titles = {
+        creation: "📦 Saisie initiale",
+        modification: "✏️ Modification",
+        changement_statut: "🔄 Changement de statut",
+        changement_technicien: "👨‍🔧 Changement de technicien",
+        commentaire: "💬 Commentaire",
+      };
+      return titles[action] || action;
+    };
+
+    return (
+      <div className="relative">
+        <div className="absolute left-4 top-0 bottom-0 w-0.5 bg-white/10"></div>
+
+        {historique.map((entry, index) => (
+          <div key={entry.id} className="relative mb-4 flex items-start group">
+            <div className={`absolute left-2 w-4 h-4 rounded-full border-2 border-[#1a1d2e] z-10 ${getActionColor(entry.action)}`}>
+              <div className={`w-full h-full rounded-full ${getActionColor(entry.action)}`}></div>
+            </div>
+
+            <div className={`ml-10 flex-1 rounded-xl p-4 border-l-4 ${getActionColor(entry.action)} transition`}>
+              <div className="flex justify-between items-start mb-2 flex-wrap gap-2">
+                <div className="flex items-center gap-2">
+                  <span className="text-xl">{getActionIcon(entry.action)}</span>
+                  <span className="font-bold text-white text-sm">{getActionTitle(entry.action)}</span>
+                </div>
+                <div className="text-xs text-gray-500 bg-white/5 px-2 py-1 rounded-full">
+                  ⏱️ {formatDateTime(entry.created_at)}
+                </div>
+              </div>
+
+              <p className="text-gray-400 text-sm mb-2">{entry.description}</p>
+
+              {entry.old_value && entry.new_value && (
+                <div className="bg-white/5 rounded-lg p-2 text-xs mt-2">
+                  <span className="text-gray-500">🔄</span>{" "}
+                  <span className="text-red-400 line-through">{entry.old_value}</span>
+                  {" → "}
+                  <span className="text-green-400 font-medium">{entry.new_value}</span>
+                </div>
+              )}
+
+              <div className="flex justify-between items-center mt-2 pt-2 border-t border-white/10">
+                <div className="flex items-center gap-2 text-xs">
+                  <span className="text-gray-500">👤 {getUserDisplayName(entry)}</span>
+                  <span className={`px-2 py-0.5 rounded-full text-xs ${entry.user_type === "client" ? "bg-green-500/15 text-green-400" : "bg-amber-500/15 text-amber-400"}`}>
+                    {entry.user_type === "client" ? "Client" : "Technicien"}
+                  </span>
+                </div>
+                <button onClick={() => navigator.clipboard.writeText(entry.description)} className="text-gray-500 hover:text-gray-300 text-xs transition" title="Copier">📋</button>
+              </div>
+            </div>
+          </div>
+        ))}
+
+        {/* Résumé */}
+        <div className="ml-10 mt-4 p-3 bg-amber-500/10 border border-amber-500/20 rounded-xl text-center text-sm text-amber-400">
+          📊 {historique.length} action(s) enregistrée(s)
+        </div>
+      </div>
+    );
+}
 
 export default function HistoriquePage() {
   const router = useRouter();
@@ -367,103 +465,6 @@ export default function HistoriquePage() {
     return `🔧 ${entry.user_name || entry.user_email?.split("@")[0] || "Technicien"}`;
   };
 
-  // Composant d'affichage de l'historique complet avec DATE et HEURE
-  const FullHistoryTimeline = ({ historique }) => {
-    if (!historique || historique.length === 0) {
-      return (
-        <div className="text-center py-8 text-gray-500">
-          <p className="text-2xl mb-2">📭</p>
-          <p className="text-sm">Aucun historique enregistré pour cet appareil</p>
-          <p className="text-xs mt-2 text-gray-600">Les actions seront tracées automatiquement</p>
-        </div>
-      );
-    }
-
-    const getActionIcon = (action) => {
-      const icons = {
-        creation: "📦",
-        modification: "✏️",
-        changement_statut: "🔄",
-        changement_technicien: "👨‍🔧",
-        commentaire: "💬",
-      };
-      return icons[action] || "📌";
-    };
-
-    const getActionColor = (action) => {
-      const colors = {
-        creation: "border-green-500 bg-green-500/10",
-        modification: "border-blue-500 bg-blue-500/10",
-        changement_statut: "border-purple-500 bg-purple-500/10",
-        changement_technicien: "border-amber-500 bg-amber-500/10",
-        commentaire: "border-gray-500 bg-white/5",
-      };
-      return colors[action] || "border-gray-500 bg-white/5";
-    };
-
-    const getActionTitle = (action) => {
-      const titles = {
-        creation: "📦 Saisie initiale",
-        modification: "✏️ Modification",
-        changement_statut: "🔄 Changement de statut",
-        changement_technicien: "👨‍🔧 Changement de technicien",
-        commentaire: "💬 Commentaire",
-      };
-      return titles[action] || action;
-    };
-
-    return (
-      <div className="relative">
-        <div className="absolute left-4 top-0 bottom-0 w-0.5 bg-white/10"></div>
-
-        {historique.map((entry, index) => (
-          <div key={entry.id} className="relative mb-4 flex items-start group">
-            <div className={`absolute left-2 w-4 h-4 rounded-full border-2 border-[#1a1d2e] z-10 ${getActionColor(entry.action)}`}>
-              <div className={`w-full h-full rounded-full ${getActionColor(entry.action)}`}></div>
-            </div>
-
-            <div className={`ml-10 flex-1 rounded-xl p-4 border-l-4 ${getActionColor(entry.action)} transition`}>
-              <div className="flex justify-between items-start mb-2 flex-wrap gap-2">
-                <div className="flex items-center gap-2">
-                  <span className="text-xl">{getActionIcon(entry.action)}</span>
-                  <span className="font-bold text-white text-sm">{getActionTitle(entry.action)}</span>
-                </div>
-                <div className="text-xs text-gray-500 bg-white/5 px-2 py-1 rounded-full">
-                  ⏱️ {formatDateTime(entry.created_at)}
-                </div>
-              </div>
-
-              <p className="text-gray-400 text-sm mb-2">{entry.description}</p>
-
-              {entry.old_value && entry.new_value && (
-                <div className="bg-white/5 rounded-lg p-2 text-xs mt-2">
-                  <span className="text-gray-500">🔄</span>{" "}
-                  <span className="text-red-400 line-through">{entry.old_value}</span>
-                  {" → "}
-                  <span className="text-green-400 font-medium">{entry.new_value}</span>
-                </div>
-              )}
-
-              <div className="flex justify-between items-center mt-2 pt-2 border-t border-white/10">
-                <div className="flex items-center gap-2 text-xs">
-                  <span className="text-gray-500">👤 {getUserDisplayName(entry)}</span>
-                  <span className={`px-2 py-0.5 rounded-full text-xs ${entry.user_type === "client" ? "bg-green-500/15 text-green-400" : "bg-amber-500/15 text-amber-400"}`}>
-                    {entry.user_type === "client" ? "Client" : "Technicien"}
-                  </span>
-                </div>
-                <button onClick={() => navigator.clipboard.writeText(entry.description)} className="text-gray-500 hover:text-gray-300 text-xs transition" title="Copier">📋</button>
-              </div>
-            </div>
-          </div>
-        ))}
-
-        {/* Résumé */}
-        <div className="ml-10 mt-4 p-3 bg-amber-500/10 border border-amber-500/20 rounded-xl text-center text-sm text-amber-400">
-          📊 {historique.length} action(s) enregistrée(s)
-        </div>
-      </div>
-    );
-  };
 
   if (loading) {
     return (
@@ -724,7 +725,7 @@ export default function HistoriquePage() {
                     <span>Historique complet</span>
                     <span className="text-xs text-gray-500 ml-2">⏱️ Actions tracées</span>
                   </h3>
-                  <FullHistoryTimeline historique={appareilHistorique} />
+                  <FullHistoryTimeline historique={appareilHistorique} getUserDisplayName={getUserDisplayName} />
                 </div>
               )}
 

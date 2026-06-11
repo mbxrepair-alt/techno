@@ -1,4 +1,4 @@
-import { GoogleGenerativeAI, SchemaType } from "@google/generative-ai";
+import { GoogleGenerativeAI, SchemaType, type Schema } from "@google/generative-ai";
 import { NextRequest, NextResponse } from "next/server";
 
 const SYSTEM_PROMPT = `Tu es un extracteur de données structurées pour un atelier de réparation de smartphones, tablettes et consoles.
@@ -21,7 +21,7 @@ Règles d'extraction :
 - Champ absent ou non mentionné → null
 - Ne jamais inventer une information absente du texte`;
 
-const RESPONSE_SCHEMA = {
+const RESPONSE_SCHEMA: Schema = {
   type: SchemaType.OBJECT,
   properties: {
     clientName: { type: SchemaType.STRING, nullable: true },
@@ -29,6 +29,7 @@ const RESPONSE_SCHEMA = {
     clientEmail: { type: SchemaType.STRING, nullable: true },
     clientType: {
       type: SchemaType.STRING,
+      format: "enum",
       enum: ["particulier", "pro"],
       nullable: false,
     },

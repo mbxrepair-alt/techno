@@ -1,36 +1,25 @@
-// ─── MBX Réparations — Service Worker v3 ─────────────────────────────────────
-const CACHE_VERSION = "mbx-v3";
-const STATIC_CACHE  = `${CACHE_VERSION}-static`;
-const PAGES_CACHE   = `${CACHE_VERSION}-pages`;
+// ─── MBX Réparations — Service Worker v4 (minimal & sûr) ─────────────────────
+// Objectif : permettre l'installation PWA + un fallback hors-ligne, SANS jamais
+// mettre en cache le code de l'app (JS/CSS/pages). Les versions précédentes
+// servaient du code périmé → écrans bloqués / écran noir. Ici, tout le code
+// passe directement par le réseau : on ne peut plus servir une vieille version.
+const CACHE_VERSION = "mbx-v4";
+const STATIC_CACHE = `${CACHE_VERSION}-static`;
 
-// Ressources mises en cache immédiatement à l'installation
-// ⚠️ Ne pas précacher les routes protégées (dashboard, repairs, clients)
-// — elles nécessitent une auth et renvoient un redirect si non connecté
+// On ne précache que le strict nécessaire au mode hors-ligne.
 const PRECACHE_URLS = [
-  "/login",
   "/offline",
-  "/manifest.json",
   "/icons/icon-192x192.png",
   "/icons/icon-512x512.png",
 ];
 
-// Une réponse est-elle saine à mettre en cache ?
-// — ok (200-299) et SURTOUT non redirigée : une réponse redirected servie
-//   à une navigation throw dans le navigateur → écran noir.
-function isCacheable(res) {
-  return res && res.ok && !res.redirected && res.type !== "opaqueredirect";
-}
-
-// ── Install : précache des ressources essentielles ────────────────────────────
-// Chaque URL est mise en cache individuellement : une URL en échec ne doit pas
-// faire échouer toute l'installation du SW (cache.addAll est atomique).
 self.addEventListener("install", (e) => {
   e.waitUntil(
     caches.open(STATIC_CACHE).then((cache) =>
       Promise.all(
         PRECACHE_URLS.map((u) =>
           fetch(u, { cache: "no-cache" })
-            .then((res) => (isCacheable(res) ? cache.put(u, res) : null))
+            .then((res) => (res && res.ok ? cache.put(u, res) : null))
             .catch(() => null)
         )
       )
@@ -39,109 +28,58 @@ self.addEventListener("install", (e) => {
   self.skipWaiting();
 });
 
-// ── Activate : supprime les anciens caches (purge les caches empoisonnés) ──────
+// Purge TOUS les anciens caches MBX (v2, v3, etc.) au passage en v4.
 self.addEventListener("activate", (e) => {
   e.waitUntil(
-    caches.keys().then((keys) =>
-      Promise.all(
-        keys
-          .filter((k) => k.startsWith("mbx-") && k !== STATIC_CACHE && k !== PAGES_CACHE)
-          .map((k) => caches.delete(k))
+    caches
+      .keys()
+      .then((keys) =>
+        Promise.all(
+          keys
+            .filter((k) => k.startsWith("mbx-") && k !== STATIC_CACHE)
+            .map((k) => caches.delete(k))
+        )
       )
-    )
+      .then(() => self.clients.claim())
   );
-  self.clients.claim();
 });
 
-// ── Fetch : stratégies de cache ───────────────────────────────────────────────
 self.addEventListener("fetch", (e) => {
   const { request } = e;
-
-  // On ne gère que les GET (cache.put rejette les autres méthodes).
   if (request.method !== "GET") return;
 
   const url = new URL(request.url);
 
-  // 1. Requêtes Supabase / API → Network Only (pas de cache)
-  if (
-    url.hostname.includes("supabase.co") ||
-    url.pathname.startsWith("/api/")
-  ) {
-    return;
-  }
-
-  // 2. Assets statiques (images, fonts, icônes) → Cache First
-  if (
-    request.destination === "image" ||
-    request.destination === "font" ||
-    url.pathname.startsWith("/icons/") ||
-    url.pathname.match(/\.(png|jpg|jpeg|svg|gif|webp|ico|woff2?|ttf)$/)
-  ) {
+  // Icônes locales → Cache First (statiques, sans risque de périmer l'app).
+  if (url.pathname.startsWith("/icons/")) {
     e.respondWith(
-      caches.match(request).then(
-        (cached) =>
-          cached ||
-          fetch(request).then((res) => {
-            if (isCacheable(res)) {
-              const clone = res.clone();
-              caches.open(STATIC_CACHE).then((c) => c.put(request, clone));
-            }
-            return res;
-          })
-      )
+      caches.match(request).then((cached) => cached || fetch(request))
     );
     return;
   }
 
-  // 3. Navigation (pages HTML) → Network First avec fallback cache puis offline
+  // Navigation (pages HTML) → réseau uniquement, fallback /offline si hors-ligne.
+  // On NE met PAS les pages en cache : le code reste toujours frais.
   if (request.mode === "navigate") {
     e.respondWith(
-      fetch(request)
-        .then((res) => {
-          // Ne JAMAIS cacher une réponse redirigée (auth → /login) :
-          // la resservir à une navigation provoque un écran noir.
-          if (isCacheable(res)) {
-            const clone = res.clone();
-            caches.open(PAGES_CACHE).then((c) => c.put(request, clone));
-          }
-          return res;
-        })
-        .catch(async () => {
-          const cached = await caches.match(request);
-          // Garde-fou : ignorer un éventuel cache redirigé hérité d'un ancien SW.
-          if (cached && !cached.redirected) return cached;
-          return caches.match("/offline");
-        })
+      fetch(request).catch(() => caches.match("/offline"))
     );
     return;
   }
 
-  // 4. JS/CSS Next.js → Stale While Revalidate
-  if (
-    url.pathname.startsWith("/_next/static/") ||
-    url.pathname.match(/\.(js|css)$/)
-  ) {
-    e.respondWith(
-      caches.open(STATIC_CACHE).then((cache) =>
-        cache.match(request).then((cached) => {
-          const fetchPromise = fetch(request)
-            .then((res) => {
-              if (isCacheable(res)) cache.put(request, res.clone());
-              return res;
-            })
-            .catch(() => cached);
-          return cached || fetchPromise;
-        })
-      )
-    );
-    return;
-  }
+  // Tout le reste (JS, CSS, API, Supabase…) → passthrough réseau, pas de cache SW.
+  // Le cache HTTP du navigateur gère déjà correctement les assets hashés Next.js.
 });
 
 // ── Push Notifications ────────────────────────────────────────────────────────
 self.addEventListener("push", (e) => {
   if (!e.data) return;
-  const data = e.data.json();
+  let data = {};
+  try {
+    data = e.data.json();
+  } catch {
+    data = { body: e.data.text() };
+  }
   e.waitUntil(
     self.registration.showNotification(data.title || "MBX Réparations", {
       body: data.body || "",

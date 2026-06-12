@@ -6,6 +6,7 @@ import { supabase } from "../lib/supabase";
 import Link from "next/link";
 import Layout from "../components/Layout";
 import AssistantPublic from "../components/AssistantPublic";
+import InstallPWA from "../components/InstallPWA";
 
 export default function HomePage() {
   const router = useRouter();
@@ -906,6 +907,7 @@ export default function HomePage() {
       </div>
 
       <AssistantPublic />
+      <InstallPWA />
     </Layout>
   );
 }

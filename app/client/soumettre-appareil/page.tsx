@@ -354,7 +354,7 @@ ${formData.description || "Aucune description"}
   body{font-family:'Courier New',monospace;background:#e5e7eb;display:flex;justify-content:center;padding:16px}
   .wrapper{display:flex;flex-direction:column;align-items:center;gap:0;width:90mm}
   /* TECHNICIEN */
-  .tech-card{width:90mm;background:#fff;border-radius:4mm 4mm 0 0;padding:4mm;border:1px solid #c7d2fe;border-bottom:none}
+  .tech-card{width:90mm;background:#fff;border-radius:4mm;padding:4mm;border:1px solid #c7d2fe}
   .tech-header{display:flex;justify-content:space-between;align-items:flex-start;border-bottom:1px solid #e0e7ff;padding-bottom:2mm;margin-bottom:2mm}
   .tech-header-left h2{font-size:11px;font-weight:900;color:#1e3a8a;letter-spacing:.5px}
   .tech-header-left p{font-size:8px;color:#64748b}
@@ -371,9 +371,9 @@ ${formData.description || "Aucune description"}
   .qr-tech-label{font-size:6.5px;color:#1e3a8a;font-weight:700;text-align:center;margin-top:1mm;line-height:1.2}
   .tech-footer{display:flex;justify-content:space-between;font-size:7.5px;color:#94a3b8;border-top:1px solid #e2e8f0;padding-top:1.5mm;margin-top:2mm}
   /* DÉCOUPE */
-  .cut{width:90mm;text-align:center;font-size:8px;color:#9ca3af;letter-spacing:3px;padding:2mm 0;border-top:1px dashed #9ca3af;border-bottom:1px dashed #9ca3af;background:#f9fafb}
+  .cut{width:90mm;text-align:center;font-size:8px;color:#9ca3af;letter-spacing:2px;padding:1.5mm 0;border-top:1.5px dashed #9ca3af}
   /* CLIENT */
-  .client-card{width:90mm;background:#fff;border-radius:0 0 4mm 4mm;padding:3mm 4mm;border:1px solid #bbf7d0;border-top:none}
+  .client-card{width:90mm;background:#fff;border-radius:4mm;padding:3mm 4mm;border:1px solid #bbf7d0}
   .client-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:2mm}
   .client-header-title{font-size:10px;font-weight:900;color:#166534}
   .client-header-title span{font-size:8px;font-weight:normal;color:#64748b;display:block}
@@ -427,7 +427,7 @@ ${formData.description || "Aucune description"}
   </div>
 
   <!-- LIGNE DE DÉCOUPE -->
-  <div class="cut">✂ &nbsp; &nbsp; À remettre au client &nbsp; &nbsp; ✂</div>
+  <div class="cut">✂ - - - - - - - - -  DÉCOUPER · partie client  - - - - - - - - - ✂</div>
 
   <!-- TICKET CLIENT — À conserver par le client -->
   <div class="client-card">

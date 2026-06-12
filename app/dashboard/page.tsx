@@ -8,6 +8,7 @@ import Layout from "../../components/Layout";
 import QRCode from "qrcode";
 import ReturnModal from "../../components/ReturnModal";
 import PatternLock from "../../components/PatternLock";
+import QrScanner from "../../components/QrScanner";
 import type { ExtractedFormData } from "../../lib/ai";
 
 export default function Dashboard() {
@@ -206,6 +207,7 @@ export default function Dashboard() {
   const [codeSuggestionIndex, setCodeSuggestionIndex] = useState({});
 
   const [recentTickets, setRecentTickets] = useState([]);
+  const [showScanner, setShowScanner] = useState(false);
   const [showSuccessModal, setShowSuccessModal] = useState(false);
   const [emailTo, setEmailTo] = useState("");
   const [sendingEmail, setSendingEmail] = useState(false);
@@ -1237,8 +1239,45 @@ export default function Dashboard() {
 
   const inputCls ="w-full bg-[#1a1d2e] border border-white/10 rounded-xl px-4 py-3.5 text-white placeholder-gray-600 text-sm outline-none focus:border-blue-500/50 focus:ring-2 focus:ring-blue-500/15 transition-all duration-200";
 
+  // Scan QR technicien : le QR encode une URL .../repairs/<id> → on ouvre la fiche.
+  const handleQrScan = (text: string) => {
+    setShowScanner(false);
+    if (!text) return;
+    const value = text.trim();
+    let repairId: string | null = null;
+
+    // Cas 1 : URL contenant /repairs/<id>
+    const match = value.match(/\/repairs\/([^/?#]+)/);
+    if (match) {
+      repairId = match[1];
+    } else if (/^\d+$/.test(value)) {
+      // Cas 2 : juste un identifiant numérique
+      repairId = value;
+    } else {
+      // Cas 3 : URL valide quelconque sur notre domaine → on suit le lien
+      try {
+        const url = new URL(value);
+        if (url.pathname && url.pathname !== "/") {
+          router.push(url.pathname + url.search);
+          return;
+        }
+      } catch {
+        /* pas une URL */
+      }
+    }
+
+    if (repairId) {
+      router.push(`/repairs/${repairId}`);
+    } else {
+      alert("QR code non reconnu : " + value);
+    }
+  };
+
   return (
     <Layout>
+      {showScanner && (
+        <QrScanner onScan={handleQrScan} onClose={() => setShowScanner(false)} />
+      )}
       {/* ── KEYFRAMES ── */}
       <style>{`
         @keyframes shimmer { 0% { transform: translateX(-150%); } 100% { transform: translateX(150%); } }
@@ -1324,6 +1363,16 @@ export default function Dashboard() {
       {/* ════════════════ HEADER ════════════════ */}
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-8">
         <div>
+          <button
+            onClick={() => setShowScanner(true)}
+            className="flex items-center gap-2 px-4 py-3 bg-orange-500/10 border border-orange-500/40 text-orange-300 rounded-xl text-sm font-semibold hover:bg-orange-500/20 hover:text-white transition-all duration-200 active:scale-95"
+            title="Scanner le QR code d'un ticket"
+          >
+            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.8} d="M4 7V5a1 1 0 011-1h2M4 17v2a1 1 0 001 1h2m10-16h2a1 1 0 011 1v2m-3 13h2a1 1 0 001-1v-2M7 12h10" />
+            </svg>
+            Scanner QR
+          </button>
         </div>
         <div ref={searchContainerRef} className="relative w-full sm:w-96">
           <div className="flex items-center gap-3 bg-[#16161d] border border-white/10 rounded-xl px-4 py-3 focus-within:border-blue-500/50 focus-within:ring-2 focus-within:ring-blue-500/10 transition-all duration-200">

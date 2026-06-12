@@ -457,13 +457,18 @@ export default function SuiviPage() {
               </div>
             </div>
 
-            {/* Prix final */}
-            {repair?.final_price > 0 && (
+            {/* Prix (final ou estimation) */}
+            {(repair?.final_price > 0 || repair?.estimated_price > 0) && (
               <div className="p-6 border-b">
                 <h3 className="font-semibold text-gray-700 mb-3">💰 Montant</h3>
                 <div className="bg-gray-50 rounded-xl p-4 text-center">
-                  <p className="text-3xl font-bold text-blue-600">{repair?.final_price} €</p>
-                  {repair?.tax_rate > 0 && (
+                  <p className="text-xs text-gray-400 uppercase tracking-wide mb-1">
+                    {repair?.final_price > 0 ? "Prix final" : "Estimation"}
+                  </p>
+                  <p className="text-3xl font-bold text-blue-600">
+                    {repair?.final_price > 0 ? repair.final_price : repair.estimated_price} €
+                  </p>
+                  {repair?.final_price > 0 && repair?.tax_rate > 0 && (
                     <p className="text-xs text-gray-400 mt-1">TVA {repair.tax_rate}% incluse</p>
                   )}
                 </div>

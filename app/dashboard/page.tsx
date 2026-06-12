@@ -2,6 +2,7 @@
 
 import { useEffect, useState, useRef, useCallback } from "react";
 import { supabase, getCurrentUser } from "../../lib/supabase";
+import { getCurrentTechnician, addHistoriqueAction } from "../../lib/historique";
 import { useRouter } from "next/navigation";
 import { DEVICES_LIST, getSmartIssueSuggestions, getQuickIssues } from "../../lib/devices-catalog";
 import Layout from "../../components/Layout";
@@ -1069,7 +1070,52 @@ export default function Dashboard() {
     }
   };
 
-  const showTicketDetails = (ticket) => {
+  // Auto-assigne la réparation au technicien connecté (recherche dashboard / scan QR).
+  // Un gérant n'est jamais auto-assigné. Si la réparation est déjà à un autre
+  // technicien, on demande confirmation avant de réassigner.
+  const assignToConnectedTech = async (repairId, knownTech = undefined) => {
+    const tech = getCurrentTechnician();
+    if (!tech || tech.is_gerant) return;
+
+    let oldTech = knownTech;
+    if (oldTech === undefined) {
+      const { data } = await supabase
+        .from("repairs")
+        .select("technician")
+        .eq("id", repairId)
+        .single();
+      oldTech = data?.technician ?? null;
+    }
+
+    if (oldTech === tech.name) return; // déjà assignée au technicien connecté
+
+    if (oldTech) {
+      const ok = window.confirm(
+        `Cette réparation est assignée à ${oldTech}.\nLa réassigner à vous (${tech.name}) ?`
+      );
+      if (!ok) return;
+    }
+
+    await supabase
+      .from("repairs")
+      .update({
+        technician: tech.name,
+        repaired_by: tech.name,
+        assigned_at: new Date().toISOString(),
+      })
+      .eq("id", repairId);
+
+    await addHistoriqueAction({
+      repairId,
+      action: "changement_technicien",
+      description: `Assignation automatique à ${tech.name}`,
+      oldValue: oldTech || "Non assigné",
+      newValue: tech.name,
+    });
+  };
+
+  const showTicketDetails = async (ticket) => {
+    await assignToConnectedTech(ticket.id, ticket.technician ?? null);
     setSelectedRepairDetail(ticket);
     setSelectedRepairClient(ticket.client);
     setClientEmail(ticket.client?.email || "");
@@ -1239,8 +1285,9 @@ export default function Dashboard() {
 
   const inputCls ="w-full bg-[#1a1d2e] border border-white/10 rounded-xl px-4 py-3.5 text-white placeholder-gray-600 text-sm outline-none focus:border-blue-500/50 focus:ring-2 focus:ring-blue-500/15 transition-all duration-200";
 
-  // Scan QR technicien : le QR encode une URL .../repairs/<id> → on ouvre la fiche.
-  const handleQrScan = (text: string) => {
+  // Scan QR technicien : le QR encode une URL .../repairs/<id> → on assigne au
+  // technicien connecté puis on ouvre la fiche.
+  const handleQrScan = async (text: string) => {
     setShowScanner(false);
     if (!text) return;
     const value = text.trim();
@@ -1267,6 +1314,7 @@ export default function Dashboard() {
     }
 
     if (repairId) {
+      await assignToConnectedTech(repairId);
       router.push(`/repairs/${repairId}`);
     } else {
       alert("QR code non reconnu : " + value);

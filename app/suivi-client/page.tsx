@@ -526,7 +526,7 @@ function SuiviClientContent() {
                       )}
 
                       {/* Prix */}
-                      {(selectedRepair.final_price > 0 || selectedRepair.estimated_price > 0) && selectedRepair.status !== "🔬 Diagnostic" && (
+                      {(selectedRepair.final_price > 0 || selectedRepair.estimated_price > 0) && (
                         <div className="bg-white/5 rounded-xl p-4 flex items-center justify-between">
                           <div>
                             <p className="text-xs text-gray-500 uppercase tracking-wider mb-1">

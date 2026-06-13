@@ -179,10 +179,11 @@ export default function FacturesPage() {
 
     filtered.forEach((r) => {
       const cid = r.client_id;
-      // Soldées : une facture PAR PAIEMENT (client + date de paiement) →
-      // les réparations payées ensemble se retrouvent sur la même facture.
-      // À régler : une facture par client.
-      const key = onlyPaid ? `${cid}__${r.payment_date || `solo-${r.id}`}` : cid;
+      // Soldées : une facture PAR PAIEMENT, regroupé sur le JOUR de paiement
+      // (+ mode) → toutes les réparations payées le même jour/ensemble se
+      // retrouvent sur la même facture. À régler : une facture par client.
+      const payDay = r.payment_date ? String(r.payment_date).slice(0, 10) : `solo-${r.id}`;
+      const key = onlyPaid ? `${cid}__${payDay}__${r.payment_method || ""}` : cid;
       if (!groups.has(key)) {
         groups.set(key, {
           key,

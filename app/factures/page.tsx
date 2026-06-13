@@ -844,37 +844,51 @@ export default function FacturesPage() {
           </div>
         </div>
 
-        {/* FACTURES PAYÉES */}
-        {paidGroups.length > 0 && (
-          <div>
-            <div className="flex items-center gap-2 mb-3">
-              <span className="w-1.5 h-1.5 rounded-full bg-green-400"></span>
-              <h2 className="text-xs font-bold text-gray-400 uppercase tracking-widest">Soldées · {paidGroups.length} client(s)</h2>
-            </div>
-            <div className="space-y-2">
-              {paidGroups
-                .filter((g) => g.client?.name?.toLowerCase().includes(searchTerm.toLowerCase()))
-                .map((group) => {
-                  const cid = "paid-" + group.key;
+        {/* FACTURES PAYÉES — regroupées par client, 1 paiement = 1 facture */}
+        {paidGroups.length > 0 && (() => {
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          const byClient = new Map<string, any>();
+          paidGroups
+            .filter((g) => g.client?.name?.toLowerCase().includes(searchTerm.toLowerCase()))
+            .forEach((g) => {
+              const id = String(g.client?.id);
+              if (!byClient.has(id)) byClient.set(id, { client: g.client, payments: [], total: 0 });
+              const e = byClient.get(id);
+              e.payments.push(g);
+              e.total += g.totalPaid;
+            });
+          const clientCards = Array.from(byClient.values());
+          if (clientCards.length === 0) return null;
+          return (
+            <div>
+              <div className="flex items-center gap-2 mb-3">
+                <span className="w-1.5 h-1.5 rounded-full bg-green-400"></span>
+                <h2 className="text-xs font-bold text-gray-400 uppercase tracking-widest">Soldées · {clientCards.length} client(s)</h2>
+              </div>
+              <div className="space-y-2">
+                {clientCards.map((cc) => {
+                  const cid = "paidc-" + cc.client?.id;
                   const isOpen = expandedClients.has(cid);
-                  const dateStr = group.payment_date ? new Date(group.payment_date).toLocaleDateString("fr-FR") : "";
+                  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+                  const nbRep = cc.payments.reduce((s: number, p: any) => s + p.repairs.length, 0);
                   return (
                     <div key={cid} className="bg-[#16161d] border border-green-500/15 rounded-2xl overflow-hidden">
+                      {/* En-tête client */}
                       <div
                         className="px-5 py-4 flex items-center gap-3 cursor-pointer hover:bg-white/3 transition-colors"
                         onClick={() => setExpandedClients(prev => { const next = new Set(prev); isOpen ? next.delete(cid) : next.add(cid); return next; })}
                       >
                         <div className="w-9 h-9 rounded-xl bg-green-500/10 flex items-center justify-center text-green-400 font-black text-sm shrink-0">
-                          {group.client?.name?.charAt(0).toUpperCase()}
+                          {cc.client?.name?.charAt(0).toUpperCase()}
                         </div>
                         <div className="flex-1 min-w-0">
-                          <div className="font-semibold text-white text-sm">{group.client?.name}</div>
+                          <div className="font-semibold text-white text-sm">{cc.client?.name}</div>
                           <div className="text-xs text-gray-500 mt-0.5">
-                            {group.repairs.length} réparation(s){dateStr ? ` · ${dateStr}` : ""}{group.payment_method ? ` · ${group.payment_method}` : ""}
+                            {cc.payments.length} facture(s) · {nbRep} réparation(s)
                           </div>
                         </div>
                         <div className="text-right shrink-0">
-                          <div className="text-xl font-black text-green-400">{group.totalPaid.toFixed(2)} €</div>
+                          <div className="text-xl font-black text-green-400">{cc.total.toFixed(2)} €</div>
                           <div className="text-[10px] text-gray-600">payé</div>
                         </div>
                         <div className={`text-gray-600 ml-1 transition-transform duration-200 ${isOpen ? "rotate-180" : ""}`}>
@@ -882,39 +896,54 @@ export default function FacturesPage() {
                         </div>
                       </div>
 
+                      {/* Factures (1 par paiement) */}
                       {isOpen && (
-                        <div className="border-t border-white/5">
-                          <div className="divide-y divide-white/5">
-                            {group.repairs.map((r) => (
-                              <div key={r.id} className="px-5 py-3 flex items-center gap-3 hover:bg-white/3 transition-colors">
-                                <span className="font-mono text-xs font-bold text-indigo-400 bg-indigo-500/10 px-2 py-0.5 rounded-md w-20 text-center shrink-0">MBX-{r.id}</span>
-                                <div className="flex-1 min-w-0">
-                                  <div className="text-sm font-medium text-white truncate">{r.device}</div>
-                                  <div className="text-xs text-gray-500 truncate">{r.issue}</div>
+                        <div className="border-t border-white/5 divide-y divide-white/8">
+                          {/* eslint-disable-next-line @typescript-eslint/no-explicit-any */}
+                          {cc.payments.map((group: any) => {
+                            const dateStr = group.payment_date ? new Date(group.payment_date).toLocaleDateString("fr-FR") : "";
+                            return (
+                              <div key={group.key} className="px-5 py-3">
+                                <div className="flex items-center justify-between gap-3 mb-2">
+                                  <div className="flex items-center gap-2 text-xs text-gray-400 min-w-0">
+                                    <span className="text-[10px] font-bold uppercase tracking-wider text-green-400 bg-green-500/10 px-2 py-0.5 rounded-md shrink-0">🧾 Facture</span>
+                                    {dateStr && <span className="truncate">{dateStr}</span>}
+                                    {group.payment_method && <span className="text-gray-600 truncate">· {group.payment_method}</span>}
+                                  </div>
+                                  <div className="text-sm font-bold text-green-400 shrink-0">{group.totalPaid.toFixed(2)} €</div>
                                 </div>
-                                <div className="text-sm font-bold text-green-400 shrink-0">{r.totalTtc.toFixed(2)} €</div>
+                                <div className="space-y-1 mb-2.5">
+                                  {/* eslint-disable-next-line @typescript-eslint/no-explicit-any */}
+                                  {group.repairs.map((r: any) => (
+                                    <div key={r.id} className="flex items-center gap-2 text-xs">
+                                      <span className="font-mono text-[10px] text-indigo-400 shrink-0">MBX-{r.id}</span>
+                                      <span className="flex-1 text-gray-300 truncate">{r.device}</span>
+                                      <span className="text-gray-500 shrink-0">{r.totalTtc.toFixed(2)} €</span>
+                                    </div>
+                                  ))}
+                                </div>
+                                <div className="flex flex-wrap gap-2">
+                                  <button onClick={() => printInvoice(group)} className="px-3 py-1 bg-indigo-500/15 hover:bg-indigo-500/25 text-indigo-300 rounded-lg text-xs font-semibold transition-all border border-indigo-500/20">
+                                    🧾 Facture PDF
+                                  </button>
+                                  {isGerant && (
+                                    <button onClick={() => openEditModal(group)} className="px-3 py-1 bg-orange-500/15 hover:bg-orange-500/25 text-orange-300 rounded-lg text-xs font-semibold transition-all border border-orange-500/20">
+                                      ✏️ Modifier
+                                    </button>
+                                  )}
+                                </div>
                               </div>
-                            ))}
-                          </div>
-                          {/* Actions facture (paiement = 1 facture) */}
-                          <div className="px-5 py-3 border-t border-white/5 flex flex-wrap items-center gap-2 bg-white/3">
-                            <button onClick={() => printInvoice(group)} className="px-3 py-1.5 bg-indigo-500/15 hover:bg-indigo-500/25 text-indigo-300 rounded-lg text-xs font-semibold transition-all border border-indigo-500/20">
-                              🧾 Facture PDF
-                            </button>
-                            {isGerant && (
-                              <button onClick={() => openEditModal(group)} className="px-3 py-1.5 bg-orange-500/15 hover:bg-orange-500/25 text-orange-300 rounded-lg text-xs font-semibold transition-all border border-orange-500/20">
-                                ✏️ Modifier
-                              </button>
-                            )}
-                          </div>
+                            );
+                          })}
                         </div>
                       )}
                     </div>
                   );
                 })}
+              </div>
             </div>
-          </div>
-        )}
+          );
+        })()}
       </div>
 
       {/* MODAL PAIEMENT */}

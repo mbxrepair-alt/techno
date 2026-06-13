@@ -179,11 +179,12 @@ export default function FacturesPage() {
 
     filtered.forEach((r) => {
       const cid = r.client_id;
-      // Soldées : une facture PAR PAIEMENT, regroupé sur le JOUR de paiement
-      // (+ mode) → toutes les réparations payées le même jour/ensemble se
-      // retrouvent sur la même facture. À régler : une facture par client.
-      const payDay = r.payment_date ? String(r.payment_date).slice(0, 10) : `solo-${r.id}`;
-      const key = onlyPaid ? `${cid}__${payDay}__${r.payment_method || ""}` : cid;
+      // Soldées : une facture PAR PAIEMENT, regroupé à la MINUTE de paiement
+      // (+ mode). Les réparations encaissées ensemble (même minute) sont sur la
+      // même facture ; s'il revient payer plus tard → facture séparée.
+      // À régler : une facture par client.
+      const payMin = r.payment_date ? String(r.payment_date).slice(0, 16) : `solo-${r.id}`;
+      const key = onlyPaid ? `${cid}__${payMin}__${r.payment_method || ""}` : cid;
       if (!groups.has(key)) {
         groups.set(key, {
           key,
@@ -228,6 +229,9 @@ export default function FacturesPage() {
     setIsSending(true);
     try {
       let remaining = amount;
+      // Un SEUL horodatage pour tout l'encaissement → les réparations payées
+      // ensemble partagent la même date/minute = une seule facture.
+      const paidAt = new Date().toISOString();
       const toPay = [...selectedGroup.repairs].sort(
         (a, b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime()
       );
@@ -245,7 +249,7 @@ export default function FacturesPage() {
             paid_amount: newPaid,
             payment_status: newPaid >= rep.totalTtc ? "payé" : "partiel",
             payment_method: paymentMethod,
-            payment_date: new Date().toISOString(),
+            payment_date: paidAt,
           })
           .eq("id", rep.id);
 

@@ -529,6 +529,40 @@ export default function RepairDetailPage() {
       );
       showMessage(`Statut: ${newStatus}`);
       loadRepair();
+
+      // Email automatique au client pour les statuts qui le nécessitent
+      const autoEmailStatuses = ["⏳ Attente validation client", "🔐 Mot de passe incorrect", "📦 Attente pièce"];
+      if (autoEmailStatuses.includes(newStatus)) {
+        const to = client?.email || emailTo;
+        if (to) {
+          try {
+            const BASE_URL = "https://technophone.vercel.app";
+            const trackingLink = client?.client_code ? `${BASE_URL}/suivi-client?code=${client.client_code}` : "";
+            const res = await fetch("/api/send-status-email", {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({
+                to,
+                clientName: client?.name || "",
+                device: repair?.device || "",
+                status: newStatus,
+                trackingLink,
+                companyName: companyInfo.name,
+                companyPhone: companyInfo.phone,
+                companyEmail: companyInfo.email,
+              }),
+            });
+            if (res.ok) {
+              await ajouterHistorique("commentaire", `✉️ Email automatique envoyé au client (${newStatus})`);
+              showMessage("✉️ Email envoyé au client", "success");
+            }
+          } catch (e) {
+            console.error("auto status email:", e);
+          }
+        } else {
+          showMessage("⚠️ Pas d'email client — notification non envoyée", "error");
+        }
+      }
     }
   };
 

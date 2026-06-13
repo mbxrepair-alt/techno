@@ -62,6 +62,20 @@ export default function RootLayout({
             });
           }
         `}</Script>
+        <Script id="number-input-guard" strategy="afterInteractive">{`
+          // Empêche la molette/scroll de modifier les champs nombre (prix)
+          document.addEventListener('wheel', function (e) {
+            var el = document.activeElement;
+            if (el && el.tagName === 'INPUT' && el.type === 'number') { el.blur(); }
+          }, { passive: true });
+          // Empêche les flèches Haut/Bas du clavier de modifier les champs nombre
+          document.addEventListener('keydown', function (e) {
+            var el = document.activeElement;
+            if ((e.key === 'ArrowUp' || e.key === 'ArrowDown') && el && el.tagName === 'INPUT' && el.type === 'number') {
+              e.preventDefault();
+            }
+          });
+        `}</Script>
       </body>
     </html>
   );

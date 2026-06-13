@@ -172,7 +172,6 @@ export default function RepairDetailPage() {
       color: "bg-orange-600",
       textColor: "text-white",
     },
-    { label: "✅ Terminer (OK / KO)", status: "✅ Terminé", color: "bg-purple-500", textColor: "text-white" },
     { label: "📦 Rendu au client", status: "📦 Rendu", color: "bg-gray-600", textColor: "text-white" },
     {
       label: "🚫 Refus client",
@@ -656,6 +655,7 @@ export default function RepairDetailPage() {
     { status: "🔬 Diagnostic", label: "Diag", icon: "🔬", color: "blue", step: 2 },
     { status: "🔧 En réparation", label: "Réparation", icon: "🔧", color: "orange", step: 3 },
     { status: "✅ Terminé", label: "Terminé", icon: "✅", color: "purple", step: 4 },
+    { status: "📦 Rendu", label: "Rendu", icon: "📦", color: "gray", step: 5 },
   ];
 
   const getCurrentStep = () => {
@@ -1013,7 +1013,13 @@ export default function RepairDetailPage() {
                   {steps.map((step, idx) => (
                     <button
                       key={idx}
-                      onClick={() => updateStatus(step.status)}
+                      onClick={() => {
+                        if (step.status === "✅ Terminé") {
+                          setShowOkKoModal(true); // choix résultat OK / KO
+                        } else {
+                          updateStatus(step.status);
+                        }
+                      }}
                       className="flex flex-col items-center group flex-1"
                     >
                       <div
@@ -1022,9 +1028,11 @@ export default function RepairDetailPage() {
                             ? `${
                                 step.status === "✅ Terminé"
                                   ? "bg-green-500 shadow-[0_0_15px_rgba(34,197,94,0.6)]"
-                                  : step.status === "🔧 En réparation"
-                                    ? "bg-orange-500 shadow-[0_0_15px_rgba(249,115,22,0.6)]"
-                                    : "bg-blue-500 shadow-[0_0_15px_rgba(59,130,246,0.6)]"
+                                  : step.status === "📦 Rendu"
+                                    ? "bg-gray-500 shadow-[0_0_15px_rgba(107,114,128,0.6)]"
+                                    : step.status === "🔧 En réparation"
+                                      ? "bg-orange-500 shadow-[0_0_15px_rgba(249,115,22,0.6)]"
+                                      : "bg-blue-500 shadow-[0_0_15px_rgba(59,130,246,0.6)]"
                               } text-white`
                             : "bg-white/20 text-white/50"
                         }`}

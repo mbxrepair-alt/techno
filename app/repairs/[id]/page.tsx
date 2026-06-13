@@ -113,6 +113,13 @@ export default function RepairDetailPage() {
   const [parts, setParts] = useState([]);
   const [currentPart, setCurrentPart] = useState({ name: "", quantity: 1, price: 0 });
 
+  // Verrouillage hybride : fiche Terminée/Rendue = lecture seule.
+  // Le gérant peut « Corriger » (déverrouille sans changer le statut).
+  // « SAV / Retour » rouvre la réparation (statut Retour) pour tout le monde.
+  const [isGerant, setIsGerant] = useState(false);
+  const [unlocked, setUnlocked] = useState(false);
+  const locked = ["✅ Terminé", "📦 Rendu"].includes(repair?.status) && !unlocked;
+
   const [showPartModal, setShowPartModal] = useState(false);
   const [showEmailModal, setShowEmailModal] = useState(false);
   const [emailTo, setEmailTo] = useState("");
@@ -338,7 +345,17 @@ export default function RepairDetailPage() {
     }
   };
 
+  useEffect(() => {
+    try {
+      const tp = localStorage.getItem("technician_permissions");
+      if (tp) setIsGerant(JSON.parse(tp)?.is_gerant === true);
+    } catch {
+      /* ignore */
+    }
+  }, []);
+
   const autoSave = async () => {
+    if (locked) return; // fiche verrouillée (Terminé/Rendu) : pas de sauvegarde
     const updateData = {
       diagnostic_technicien: diagnosticTechnicien,
       risks,
@@ -1075,6 +1092,44 @@ export default function RepairDetailPage() {
           </div>
         )}
 
+        {/* BANDEAU VERROUILLAGE (fiche Terminée / Rendue) */}
+        {["✅ Terminé", "📦 Rendu"].includes(repair?.status) && (
+          locked ? (
+            <div className="mb-4 bg-amber-50 border border-amber-200 rounded-xl px-4 py-3 flex flex-col sm:flex-row sm:items-center gap-3">
+              <div className="flex-1 text-sm text-amber-800">
+                🔒 <strong>Fiche {repair.status}</strong> — en lecture seule. Pour modifier :
+              </div>
+              <div className="flex gap-2">
+                {isGerant && (
+                  <button
+                    onClick={() => setUnlocked(true)}
+                    className="px-3 py-1.5 bg-white border border-amber-300 text-amber-700 rounded-lg text-xs font-semibold hover:bg-amber-100 transition"
+                    title="Petite correction sans changer le statut (gérant)"
+                  >
+                    ✏️ Corriger
+                  </button>
+                )}
+                <button
+                  onClick={async () => {
+                    if (window.confirm("Ouvrir un SAV / retour ?\nL'appareil repasse en réparation (statut Retour SAV) et la fiche redevient modifiable.")) {
+                      await updateStatus("🔄 Retour SAV");
+                      setUnlocked(true);
+                    }
+                  }}
+                  className="px-3 py-1.5 bg-orange-500 text-white rounded-lg text-xs font-semibold hover:bg-orange-600 transition"
+                  title="L'appareil revient (retour client / problème) → rouvre la réparation"
+                >
+                  🔄 SAV / Retour
+                </button>
+              </div>
+            </div>
+          ) : (
+            <div className="mb-4 bg-blue-50 border border-blue-200 rounded-xl px-4 py-2.5 text-sm text-blue-700 flex items-center gap-2">
+              ✏️ <strong>Mode édition</strong> — les modifications sont enregistrées automatiquement.
+            </div>
+          )
+        )}
+
         {/* GRILLE 2 COLONNES */}
         <div className="grid lg:grid-cols-2 gap-6">
           {/* COLONNE GAUCHE */}
@@ -1096,6 +1151,7 @@ export default function RepairDetailPage() {
                   rows={6}
                   type="diagnostic"
                   repairData={{ device: repair?.device, issue: repair?.issue }}
+                  disabled={locked}
                 />
                 <p className="text-xs text-gray-400 mt-1">🔒 Ce texte est INTERNE</p>
               </div>
@@ -1120,6 +1176,7 @@ export default function RepairDetailPage() {
                   className="w-full border-0 focus:ring-0 text-gray-700 resize-none text-sm"
                   rows={5}
                   type="work"
+                  disabled={locked}
                 />
                 {parts.length > 0 && (
                   <div className="mt-3 bg-gray-50 rounded p-2">
@@ -1176,6 +1233,7 @@ export default function RepairDetailPage() {
                   onChange={(e) => setRisks(e.target.value)}
                   className="w-full border-0 focus:ring-0 text-gray-700 resize-none text-sm"
                   placeholder="Risques potentiels..."
+                  disabled={locked}
                 />
               </div>
             </div>
@@ -1194,6 +1252,7 @@ export default function RepairDetailPage() {
                   onChange={(e) => setTestsPassed(e.target.value)}
                   className="w-full border-0 focus:ring-0 text-gray-700 resize-none text-sm"
                   placeholder="Tests effectués..."
+                  disabled={locked}
                 />
               </div>
             </div>
@@ -1213,8 +1272,9 @@ export default function RepairDetailPage() {
                     type="number"
                     value={finalPrice}
                     onChange={(e) => setFinalPrice(e.target.value)}
-                    className="w-36 text-right text-lg font-bold border rounded-lg p-2 text-center"
+                    className="w-36 text-right text-lg font-bold border rounded-lg p-2 text-center disabled:bg-gray-100 disabled:text-gray-400"
                     step="1"
+                    disabled={locked}
                   />
                 </div>
                 {repair?.estimated_price && repair?.estimated_price > 0 && !repair?.final_price && (
@@ -1231,9 +1291,10 @@ export default function RepairDetailPage() {
                     type="number"
                     value={diagnosticPrice}
                     onChange={(e) => setDiagnosticPrice(e.target.value)}
-                    className="w-28 text-right text-base font-semibold border rounded-lg p-2 text-center"
+                    className="w-28 text-right text-base font-semibold border rounded-lg p-2 text-center disabled:bg-gray-100 disabled:text-gray-400"
                     step="1"
                     placeholder="0"
+                    disabled={locked}
                   />
                 </div>
               </div>

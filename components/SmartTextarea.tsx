@@ -24,6 +24,7 @@ interface SmartTextareaProps {
   type?: TextareaType;
   repairData?: RepairData | null;
   onAIGenerated?: ((text: string) => void) | null;
+  disabled?: boolean;
 }
 
 const DEFAULTS: Record<TextareaType, string[]> = {
@@ -71,6 +72,7 @@ export default function SmartTextarea({
   type = "diagnostic",
   repairData = null,
   onAIGenerated = null,
+  disabled = false,
 }: SmartTextareaProps) {
   const [show, setShow] = useState(false);
   const [suggestions, setSuggestions] = useState<string[]>([]);
@@ -337,6 +339,7 @@ export default function SmartTextarea({
         className={className}
         placeholder={placeholder}
         rows={rows}
+        disabled={disabled}
       />
       {show && suggestions.length > 0 && (
         <div className="absolute z-50 left-0 right-0 mt-1 bg-white border rounded-lg shadow-lg max-h-48 overflow-y-auto">

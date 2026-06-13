@@ -5,7 +5,22 @@ import { supabase, getCurrentUser } from "../../lib/supabase";
 import { useRouter } from "next/navigation";
 import Layout from "../../components/Layout";
 import { getCurrentTechnician } from "../../lib/historique";
-import { Store, Plus, Trash2, ShoppingCart } from "lucide-react";
+import { Store, Plus, Trash2, ShoppingCart, ScanLine } from "lucide-react";
+import QrScanner from "../../components/QrScanner";
+
+const CATEGORIES = [
+  "Téléphone",
+  "Coque",
+  "Vitre / Verre trempé",
+  "Chargeur",
+  "Câble",
+  "Écouteurs / Casque",
+  "Batterie externe",
+  "Pièce détachée",
+  "Carte SIM",
+  "Accessoire",
+  "Autre",
+];
 
 export default function BoutiquePage() {
   const router = useRouter();
@@ -20,7 +35,9 @@ export default function BoutiquePage() {
   const [userId, setUserId] = useState<string>("");
 
   const [showAdd, setShowAdd] = useState(false);
-  const [form, setForm] = useState({ name: "", category: "", stock: "", purchase_price: "", sale_price: "" });
+  const [form, setForm] = useState({ name: "", category: "", stock: "", purchase_price: "", sale_price: "", barcode: "", imei: "" });
+  // scan: "form" = remplir le code-barres du formulaire, "sell" = trouver un produit à vendre
+  const [scanMode, setScanMode] = useState<null | "form" | "sell">(null);
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const [sellProduct, setSellProduct] = useState<any>(null);
@@ -65,10 +82,38 @@ export default function BoutiquePage() {
       stock: Number(form.stock) || 0,
       purchase_price: Number(form.purchase_price) || 0,
       sale_price: Number(form.sale_price) || 0,
+      barcode: form.barcode.trim(),
+      imei: form.imei.trim(),
     });
-    setForm({ name: "", category: "", stock: "", purchase_price: "", sale_price: "" });
+    setForm({ name: "", category: "", stock: "", purchase_price: "", sale_price: "", barcode: "", imei: "" });
     setShowAdd(false);
     await load();
+  };
+
+  // Résultat d'un scan code-barres
+  const handleScan = (text: string) => {
+    const code = (text || "").trim();
+    const mode = scanMode;
+    setScanMode(null);
+    if (!code) return;
+    if (mode === "form") {
+      setForm((f) => ({ ...f, barcode: code }));
+      return;
+    }
+    // mode "sell" : chercher le produit par code-barres
+    const found = products.find((p) => p.barcode && p.barcode === code);
+    if (found) {
+      setSellProduct(found);
+      setSellQty("1");
+    } else {
+      // pas trouvé → proposer de créer le produit avec ce code-barres
+      if (isGerant && confirm("Produit introuvable pour ce code-barres. Créer un nouveau produit avec ce code ?")) {
+        setForm((f) => ({ ...f, barcode: code }));
+        setShowAdd(true);
+      } else {
+        alert("Aucun produit avec ce code-barres : " + code);
+      }
+    }
   };
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -121,10 +166,17 @@ export default function BoutiquePage() {
             <Store size={18} className="text-pink-400" />
             Boutique
           </h1>
-          {isGerant && tab === "stock" && (
-            <button onClick={() => setShowAdd(true)} className="flex items-center gap-2 px-4 py-2 bg-pink-500 hover:bg-pink-400 text-white rounded-xl text-sm font-bold transition active:scale-95">
-              <Plus size={16} /> Produit
-            </button>
+          {tab === "stock" && (
+            <div className="flex items-center gap-2">
+              <button onClick={() => setScanMode("sell")} className="flex items-center gap-2 px-4 py-2 bg-[#16161d] border border-white/10 text-gray-200 hover:border-pink-500/40 rounded-xl text-sm font-bold transition active:scale-95">
+                <ScanLine size={16} /> Scanner
+              </button>
+              {isGerant && (
+                <button onClick={() => setShowAdd(true)} className="flex items-center gap-2 px-4 py-2 bg-pink-500 hover:bg-pink-400 text-white rounded-xl text-sm font-bold transition active:scale-95">
+                  <Plus size={16} /> Produit
+                </button>
+              )}
+            </div>
           )}
         </div>
 
@@ -149,6 +201,8 @@ export default function BoutiquePage() {
                       <div className="min-w-0">
                         <div className="font-semibold text-white text-sm">{p.name}</div>
                         <div className="text-xs text-gray-500">{p.category || "—"}</div>
+                        {p.barcode && <div className="text-[10px] text-gray-600 font-mono mt-0.5">▮▮ {p.barcode}</div>}
+                        {p.imei && <div className="text-[10px] text-gray-600 font-mono">IMEI {p.imei}</div>}
                       </div>
                       <div className="text-right shrink-0">
                         <div className={`text-sm font-bold ${p.stock <= 0 ? "text-red-400" : p.stock <= 3 ? "text-amber-400" : "text-white"}`}>{p.stock} en stock</div>
@@ -228,7 +282,21 @@ export default function BoutiquePage() {
             <h2 className="text-lg font-bold text-white mb-4">➕ Nouveau produit</h2>
             <div className="space-y-3">
               <input placeholder="Nom du produit" value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} className="w-full bg-[#1a1d2e] border border-white/10 rounded-xl px-4 py-2.5 text-white text-sm outline-none focus:border-pink-500/50" />
-              <input placeholder="Catégorie (ex: Coque, Chargeur, Vitre…)" value={form.category} onChange={(e) => setForm({ ...form, category: e.target.value })} className="w-full bg-[#1a1d2e] border border-white/10 rounded-xl px-4 py-2.5 text-white text-sm outline-none focus:border-pink-500/50" />
+              <select value={form.category} onChange={(e) => setForm({ ...form, category: e.target.value })} className="w-full bg-[#1a1d2e] border border-white/10 rounded-xl px-4 py-2.5 text-white text-sm outline-none focus:border-pink-500/50">
+                <option value="">— Catégorie —</option>
+                {CATEGORIES.map((c) => <option key={c} value={c}>{c}</option>)}
+              </select>
+              {/* Code-barres + scan */}
+              <div className="flex gap-2">
+                <input placeholder="Code-barres" value={form.barcode} onChange={(e) => setForm({ ...form, barcode: e.target.value })} className="flex-1 bg-[#1a1d2e] border border-white/10 rounded-xl px-4 py-2.5 text-white text-sm outline-none focus:border-pink-500/50" />
+                <button type="button" onClick={() => setScanMode("form")} className="px-3 bg-pink-500/15 border border-pink-500/30 text-pink-300 rounded-xl hover:bg-pink-500/25 transition flex items-center gap-1.5 text-sm">
+                  <ScanLine size={16} /> Scan
+                </button>
+              </div>
+              {/* IMEI uniquement pour les téléphones */}
+              {form.category === "Téléphone" && (
+                <input placeholder="IMEI (téléphone)" value={form.imei} onChange={(e) => setForm({ ...form, imei: e.target.value })} className="w-full bg-[#1a1d2e] border border-white/10 rounded-xl px-4 py-2.5 text-white text-sm outline-none focus:border-pink-500/50" />
+              )}
               <div className="grid grid-cols-3 gap-2">
                 <input type="number" placeholder="Stock" value={form.stock} onChange={(e) => setForm({ ...form, stock: e.target.value })} className="bg-[#1a1d2e] border border-white/10 rounded-xl px-3 py-2.5 text-white text-sm outline-none focus:border-pink-500/50" />
                 <input type="number" placeholder="Achat €" value={form.purchase_price} onChange={(e) => setForm({ ...form, purchase_price: e.target.value })} className="bg-[#1a1d2e] border border-white/10 rounded-xl px-3 py-2.5 text-white text-sm outline-none focus:border-pink-500/50" />
@@ -257,6 +325,11 @@ export default function BoutiquePage() {
             <button onClick={() => setSellProduct(null)} className="w-full mt-2 bg-white/5 hover:bg-white/10 text-gray-300 py-2.5 rounded-xl text-sm border border-white/10 transition">Annuler</button>
           </div>
         </div>
+      )}
+
+      {/* SCANNER CODE-BARRES */}
+      {scanMode && (
+        <QrScanner onScan={handleScan} onClose={() => setScanMode(null)} />
       )}
     </Layout>
   );

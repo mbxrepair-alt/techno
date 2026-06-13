@@ -20,6 +20,7 @@ export default function SettingsPage() {
   const [message, setMessage] = useState("");
   const [logoPreview, setLogoPreview] = useState(null);
   const [technicians, setTechnicians] = useState([]);
+  const [exporting, setExporting] = useState(false);
 
   // Paramètres existants
   const [settings, setSettings] = useState({
@@ -211,12 +212,51 @@ export default function SettingsPage() {
     setMessage("✅ Logo supprimé");
   };
 
+  // Export complet de la base du compte (clients + réparations) en Excel.
+  const exportDatabase = async () => {
+    setExporting(true);
+    try {
+      const user = await getCurrentUser();
+      if (!user) return;
+
+      const [clientsRes, repairsRes] = await Promise.all([
+        supabase.from("clients").select("*").eq("user_id", user.id),
+        supabase.from("repairs").select("*").eq("user_id", user.id).order("created_at", { ascending: false }),
+      ]);
+
+      const clients = clientsRes.data || [];
+      const repairs = repairsRes.data || [];
+
+      const XLSX = await import("xlsx");
+      const wb = XLSX.utils.book_new();
+
+      if (clients.length) {
+        XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(clients), "Clients");
+      }
+      if (repairs.length) {
+        XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(repairs), "Reparations");
+      }
+      if (!clients.length && !repairs.length) {
+        XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet([["Aucune donnée"]]), "Vide");
+      }
+
+      const today = new Date().toISOString().slice(0, 10);
+      XLSX.writeFile(wb, `MBX_sauvegarde_${today}.xlsx`);
+    } catch (e) {
+      console.error("exportDatabase error:", e);
+      alert("Erreur lors de l'export. Réessayez.");
+    } finally {
+      setExporting(false);
+    }
+  };
+
   const isGerant = permissions?.is_gerant === true;
 
   const tabs = [
     { id: "general", label: "⚙️ Général", visible: true },
     { id: "company", label: "🏢 Entreprise", visible: true },
     { id: "technicians", label: "👨‍🔧 Techniciens", visible: isGerant },
+    { id: "backup", label: "💾 Sauvegarde", visible: isGerant },
     { id: "logs", label: "📋 Logs", visible: isGerant },
   ];
 
@@ -399,6 +439,33 @@ export default function SettingsPage() {
               </p>
               <div className="bg-slate-500/10 border border-slate-500/20 rounded-xl px-4 py-3">
                 <p className="text-sm text-slate-400">📋 {technicians.length} technicien(s) actif(s)</p>
+              </div>
+            </div>
+          )}
+
+          {/* Onglet Sauvegarde */}
+          {activeTab === "backup" && isGerant && (
+            <div>
+              <h2 className="text-sm font-bold text-gray-400 uppercase tracking-widest mb-3">Sauvegarde de la base</h2>
+              <p className="text-sm text-gray-500 mb-5 max-w-lg">
+                Téléchargez l&apos;intégralité des données de votre compte (clients et réparations)
+                dans un fichier Excel. Utile pour conserver une copie de sauvegarde ou récupérer vos données.
+              </p>
+              <div className="p-5 bg-white/5 border border-white/10 rounded-xl max-w-lg">
+                <div className="flex items-center gap-3 mb-4">
+                  <div className="w-11 h-11 rounded-xl bg-green-500/10 flex items-center justify-center text-2xl">📊</div>
+                  <div>
+                    <div className="text-white font-semibold text-sm">Export Excel</div>
+                    <div className="text-xs text-gray-500">2 feuilles : Clients · Réparations</div>
+                  </div>
+                </div>
+                <button
+                  onClick={exportDatabase}
+                  disabled={exporting}
+                  className="px-6 py-2.5 bg-green-600 hover:bg-green-500 text-white rounded-xl text-sm font-semibold transition-all disabled:opacity-50 flex items-center gap-2"
+                >
+                  {exporting ? "⏳ Export en cours…" : "⬇️ Télécharger ma base (Excel)"}
+                </button>
               </div>
             </div>
           )}

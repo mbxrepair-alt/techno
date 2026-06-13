@@ -564,40 +564,6 @@ export default function FacturesPage() {
     }
   };
 
-  // Export Excel (Ultra) d'une facture
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const exportExcel = async (group: any) => {
-    const XLSX = await import("xlsx");
-    const totalHt = group.repairs.reduce((s: number, r: any) => s + r.priceHt, 0);
-    const totalTva = group.totalTtc - totalHt;
-    const rows = [
-      ["Facture", group.client?.name || "—"],
-      ["Date", group.payment_date ? new Date(group.payment_date).toLocaleDateString("fr-FR") : ""],
-      ["Société", companyProfile.name],
-      [],
-      ["Réf.", "Appareil", "Panne", "Prix HT (€)", "TVA (%)", "Prix TTC (€)"],
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      ...group.repairs.map((r: any) => [
-        `MBX-${r.id}`,
-        r.device,
-        r.issue,
-        Number(r.priceHt).toFixed(2),
-        group.tvaRate,
-        Number(r.totalTtc).toFixed(2),
-      ]),
-      [],
-      ["", "", "", "Total HT", "", totalHt.toFixed(2)],
-      ["", "", "", "TVA", "", totalTva.toFixed(2)],
-      ["", "", "", "Total TTC", "", group.totalTtc.toFixed(2)],
-    ];
-    const ws = XLSX.utils.aoa_to_sheet(rows);
-    ws["!cols"] = [{ wch: 12 }, { wch: 22 }, { wch: 28 }, { wch: 12 }, { wch: 10 }, { wch: 14 }];
-    const wb = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(wb, ws, "Facture");
-    const safeName = (group.client?.name || "client").replace(/[^a-z0-9]/gi, "_");
-    XLSX.writeFile(wb, `Facture_${safeName}.xlsx`);
-  };
-
   /* -------------------------------------------------------------
      8️⃣ Récupération des groupes
      ------------------------------------------------------------- */
@@ -934,9 +900,6 @@ export default function FacturesPage() {
                           <div className="px-5 py-3 border-t border-white/5 flex flex-wrap items-center gap-2 bg-white/3">
                             <button onClick={() => printInvoice(group)} className="px-3 py-1.5 bg-indigo-500/15 hover:bg-indigo-500/25 text-indigo-300 rounded-lg text-xs font-semibold transition-all border border-indigo-500/20">
                               🧾 Facture PDF
-                            </button>
-                            <button onClick={() => exportExcel(group)} className="px-3 py-1.5 bg-green-500/15 hover:bg-green-500/25 text-green-300 rounded-lg text-xs font-semibold transition-all border border-green-500/20">
-                              📊 Exporter Excel
                             </button>
                             {isGerant && (
                               <button onClick={() => openEditModal(group)} className="px-3 py-1.5 bg-orange-500/15 hover:bg-orange-500/25 text-orange-300 rounded-lg text-xs font-semibold transition-all border border-orange-500/20">

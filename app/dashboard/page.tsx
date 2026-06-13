@@ -1114,8 +1114,9 @@ export default function Dashboard() {
     });
   };
 
-  const showTicketDetails = async (ticket) => {
-    await assignToConnectedTech(ticket.id, ticket.technician ?? null);
+  const showTicketDetails = (ticket) => {
+    // Pas d'assignation ici : juste consulter. L'assignation se fait au clic
+    // sur « Ouvrir fiche » (avec confirmation si un autre technicien).
     setSelectedRepairDetail(ticket);
     setSelectedRepairClient(ticket.client);
     setClientEmail(ticket.client?.email || "");
@@ -1882,7 +1883,7 @@ export default function Dashboard() {
                 }} className="flex-1 bg-gradient-to-r from-blue-600 to-blue-500 text-white py-2.5 rounded-xl font-semibold text-sm hover:from-blue-500 hover:to-blue-400 transition-all duration-200">
                   🖨️ Imprimer ticket
                 </button>
-                <button onClick={() => { setShowDetailModal(false); window.location.href = `/repairs/${selectedRepairDetail.id}`; }}
+                <button onClick={async () => { await assignToConnectedTech(selectedRepairDetail.id, selectedRepairDetail.technician ?? null); setShowDetailModal(false); window.location.href = `/repairs/${selectedRepairDetail.id}`; }}
                   className="flex-1 bg-gradient-to-r from-orange-600 to-orange-500 text-white py-2.5 rounded-xl font-semibold text-sm hover:from-orange-500 hover:to-orange-400 transition-all duration-200">
                   🔧 Ouvrir fiche
                 </button>

@@ -537,8 +537,14 @@ export default function RepairDetailPage() {
       await updateStatus("❌ KO");
       return;
     }
-    // OK : ouvrir une petite fenêtre pour saisir travaux + prix puis valider
     setShowOkKoModal(false);
+    // Si travaux + prix déjà renseignés → on termine directement, sans fenêtre.
+    const prixActuel = parseFloat(String(finalPrice || 0));
+    if (repairDescription.trim() && prixActuel > 0) {
+      await updateStatus("✅ Terminé");
+      return;
+    }
+    // Sinon, ouvrir la fenêtre pour compléter travaux + prix.
     setFinalizeTravaux(repairDescription || "");
     setFinalizePrice(finalPrice ? String(finalPrice) : "");
     setShowFinalizeModal(true);

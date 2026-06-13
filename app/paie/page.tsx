@@ -180,9 +180,6 @@ export default function PaiePage() {
           </div>
         )}
 
-        <p className="text-xs text-gray-600 mt-4">
-          ⚠️ Si les champs Base / Commission ne s&apos;enregistrent pas, exécutez le fichier <code className="text-gray-400">supabase-payroll.sql</code> dans Supabase (ajoute les colonnes).
-        </p>
       </div>
     </Layout>
   );

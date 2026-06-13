@@ -7,6 +7,7 @@ import { useState, useEffect } from "react";
 import {
   LayoutDashboard,
   Wrench,
+  Inbox,
   Users,
   History,
   Receipt,
@@ -105,6 +106,14 @@ export default function Navigation({ user, permissions }: NavigationProps) {
       icon: Wrench,
       color: "text-orange-400",
       activeBg: "bg-orange-500/15 border-orange-500/30",
+      visible: !!(permissions?.can_access_repairs || isGerant),
+    },
+    {
+      href: "/receptions",
+      label: "Réceptions",
+      icon: Inbox,
+      color: "text-pink-400",
+      activeBg: "bg-pink-500/15 border-pink-500/30",
       visible: !!(permissions?.can_access_repairs || isGerant),
     },
     {

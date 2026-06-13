@@ -87,6 +87,7 @@ export default function RepairDetailPage() {
   const [message, setMessage] = useState({ text: "", type: "" });
   const [sendingEmail, setSendingEmail] = useState(false);
   const [showQuickActions, setShowQuickActions] = useState(false);
+  const [showOkKoModal, setShowOkKoModal] = useState(false);
   const [currentUserId, setCurrentUserId] = useState(null);
 
   const [historique, setHistorique] = useState([]);
@@ -118,7 +119,7 @@ export default function RepairDetailPage() {
   // « SAV / Retour » rouvre la réparation (statut Retour) pour tout le monde.
   const [isGerant, setIsGerant] = useState(false);
   const [unlocked, setUnlocked] = useState(false);
-  const locked = ["✅ Terminé", "📦 Rendu"].includes(repair?.status) && !unlocked;
+  const locked = ["✅ Terminé", "📦 Rendu", "❌ KO"].includes(repair?.status) && !unlocked;
 
   const [showPartModal, setShowPartModal] = useState(false);
   const [showEmailModal, setShowEmailModal] = useState(false);
@@ -171,9 +172,8 @@ export default function RepairDetailPage() {
       color: "bg-orange-600",
       textColor: "text-white",
     },
-    { label: "✅ Terminé", status: "✅ Terminé", color: "bg-purple-500", textColor: "text-white" },
+    { label: "✅ Terminer (OK / KO)", status: "✅ Terminé", color: "bg-purple-500", textColor: "text-white" },
     { label: "📦 Rendu au client", status: "📦 Rendu", color: "bg-gray-600", textColor: "text-white" },
-    { label: "❌ KO - Irréparable", status: "❌ KO", color: "bg-red-600", textColor: "text-white" },
     {
       label: "🚫 Refus client",
       status: "🚫 Refus client",
@@ -525,6 +525,19 @@ export default function RepairDetailPage() {
     }
   };
 
+  // Terminer la réparation avec son résultat : OK (réparé) ou KO (non réparé).
+  // KO → aucun montant facturé (prix à 0, et le statut KO n'apparaît pas en facture).
+  const finishRepair = async (result: "OK" | "KO") => {
+    setShowOkKoModal(false);
+    if (result === "KO") {
+      setFinalPrice("0");
+      await supabase.from("repairs").update({ final_price: 0 }).eq("id", id);
+      await updateStatus("❌ KO");
+    } else {
+      await updateStatus("✅ Terminé");
+    }
+  };
+
   const escapeHtml = (str: string) =>
     String(str || "").replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
 
@@ -732,8 +745,12 @@ export default function RepairDetailPage() {
                 <button
                   key={idx}
                   onClick={() => {
-                    updateStatus(action.status);
                     setShowQuickActions(false);
+                    if (action.status === "✅ Terminé") {
+                      setShowOkKoModal(true); // demander le résultat OK / KO
+                    } else {
+                      updateStatus(action.status);
+                    }
                   }}
                   className={`${action.color} ${action.textColor} py-2 rounded-lg text-sm font-semibold`}
                 >
@@ -741,6 +758,39 @@ export default function RepairDetailPage() {
                 </button>
               ))}
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* MODAL RÉSULTAT OK / KO */}
+      {showOkKoModal && (
+        <div className="fixed inset-0 bg-black/50 z-50 flex justify-center items-center p-4">
+          <div className="bg-white rounded-xl w-full max-w-md p-5">
+            <h2 className="text-lg font-bold mb-1">Résultat de la réparation</h2>
+            <p className="text-sm text-gray-500 mb-4">L&apos;appareil a-t-il été réparé ?</p>
+            <div className="grid grid-cols-1 gap-3">
+              <button
+                onClick={() => finishRepair("OK")}
+                className="bg-green-600 hover:bg-green-700 text-white py-3 rounded-xl font-bold text-sm transition flex items-center justify-center gap-2"
+              >
+                ✅ Réparé (OK) — facturable
+              </button>
+              <button
+                onClick={() => finishRepair("KO")}
+                className="bg-red-600 hover:bg-red-700 text-white py-3 rounded-xl font-bold text-sm transition flex items-center justify-center gap-2"
+              >
+                ❌ Non réparé (KO) — rien facturé
+              </button>
+              <button
+                onClick={() => setShowOkKoModal(false)}
+                className="bg-gray-100 hover:bg-gray-200 text-gray-600 py-2.5 rounded-xl text-sm transition"
+              >
+                Annuler
+              </button>
+            </div>
+            <p className="text-xs text-gray-400 mt-3 text-center">
+              KO = appareil irréparable (manque de pièce, panne non trouvée). Aucune facture ne sera générée.
+            </p>
           </div>
         </div>
       )}
@@ -1092,8 +1142,8 @@ export default function RepairDetailPage() {
           </div>
         )}
 
-        {/* BANDEAU VERROUILLAGE (fiche Terminée / Rendue) */}
-        {["✅ Terminé", "📦 Rendu"].includes(repair?.status) && (
+        {/* BANDEAU VERROUILLAGE (fiche Terminée / Rendue / KO) */}
+        {["✅ Terminé", "📦 Rendu", "❌ KO"].includes(repair?.status) && (
           locked ? (
             <div className="mb-4 bg-amber-50 border border-amber-200 rounded-xl px-4 py-3 flex flex-col sm:flex-row sm:items-center gap-3">
               <div className="flex-1 text-sm text-amber-800">

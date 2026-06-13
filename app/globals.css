@@ -1,6 +1,19 @@
 @import "tailwindcss";
 
 /* ============================================
+   MASQUER LES FLÈCHES DES CHAMPS NOMBRE (prix, etc.)
+   ============================================ */
+input[type="number"]::-webkit-inner-spin-button,
+input[type="number"]::-webkit-outer-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
+input[type="number"] {
+  -moz-appearance: textfield;
+  appearance: textfield;
+}
+
+/* ============================================
    SAFE AREA (PWA / iPhone notch)
    ============================================ */
 .pb-safe {

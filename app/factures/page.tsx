@@ -90,8 +90,9 @@ export default function FacturesPage() {
 
       const repairsWithDetails = (repairsResult.data || []).map((r) => {
         const priceHt = r.final_price ?? r.estimated_price ?? 0;
-        // Priorité : tva_rate de la réparation, sinon tva du client (depuis rates frais, pas state)
-        const tvaRate = r.tva_rate ?? rates[r.client_id] ?? 0;
+        // Priorité : TVA par défaut du client (= celle affichée/éditée), sinon
+        // tva_rate de la réparation. Évite le désync TTC affiché ≠ TVA affichée.
+        const tvaRate = rates[r.client_id] ?? r.tva_rate ?? 0;
         const totalTtc = tvaRate === 0 ? priceHt : priceHt * (1 + tvaRate / 100);
         const paid = r.paid_amount ?? 0;
         const remaining = Math.max(0, totalTtc - paid);

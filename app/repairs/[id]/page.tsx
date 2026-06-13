@@ -712,6 +712,11 @@ export default function RepairDetailPage() {
         const data = await res.json();
         throw new Error(data.error || "Erreur envoi");
       }
+      // Enregistrer l'email sur la fiche client s'il a changé / était vide
+      if (client?.id && emailTo.trim() && emailTo.trim() !== client.email) {
+        await supabase.from("clients").update({ email: emailTo.trim() }).eq("id", client.id);
+        setClient({ ...client, email: emailTo.trim() });
+      }
       await ajouterHistorique("commentaire", `✉️ Email envoyé à ${emailTo}`);
       showMessage(`✅ Email envoyé`, "success");
       setShowEmailModal(false);

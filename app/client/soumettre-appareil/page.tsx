@@ -855,30 +855,6 @@ ${formData.description || "Aucune description"}
               </div>
             </div>
 
-            {/* Quantité */}
-            <div className="bg-gray-800/40 border border-orange-500/20 rounded-xl p-4">
-              <label className="block text-sm font-semibold text-orange-300 mb-1 flex items-center gap-2">
-                <span className="w-5 h-5 bg-orange-500/20 rounded flex items-center justify-center text-xs">🔢</span>
-                Plusieurs exemplaires du MÊME modèle ?
-              </label>
-              <p className="text-xs text-gray-500 mb-3">Pour un appareil <span className="text-orange-300">différent</span>, laissez sur 1 et ajoutez-le après validation.</p>
-              <div className="flex items-center gap-4">
-                <div className="flex items-center gap-2 bg-gray-900/70 border border-gray-600 rounded-xl px-3 py-2">
-                  <button type="button" onClick={() => setQuantity((q) => Math.max(1, q - 1))}
-                    className="w-8 h-8 rounded-full bg-orange-500/10 hover:bg-orange-500/20 border border-orange-500/30 text-orange-400 font-black text-lg flex items-center justify-center transition">−</button>
-                  <span className="w-8 text-center font-black text-white text-xl">{quantity}</span>
-                  <button type="button" onClick={() => setQuantity((q) => Math.min(10, q + 1))}
-                    className="w-8 h-8 rounded-full bg-orange-500/10 hover:bg-orange-500/20 border border-orange-500/30 text-orange-400 font-black text-lg flex items-center justify-center transition">+</button>
-                </div>
-                <span className="text-sm text-gray-400">
-                  {quantity} appareil{quantity > 1 ? "s" : ""} identique{quantity > 1 ? "s" : ""} seront créés
-                </span>
-              </div>
-              {quantity > 1 && (
-                <p className="text-xs text-orange-400/60 mt-2">✨ Utile pour un lot de réparation avec la même panne</p>
-              )}
-            </div>
-
             {error && (
               <div className="bg-red-500/10 border border-red-500/30 rounded-xl px-4 py-3">
                 <p className="text-red-400 text-sm text-center font-semibold">{error}</p>
@@ -894,9 +870,9 @@ ${formData.description || "Aucune description"}
                   {loading ? (
                     <><span className="animate-spin">⏳</span> Enregistrement...</>
                   ) : submittedTickets.length > 0 ? (
-                    <>➕ Ajouter cet appareil {quantity > 1 ? `(${quantity})` : ""}</>
+                    <>➕ Ajouter cet appareil</>
                   ) : (
-                    <>✨ Déclarer cet appareil {quantity > 1 ? `(${quantity})` : ""}</>
+                    <>✨ Déclarer cet appareil</>
                   )}
                 </span>
               </button>

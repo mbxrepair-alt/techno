@@ -926,6 +926,9 @@ export default function FacturesPage() {
                                   <button onClick={() => printInvoice(group)} className="px-3 py-1 bg-indigo-500/15 hover:bg-indigo-500/25 text-indigo-300 rounded-lg text-xs font-semibold transition-all border border-indigo-500/20">
                                     🧾 Facture PDF
                                   </button>
+                                  <button onClick={() => { setSelectedGroupForEmail(group); setEmailTo(group.client?.email || ""); setShowEmailModal(true); }} className="px-3 py-1 bg-sky-500/15 hover:bg-sky-500/25 text-sky-300 rounded-lg text-xs font-semibold transition-all border border-sky-500/20">
+                                    ✉️ Envoyer
+                                  </button>
                                   {isGerant && (
                                     <button onClick={() => openEditModal(group)} className="px-3 py-1 bg-orange-500/15 hover:bg-orange-500/25 text-orange-300 rounded-lg text-xs font-semibold transition-all border border-orange-500/20">
                                       ✏️ Modifier

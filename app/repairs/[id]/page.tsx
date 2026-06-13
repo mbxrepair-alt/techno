@@ -527,14 +527,25 @@ export default function RepairDetailPage() {
   // Terminer la réparation avec son résultat : OK (réparé) ou KO (non réparé).
   // KO → aucun montant facturé (prix à 0, et le statut KO n'apparaît pas en facture).
   const finishRepair = async (result: "OK" | "KO") => {
-    setShowOkKoModal(false);
     if (result === "KO") {
+      setShowOkKoModal(false);
       setFinalPrice("0");
       await supabase.from("repairs").update({ final_price: 0 }).eq("id", id);
       await updateStatus("❌ KO");
-    } else {
-      await updateStatus("✅ Terminé");
+      return;
     }
+    // OK : exiger les travaux effectués + un prix renseigné
+    const prix = parseFloat(String(finalPrice || 0));
+    if (!repairDescription.trim() || !prix || prix <= 0) {
+      setShowOkKoModal(false);
+      showMessage(
+        "⚠️ Renseignez les 🔧 Travaux effectués et le 💰 prix avant de terminer en OK.",
+        "error"
+      );
+      return;
+    }
+    setShowOkKoModal(false);
+    await updateStatus("✅ Terminé");
   };
 
   const escapeHtml = (str: string) =>

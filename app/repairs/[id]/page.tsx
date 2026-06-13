@@ -175,7 +175,6 @@ export default function RepairDetailPage() {
       color: "bg-orange-600",
       textColor: "text-white",
     },
-    { label: "📦 Rendu au client", status: "📦 Rendu", color: "bg-gray-600", textColor: "text-white" },
     {
       label: "🚫 Refus client",
       status: "🚫 Refus client",
@@ -774,8 +773,15 @@ export default function RepairDetailPage() {
       )}
 
       {showQuickActions && (
-        <div className="fixed inset-0 bg-black/50 z-50 flex justify-center items-center p-4">
-          <div className="bg-white rounded-xl w-full max-w-md p-5">
+        <div className="fixed inset-0 bg-black/50 z-50 flex justify-center items-center p-4" onClick={() => setShowQuickActions(false)}>
+          <div className="bg-white rounded-xl w-full max-w-md p-5 relative" onClick={(e) => e.stopPropagation()}>
+            <button
+              onClick={() => setShowQuickActions(false)}
+              className="absolute top-3 right-3 w-8 h-8 bg-gray-100 hover:bg-gray-200 text-gray-500 rounded-full flex items-center justify-center text-sm"
+              aria-label="Fermer"
+            >
+              ✕
+            </button>
             <h2 className="text-lg font-bold mb-3">⚡ Actions rapides</h2>
             <div className="grid grid-cols-1 gap-2">
               {quickActions.map((action, idx) => (

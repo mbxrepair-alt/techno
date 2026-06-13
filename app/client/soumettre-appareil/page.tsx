@@ -857,10 +857,11 @@ ${formData.description || "Aucune description"}
 
             {/* Quantité */}
             <div className="bg-gray-800/40 border border-orange-500/20 rounded-xl p-4">
-              <label className="block text-sm font-semibold text-orange-300 mb-3 flex items-center gap-2">
+              <label className="block text-sm font-semibold text-orange-300 mb-1 flex items-center gap-2">
                 <span className="w-5 h-5 bg-orange-500/20 rounded flex items-center justify-center text-xs">🔢</span>
-                Nombre d&apos;appareils à déclarer
+                Plusieurs exemplaires du MÊME modèle ?
               </label>
+              <p className="text-xs text-gray-500 mb-3">Pour un appareil <span className="text-orange-300">différent</span>, laissez sur 1 et ajoutez-le après validation.</p>
               <div className="flex items-center gap-4">
                 <div className="flex items-center gap-2 bg-gray-900/70 border border-gray-600 rounded-xl px-3 py-2">
                   <button type="button" onClick={() => setQuantity((q) => Math.max(1, q - 1))}
@@ -892,8 +893,10 @@ ${formData.description || "Aucune description"}
                 <span className="relative z-10 flex items-center gap-2">
                   {loading ? (
                     <><span className="animate-spin">⏳</span> Enregistrement...</>
+                  ) : submittedTickets.length > 0 ? (
+                    <>➕ Ajouter cet appareil {quantity > 1 ? `(${quantity})` : ""}</>
                   ) : (
-                    <>✨ Générer {quantity > 1 ? `${quantity} tickets` : "le ticket"}</>
+                    <>✨ Déclarer cet appareil {quantity > 1 ? `(${quantity})` : ""}</>
                   )}
                 </span>
               </button>
@@ -904,6 +907,9 @@ ${formData.description || "Aucune description"}
                 </button>
               )}
             </div>
+            <p className="text-xs text-gray-500 text-center -mt-1">
+              💡 Après validation, le formulaire se vide pour ajouter un <span className="text-orange-300">autre appareil (modèle différent)</span>. Cliquez « Terminer » quand vous avez fini.
+            </p>
 
           </form>
         </div>

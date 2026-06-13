@@ -241,7 +241,10 @@ export default function SettingsPage() {
       }
 
       const today = new Date().toISOString().slice(0, 10);
-      XLSX.writeFile(wb, `MBX_sauvegarde_${today}.xlsx`);
+      const atelier = (settings.company_name || companyName || "atelier")
+        .replace(/[^a-z0-9]+/gi, "_")
+        .replace(/^_+|_+$/g, "") || "atelier";
+      XLSX.writeFile(wb, `${atelier}_sauvegarde_${today}.xlsx`);
     } catch (e) {
       console.error("exportDatabase error:", e);
       alert("Erreur lors de l'export. Réessayez.");

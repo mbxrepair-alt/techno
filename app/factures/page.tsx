@@ -6,7 +6,7 @@
 
 import { useEffect, useState } from "react";
 import { supabase, getCurrentUser } from "../../lib/supabase";
-import { getCurrentTechnician } from "../../lib/historique";
+import { getCurrentTechnician, addHistoriqueAction } from "../../lib/historique";
 import { useRouter } from "next/navigation";
 import Layout from "../../components/Layout";
 
@@ -37,6 +37,7 @@ export default function FacturesPage() {
   const [companyProfile, setCompanyProfile] = useState<{ name: string; address: string; phone: string; email: string; siret: string; logo_url: string }>({ name: "MBX", address: "", phone: "", email: "", siret: "", logo_url: "" });
   const [logoBase64, setLogoBase64] = useState<string>("");
   const [isGerant, setIsGerant] = useState(false);
+  const [markRenduOnPay, setMarkRenduOnPay] = useState(true);
   // Édition de facture (gérant)
   const [showEditModal, setShowEditModal] = useState(false);
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -243,13 +244,16 @@ export default function FacturesPage() {
         const apply = Math.min(remaining, rep.remainingTtc);
         const newPaid = rep.paidTtc + apply;
 
+        const fullyPaid = newPaid >= rep.totalTtc;
         await supabase
           .from("repairs")
           .update({
             paid_amount: newPaid,
-            payment_status: newPaid >= rep.totalTtc ? "payé" : "partiel",
+            payment_status: fullyPaid ? "payé" : "partiel",
             payment_method: paymentMethod,
             payment_date: paidAt,
+            // Marquer rendu si la case est cochée et la réparation soldée
+            ...(markRenduOnPay && fullyPaid ? { status: "📦 Rendu" } : {}),
           })
           .eq("id", rep.id);
 
@@ -566,6 +570,31 @@ export default function FacturesPage() {
       alert("Erreur lors de l'enregistrement.");
     } finally {
       setSavingEdit(false);
+    }
+  };
+
+  // Marquer toutes les réparations d'une facture comme « Rendu »
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const markGroupRendu = async (group: any) => {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const toRender = group.repairs.filter((r: any) => r.status !== "📦 Rendu");
+    if (toRender.length === 0) return;
+    try {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      for (const r of toRender) {
+        await supabase.from("repairs").update({ status: "📦 Rendu" }).eq("id", r.id);
+        await addHistoriqueAction({
+          repairId: r.id,
+          action: "changement_statut",
+          description: "Appareil rendu au client",
+          oldValue: r.status,
+          newValue: "📦 Rendu",
+        });
+      }
+      await loadData();
+    } catch (e) {
+      console.error("markGroupRendu error:", e);
+      alert("Erreur lors du marquage Rendu.");
     }
   };
 
@@ -934,6 +963,14 @@ export default function FacturesPage() {
                                   <button onClick={() => { setSelectedGroupForEmail(group); setEmailTo(group.client?.email || ""); setShowEmailModal(true); }} className="px-3 py-1 bg-sky-500/15 hover:bg-sky-500/25 text-sky-300 rounded-lg text-xs font-semibold transition-all border border-sky-500/20">
                                     ✉️ Envoyer
                                   </button>
+                                  {/* eslint-disable-next-line @typescript-eslint/no-explicit-any */}
+                                  {group.repairs.every((r: any) => r.status === "📦 Rendu") ? (
+                                    <span className="px-3 py-1 bg-white/5 text-gray-500 rounded-lg text-xs font-semibold border border-white/10">📦 Rendu</span>
+                                  ) : (
+                                    <button onClick={() => markGroupRendu(group)} className="px-3 py-1 bg-emerald-500/15 hover:bg-emerald-500/25 text-emerald-300 rounded-lg text-xs font-semibold transition-all border border-emerald-500/20">
+                                      📦 Marquer rendu
+                                    </button>
+                                  )}
                                   {isGerant && (
                                     <button onClick={() => openEditModal(group)} className="px-3 py-1 bg-orange-500/15 hover:bg-orange-500/25 text-orange-300 rounded-lg text-xs font-semibold transition-all border border-orange-500/20">
                                       ✏️ Modifier
@@ -978,6 +1015,15 @@ export default function FacturesPage() {
               <option>Virement</option>
               <option>Chèque</option>
             </select>
+            <label className="flex items-center gap-2 my-3 cursor-pointer select-none">
+              <input
+                type="checkbox"
+                checked={markRenduOnPay}
+                onChange={(e) => setMarkRenduOnPay(e.target.checked)}
+                className="w-4 h-4 accent-emerald-500"
+              />
+              <span className="text-sm text-gray-300">📦 Marquer l&apos;appareil comme <span className="text-emerald-400 font-semibold">rendu</span> après paiement</span>
+            </label>
             <button onClick={registerPayment} disabled={isSending} className="w-full bg-green-600 hover:bg-green-500 text-white py-2.5 rounded-xl font-semibold text-sm transition-all mt-2 disabled:opacity-50">
               ✅ Encaisser
             </button>

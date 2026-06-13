@@ -4,7 +4,7 @@ import { useEffect, useState, useCallback, useMemo } from "react";
 import { supabase, getCurrentUser } from "../../lib/supabase";
 import { useRouter } from "next/navigation";
 import Layout from "../../components/Layout";
-import { getHistoriqueAppareil } from "../../lib/historique";
+import { getHistoriqueAppareil, addHistoriqueAction } from "../../lib/historique";
 
 // Configuration des statuts
 const STATUS_CONFIG = {
@@ -702,8 +702,8 @@ export default function HistoriquePage() {
                 </div>
               </div>
 
-              {/* Bouton Historique */}
-              <div className="flex justify-between items-center">
+              {/* Bouton Historique + Rendu */}
+              <div className="flex justify-between items-center flex-wrap gap-2">
                 <button
                   onClick={() => setShowFullHistory(!showFullHistory)}
                   className="flex items-center gap-2 px-4 py-2 bg-amber-500/15 text-amber-400 border border-amber-500/30 rounded-xl hover:bg-amber-500/25 transition-all duration-150 text-sm font-medium"
@@ -714,7 +714,27 @@ export default function HistoriquePage() {
                     {appareilHistorique.length}
                   </span>
                 </button>
-                <div className="text-xs text-gray-500">⏱️ Date et heure</div>
+                {!["📦 Rendu", "❌ KO", "🚫 Refus client"].includes(selectedRepair.status) && (
+                  <button
+                    onClick={async () => {
+                      const { error } = await supabase.from("repairs").update({ status: "📦 Rendu" }).eq("id", selectedRepair.id);
+                      if (!error) {
+                        await addHistoriqueAction({
+                          repairId: selectedRepair.id,
+                          action: "changement_statut",
+                          description: "Appareil rendu au client",
+                          oldValue: selectedRepair.status,
+                          newValue: "📦 Rendu",
+                        });
+                        setSelectedRepair({ ...selectedRepair, status: "📦 Rendu" });
+                        loadHistory();
+                      }
+                    }}
+                    className="flex items-center gap-2 px-4 py-2 bg-emerald-500/15 text-emerald-300 border border-emerald-500/30 rounded-xl hover:bg-emerald-500/25 transition-all duration-150 text-sm font-medium"
+                  >
+                    📦 Marquer rendu
+                  </button>
+                )}
               </div>
 
               {/* Timeline Historique Complet */}

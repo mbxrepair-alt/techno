@@ -6,6 +6,7 @@
 
 import { useEffect, useState } from "react";
 import { supabase, getCurrentUser } from "../../lib/supabase";
+import { getCurrentTechnician } from "../../lib/historique";
 import { useRouter } from "next/navigation";
 import Layout from "../../components/Layout";
 
@@ -35,6 +36,20 @@ export default function FacturesPage() {
   const [expandedClients, setExpandedClients] = useState<Set<string>>(new Set());
   const [companyProfile, setCompanyProfile] = useState<{ name: string; address: string; phone: string; email: string; siret: string; logo_url: string }>({ name: "MBX", address: "", phone: "", email: "", siret: "", logo_url: "" });
   const [logoBase64, setLogoBase64] = useState<string>("");
+  const [isGerant, setIsGerant] = useState(false);
+  // Édition de facture (gérant)
+  const [showEditModal, setShowEditModal] = useState(false);
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const [editGroup, setEditGroup] = useState<any>(null);
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const [editRows, setEditRows] = useState<any[]>([]);
+  const [editTva, setEditTva] = useState(0);
+  const [savingEdit, setSavingEdit] = useState(false);
+
+  useEffect(() => {
+    const t = getCurrentTechnician();
+    setIsGerant(t?.is_gerant === true);
+  }, []);
 
   /* -------------------------------------------------------------
      1️⃣ Chargement du taux de TVA par client
@@ -164,24 +179,38 @@ export default function FacturesPage() {
 
     filtered.forEach((r) => {
       const cid = r.client_id;
-      if (!groups.has(cid)) {
-        groups.set(cid, {
+      // Soldées : une facture PAR PAIEMENT (client + date de paiement) →
+      // les réparations payées ensemble se retrouvent sur la même facture.
+      // À régler : une facture par client.
+      const key = onlyPaid ? `${cid}__${r.payment_date || `solo-${r.id}`}` : cid;
+      if (!groups.has(key)) {
+        groups.set(key, {
+          key,
           client: r.client,
           repairs: [],
           totalTtc: 0,
           totalPaid: 0,
           totalRemaining: 0,
           tvaRate: clientTvaRates[cid] ?? r.tvaRate ?? 0,
+          payment_date: r.payment_date || null,
+          payment_method: r.payment_method || "",
         });
       }
-      const g = groups.get(cid);
+      const g = groups.get(key);
       g.repairs.push(r);
       g.totalTtc += r.totalTtc;
       g.totalPaid += r.paidTtc;
       g.totalRemaining += r.remainingTtc;
     });
 
-    return Array.from(groups.values()).sort((a, b) => b.totalRemaining - a.totalRemaining);
+    const result = Array.from(groups.values());
+    if (onlyPaid) {
+      // Plus récents en premier
+      return result.sort(
+        (a, b) => new Date(b.payment_date || 0).getTime() - new Date(a.payment_date || 0).getTime()
+      );
+    }
+    return result.sort((a, b) => b.totalRemaining - a.totalRemaining);
   };
 
   /* -------------------------------------------------------------
@@ -492,6 +521,84 @@ export default function FacturesPage() {
   };
 
   /* -------------------------------------------------------------
+     7️⃣ Édition d'une facture (gérant) + export Excel
+     ------------------------------------------------------------- */
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const openEditModal = (group: any) => {
+    if (!isGerant) return;
+    setEditGroup(group);
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    setEditRows(group.repairs.map((r: any) => ({ id: r.id, device: r.device, priceHt: r.priceHt, removed: false })));
+    setEditTva(group.tvaRate ?? 0);
+    setShowEditModal(true);
+  };
+
+  const saveEdit = async () => {
+    if (!editGroup) return;
+    setSavingEdit(true);
+    try {
+      for (const row of editRows) {
+        if (row.removed) {
+          // Retirer de la facture : on remet la réparation "non facturée"
+          await supabase
+            .from("repairs")
+            .update({ paid_amount: 0, payment_status: "non payé", payment_date: null })
+            .eq("id", row.id);
+        } else {
+          const ht = Number(row.priceHt) || 0;
+          const ttc = editTva === 0 ? ht : ht * (1 + editTva / 100);
+          await supabase
+            .from("repairs")
+            .update({ final_price: ht, tva_rate: editTva, paid_amount: ttc })
+            .eq("id", row.id);
+        }
+      }
+      setShowEditModal(false);
+      setEditGroup(null);
+      await loadData();
+    } catch (e) {
+      console.error("saveEdit error:", e);
+      alert("Erreur lors de l'enregistrement.");
+    } finally {
+      setSavingEdit(false);
+    }
+  };
+
+  // Export Excel (Ultra) d'une facture
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const exportExcel = async (group: any) => {
+    const XLSX = await import("xlsx");
+    const totalHt = group.repairs.reduce((s: number, r: any) => s + r.priceHt, 0);
+    const totalTva = group.totalTtc - totalHt;
+    const rows = [
+      ["Facture", group.client?.name || "—"],
+      ["Date", group.payment_date ? new Date(group.payment_date).toLocaleDateString("fr-FR") : ""],
+      ["Société", companyProfile.name],
+      [],
+      ["Réf.", "Appareil", "Panne", "Prix HT (€)", "TVA (%)", "Prix TTC (€)"],
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      ...group.repairs.map((r: any) => [
+        `MBX-${r.id}`,
+        r.device,
+        r.issue,
+        Number(r.priceHt).toFixed(2),
+        group.tvaRate,
+        Number(r.totalTtc).toFixed(2),
+      ]),
+      [],
+      ["", "", "", "Total HT", "", totalHt.toFixed(2)],
+      ["", "", "", "TVA", "", totalTva.toFixed(2)],
+      ["", "", "", "Total TTC", "", group.totalTtc.toFixed(2)],
+    ];
+    const ws = XLSX.utils.aoa_to_sheet(rows);
+    ws["!cols"] = [{ wch: 12 }, { wch: 22 }, { wch: 28 }, { wch: 12 }, { wch: 10 }, { wch: 14 }];
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, "Facture");
+    const safeName = (group.client?.name || "client").replace(/[^a-z0-9]/gi, "_");
+    XLSX.writeFile(wb, `Facture_${safeName}.xlsx`);
+  };
+
+  /* -------------------------------------------------------------
      8️⃣ Récupération des groupes
      ------------------------------------------------------------- */
   const unpaidGroups = groupByClient(false);
@@ -782,8 +889,9 @@ export default function FacturesPage() {
               {paidGroups
                 .filter((g) => g.client?.name?.toLowerCase().includes(searchTerm.toLowerCase()))
                 .map((group) => {
-                  const cid = String(group.client?.id) + "-paid";
+                  const cid = "paid-" + group.key;
                   const isOpen = expandedClients.has(cid);
+                  const dateStr = group.payment_date ? new Date(group.payment_date).toLocaleDateString("fr-FR") : "";
                   return (
                     <div key={cid} className="bg-[#16161d] border border-green-500/15 rounded-2xl overflow-hidden">
                       <div
@@ -795,7 +903,9 @@ export default function FacturesPage() {
                         </div>
                         <div className="flex-1 min-w-0">
                           <div className="font-semibold text-white text-sm">{group.client?.name}</div>
-                          <div className="text-xs text-gray-500 mt-0.5">{group.repairs.length} réparation(s) soldée(s)</div>
+                          <div className="text-xs text-gray-500 mt-0.5">
+                            {group.repairs.length} réparation(s){dateStr ? ` · ${dateStr}` : ""}{group.payment_method ? ` · ${group.payment_method}` : ""}
+                          </div>
                         </div>
                         <div className="text-right shrink-0">
                           <div className="text-xl font-black text-green-400">{group.totalPaid.toFixed(2)} €</div>
@@ -807,23 +917,33 @@ export default function FacturesPage() {
                       </div>
 
                       {isOpen && (
-                        <div className="border-t border-white/5 divide-y divide-white/5">
-                          {group.repairs.map((r) => (
-                            <div key={r.id} className="px-5 py-3 flex items-center gap-3 hover:bg-white/3 transition-colors">
-                              <span className="font-mono text-xs font-bold text-indigo-400 bg-indigo-500/10 px-2 py-0.5 rounded-md w-20 text-center shrink-0">MBX-{r.id}</span>
-                              <div className="flex-1 min-w-0">
-                                <div className="text-sm font-medium text-white truncate">{r.device}</div>
-                                <div className="text-xs text-gray-500 truncate">{r.issue}</div>
+                        <div className="border-t border-white/5">
+                          <div className="divide-y divide-white/5">
+                            {group.repairs.map((r) => (
+                              <div key={r.id} className="px-5 py-3 flex items-center gap-3 hover:bg-white/3 transition-colors">
+                                <span className="font-mono text-xs font-bold text-indigo-400 bg-indigo-500/10 px-2 py-0.5 rounded-md w-20 text-center shrink-0">MBX-{r.id}</span>
+                                <div className="flex-1 min-w-0">
+                                  <div className="text-sm font-medium text-white truncate">{r.device}</div>
+                                  <div className="text-xs text-gray-500 truncate">{r.issue}</div>
+                                </div>
+                                <div className="text-sm font-bold text-green-400 shrink-0">{r.totalTtc.toFixed(2)} €</div>
                               </div>
-                              {r.payment_method && (
-                                <span className="text-[10px] text-gray-500 bg-white/5 px-2 py-0.5 rounded-md shrink-0">{r.payment_method}</span>
-                              )}
-                              <div className="text-sm font-bold text-green-400 shrink-0">{r.totalTtc.toFixed(2)} €</div>
-                              <button onClick={() => printInvoice({ ...group, repairs: [r] })} className="shrink-0 px-3 py-1.5 bg-white/5 hover:bg-white/10 text-gray-400 rounded-lg text-xs font-medium transition-all border border-white/8">
-                                🧾 Facture
+                            ))}
+                          </div>
+                          {/* Actions facture (paiement = 1 facture) */}
+                          <div className="px-5 py-3 border-t border-white/5 flex flex-wrap items-center gap-2 bg-white/3">
+                            <button onClick={() => printInvoice(group)} className="px-3 py-1.5 bg-indigo-500/15 hover:bg-indigo-500/25 text-indigo-300 rounded-lg text-xs font-semibold transition-all border border-indigo-500/20">
+                              🧾 Facture PDF
+                            </button>
+                            <button onClick={() => exportExcel(group)} className="px-3 py-1.5 bg-green-500/15 hover:bg-green-500/25 text-green-300 rounded-lg text-xs font-semibold transition-all border border-green-500/20">
+                              📊 Exporter Excel
+                            </button>
+                            {isGerant && (
+                              <button onClick={() => openEditModal(group)} className="px-3 py-1.5 bg-orange-500/15 hover:bg-orange-500/25 text-orange-300 rounded-lg text-xs font-semibold transition-all border border-orange-500/20">
+                                ✏️ Modifier
                               </button>
-                            </div>
-                          ))}
+                            )}
+                          </div>
                         </div>
                       )}
                     </div>
@@ -862,6 +982,72 @@ export default function FacturesPage() {
               ✅ Encaisser
             </button>
             <button onClick={() => setShowPaymentModal(false)} className="w-full bg-white/5 hover:bg-white/10 text-gray-300 py-2.5 rounded-xl text-sm border border-white/10 transition-all mt-2">
+              Annuler
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* MODAL MODIFIER FACTURE (gérant) */}
+      {showEditModal && editGroup && (
+        <div className="fixed inset-0 bg-black/70 backdrop-blur-sm flex items-center justify-center p-4 z-50">
+          <div className="bg-[#16161d] border border-white/10 border-t-2 border-t-orange-500 rounded-2xl max-w-lg w-full p-6 shadow-2xl max-h-[90vh] overflow-y-auto">
+            <h2 className="text-lg font-bold text-white mb-1">✏️ Modifier la facture</h2>
+            <p className="text-gray-500 text-xs mb-4">{editGroup.client?.name}</p>
+
+            {/* Réparations éditables */}
+            <div className="space-y-2 mb-4">
+              {editRows.map((row, i) => (
+                <div key={row.id} className={`flex items-center gap-2 bg-[#1a1d2e] border border-white/10 rounded-xl px-3 py-2 ${row.removed ? "opacity-40" : ""}`}>
+                  <span className="font-mono text-[10px] text-indigo-400 shrink-0">MBX-{row.id}</span>
+                  <span className="flex-1 text-xs text-white truncate">{row.device}</span>
+                  <input
+                    type="number"
+                    step="0.01"
+                    value={row.priceHt}
+                    disabled={row.removed}
+                    onChange={(e) => setEditRows((prev) => prev.map((p, j) => j === i ? { ...p, priceHt: e.target.value } : p))}
+                    className="w-20 bg-black/40 border border-white/10 rounded-lg px-2 py-1 text-white text-xs text-right outline-none focus:border-orange-500/60"
+                  />
+                  <span className="text-[10px] text-gray-500">€ HT</span>
+                  <button
+                    onClick={() => setEditRows((prev) => prev.map((p, j) => j === i ? { ...p, removed: !p.removed } : p))}
+                    className={`text-xs px-2 py-1 rounded-lg border transition-all ${row.removed ? "bg-white/5 text-gray-400 border-white/10" : "bg-red-500/10 text-red-400 border-red-500/20 hover:bg-red-500/20"}`}
+                    title={row.removed ? "Annuler le retrait" : "Retirer de la facture"}
+                  >
+                    {row.removed ? "↩" : "🗑"}
+                  </button>
+                </div>
+              ))}
+            </div>
+
+            {/* TVA */}
+            <div className="flex items-center gap-3 mb-4">
+              <span className="text-xs text-gray-400">Taux de TVA</span>
+              <select
+                value={editTva}
+                onChange={(e) => setEditTva(Number(e.target.value))}
+                className="bg-[#1a1d2e] border border-white/10 rounded-lg px-3 py-1.5 text-white text-sm outline-none focus:border-orange-500/60"
+              >
+                {TVA_RATES.map((r) => <option key={r} value={r}>{r}%</option>)}
+              </select>
+            </div>
+
+            {/* Total recalculé en direct */}
+            <div className="bg-white/5 rounded-xl px-4 py-3 mb-4 flex justify-between items-center">
+              <span className="text-xs text-gray-400 uppercase tracking-wider">Nouveau total TTC</span>
+              <span className="text-lg font-black text-orange-400">
+                {editRows.filter((r) => !r.removed).reduce((s, r) => {
+                  const ht = Number(r.priceHt) || 0;
+                  return s + (editTva === 0 ? ht : ht * (1 + editTva / 100));
+                }, 0).toFixed(2)} €
+              </span>
+            </div>
+
+            <button onClick={saveEdit} disabled={savingEdit} className="w-full bg-orange-500 hover:bg-orange-400 text-black py-2.5 rounded-xl font-semibold text-sm transition-all disabled:opacity-50">
+              {savingEdit ? "Enregistrement…" : "💾 Enregistrer"}
+            </button>
+            <button onClick={() => { setShowEditModal(false); setEditGroup(null); }} className="w-full bg-white/5 hover:bg-white/10 text-gray-300 py-2.5 rounded-xl text-sm border border-white/10 transition-all mt-2">
               Annuler
             </button>
           </div>

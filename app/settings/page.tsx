@@ -289,7 +289,12 @@ export default function SettingsPage() {
           {/* Onglet Entreprise */}
           {activeTab === "company" && (
             <div>
-              <h2 className="text-sm font-bold text-gray-400 uppercase tracking-widest mb-5">Informations de l'entreprise</h2>
+              <h2 className="text-sm font-bold text-gray-400 uppercase tracking-widest mb-3">Informations de l'entreprise</h2>
+              {!isGerant && (
+                <div className="mb-5 flex items-center gap-2 bg-orange-500/10 border border-orange-500/20 rounded-xl px-4 py-2.5 text-xs text-orange-300">
+                  🔒 Ces informations sont gérées par le gérant. Elles sont en lecture seule pour votre compte.
+                </div>
+              )}
 
               {/* Upload Logo */}
               <div className="mb-6 p-4 bg-white/5 border border-white/10 rounded-xl">
@@ -298,7 +303,9 @@ export default function SettingsPage() {
                   {logoPreview ? (
                     <div className="relative">
                       <img src={logoPreview} alt="Logo" className="w-16 h-16 object-contain border border-white/10 rounded-xl bg-white/5 p-1" />
-                      <button onClick={removeLogo} className="absolute -top-2 -right-2 bg-red-500 hover:bg-red-600 text-white rounded-full w-5 h-5 flex items-center justify-center text-xs">×</button>
+                      {isGerant && (
+                        <button onClick={removeLogo} className="absolute -top-2 -right-2 bg-red-500 hover:bg-red-600 text-white rounded-full w-5 h-5 flex items-center justify-center text-xs">×</button>
+                      )}
                     </div>
                   ) : (
                     <div className="w-16 h-16 bg-white/10 rounded-xl flex items-center justify-center text-2xl">🔧</div>
@@ -308,8 +315,8 @@ export default function SettingsPage() {
                       type="file"
                       accept="image/png,image/jpeg,image/jpg"
                       onChange={handleFileChange}
-                      disabled={uploading}
-                      className="block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-semibold file:bg-slate-500/15 file:text-slate-300 hover:file:bg-slate-500/25 transition-all"
+                      disabled={uploading || !isGerant}
+                      className="block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-semibold file:bg-slate-500/15 file:text-slate-300 hover:file:bg-slate-500/25 transition-all disabled:opacity-40 disabled:cursor-not-allowed"
                     />
                     <p className="text-xs text-gray-600 mt-1">PNG, JPG ou JPEG. Max 2MB.</p>
                   </div>
@@ -324,7 +331,8 @@ export default function SettingsPage() {
                     type="text"
                     value={settings.company_name}
                     onChange={(e) => setSettings({ ...settings, company_name: e.target.value })}
-                    className={inputCls}
+                    className={isGerant ? inputCls : inputReadOnlyCls}
+                    disabled={!isGerant}
                     placeholder="Votre entreprise"
                   />
                 </div>
@@ -334,7 +342,8 @@ export default function SettingsPage() {
                     type="tel"
                     value={settings.contact_phone}
                     onChange={(e) => setSettings({ ...settings, contact_phone: e.target.value })}
-                    className={inputCls}
+                    className={isGerant ? inputCls : inputReadOnlyCls}
+                    disabled={!isGerant}
                     placeholder="0612345678"
                   />
                 </div>
@@ -344,7 +353,8 @@ export default function SettingsPage() {
                     type="email"
                     value={settings.contact_email}
                     onChange={(e) => setSettings({ ...settings, contact_email: e.target.value })}
-                    className={inputCls}
+                    className={isGerant ? inputCls : inputReadOnlyCls}
+                    disabled={!isGerant}
                     placeholder="contact@entreprise.com"
                   />
                 </div>
@@ -353,18 +363,21 @@ export default function SettingsPage() {
                   <textarea
                     value={settings.contact_address}
                     onChange={(e) => setSettings({ ...settings, contact_address: e.target.value })}
-                    className={inputCls}
+                    className={isGerant ? inputCls : inputReadOnlyCls}
+                    disabled={!isGerant}
                     rows={3}
                     placeholder="Adresse complète"
                   />
                 </div>
-                <button
-                  onClick={saveSettings}
-                  disabled={loading}
-                  className="px-6 py-2.5 bg-gradient-to-r from-gray-500 to-slate-600 text-white rounded-xl text-sm font-semibold shadow-[0_4px_0_rgba(0,0,0,0.3)] active:translate-y-0.5 active:shadow-[0_2px_0_rgba(0,0,0,0.3)] transition-all disabled:opacity-50"
-                >
-                  {loading ? "Enregistrement..." : "💾 Enregistrer"}
-                </button>
+                {isGerant && (
+                  <button
+                    onClick={saveSettings}
+                    disabled={loading}
+                    className="px-6 py-2.5 bg-gradient-to-r from-gray-500 to-slate-600 text-white rounded-xl text-sm font-semibold shadow-[0_4px_0_rgba(0,0,0,0.3)] active:translate-y-0.5 active:shadow-[0_2px_0_rgba(0,0,0,0.3)] transition-all disabled:opacity-50"
+                  >
+                    {loading ? "Enregistrement..." : "💾 Enregistrer"}
+                  </button>
+                )}
               </div>
             </div>
           )}

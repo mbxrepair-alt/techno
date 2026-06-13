@@ -4,6 +4,7 @@ import { Suspense, Fragment } from "react";
 import { useState, useEffect } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
 import { supabase } from "../../lib/supabase"; // used only for client_response updates
+import PatternLock from "../../components/PatternLock";
 
 const STATUS_STEPS = [
   "📥 Réceptionné",
@@ -591,13 +592,26 @@ function SuiviClientContent() {
                                 ⚠️ <strong>Forfait diagnostic : {selectedRepair.diagnostic_price}€</strong> — Ce montant sera facturé si vous refusez la réparation.
                               </div>
                             )}
+                            {selectedRepair.status === "🔐 Mot de passe incorrect" && (
+                              <div className="mb-3">
+                                <p className="text-xs text-amber-200/70 mb-2 text-center">
+                                  ✏️ Dessinez votre schéma ci-dessous, <span className="text-amber-300">ou</span> tapez votre code PIN plus bas
+                                </p>
+                                <div className="max-w-[220px] mx-auto">
+                                  <PatternLock
+                                    onComplete={(pattern) => setClientResponse(`Schéma : ${pattern.join("-")}`)}
+                                    onClear={() => setClientResponse("")}
+                                  />
+                                </div>
+                              </div>
+                            )}
                             <textarea
                               className="w-full bg-[#0f0f13] border border-white/15 rounded-xl px-4 py-3 text-white placeholder-gray-600 text-sm outline-none focus:border-amber-500/60 focus:ring-2 focus:ring-amber-500/15 transition-all resize-none"
                               rows={3}
                               placeholder={
                                 selectedRepair.status === "⏳ Attente validation client"
                                   ? "Écrivez votre réponse (ex: je valide le devis de 89€)"
-                                  : "Entrez votre code ou schéma de déverrouillage"
+                                  : "Code PIN / mot de passe (ou dessinez le schéma ci-dessus)"
                               }
                               value={clientResponse}
                               onChange={(e) => setClientResponse(e.target.value)}

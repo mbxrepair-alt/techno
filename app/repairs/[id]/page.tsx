@@ -88,6 +88,9 @@ export default function RepairDetailPage() {
   const [sendingEmail, setSendingEmail] = useState(false);
   const [showQuickActions, setShowQuickActions] = useState(false);
   const [showOkKoModal, setShowOkKoModal] = useState(false);
+  const [showFinalizeModal, setShowFinalizeModal] = useState(false);
+  const [finalizeTravaux, setFinalizeTravaux] = useState("");
+  const [finalizePrice, setFinalizePrice] = useState("");
   const [currentUserId, setCurrentUserId] = useState(null);
 
   const [historique, setHistorique] = useState([]);
@@ -534,17 +537,28 @@ export default function RepairDetailPage() {
       await updateStatus("❌ KO");
       return;
     }
-    // OK : exiger les travaux effectués + un prix renseigné
-    const prix = parseFloat(String(finalPrice || 0));
-    if (!repairDescription.trim() || !prix || prix <= 0) {
-      setShowOkKoModal(false);
-      showMessage(
-        "⚠️ Renseignez les 🔧 Travaux effectués et le 💰 prix avant de terminer en OK.",
-        "error"
-      );
+    // OK : ouvrir une petite fenêtre pour saisir travaux + prix puis valider
+    setShowOkKoModal(false);
+    setFinalizeTravaux(repairDescription || "");
+    setFinalizePrice(finalPrice ? String(finalPrice) : "");
+    setShowFinalizeModal(true);
+  };
+
+  // Validation de la fenêtre de finalisation (OK) : enregistre travaux + prix
+  // puis passe la réparation en Terminé.
+  const confirmFinishOk = async () => {
+    const prix = parseFloat(String(finalizePrice || 0));
+    if (!finalizeTravaux.trim() || !prix || prix <= 0) {
+      showMessage("Renseignez les travaux effectués et un prix valide.", "error");
       return;
     }
-    setShowOkKoModal(false);
+    setRepairDescription(finalizeTravaux);
+    setFinalPrice(String(prix));
+    await supabase
+      .from("repairs")
+      .update({ repair_description: finalizeTravaux, final_price: prix })
+      .eq("id", id);
+    setShowFinalizeModal(false);
     await updateStatus("✅ Terminé");
   };
 
@@ -802,6 +816,49 @@ export default function RepairDetailPage() {
             <p className="text-xs text-gray-400 mt-3 text-center">
               KO = appareil irréparable (manque de pièce, panne non trouvée). Aucune facture ne sera générée.
             </p>
+          </div>
+        </div>
+      )}
+
+      {/* MODAL FINALISATION (OK) : travaux + prix */}
+      {showFinalizeModal && (
+        <div className="fixed inset-0 bg-black/50 z-50 flex justify-center items-center p-4">
+          <div className="bg-white rounded-xl w-full max-w-md p-5">
+            <h2 className="text-lg font-bold mb-1">✅ Finaliser la réparation</h2>
+            <p className="text-sm text-gray-500 mb-4">Renseignez les travaux et le montant.</p>
+
+            <label className="block text-xs font-semibold text-gray-600 mb-1">🔧 Travaux effectués</label>
+            <textarea
+              rows={4}
+              value={finalizeTravaux}
+              onChange={(e) => setFinalizeTravaux(e.target.value)}
+              placeholder="Détail des travaux effectués..."
+              className="w-full border rounded-lg p-2 text-sm text-gray-700 mb-3 resize-none focus:ring-2 focus:ring-green-500 focus:border-transparent outline-none"
+              autoFocus
+            />
+
+            <label className="block text-xs font-semibold text-gray-600 mb-1">💰 Prix (€)</label>
+            <input
+              type="number"
+              step="1"
+              value={finalizePrice}
+              onChange={(e) => setFinalizePrice(e.target.value)}
+              placeholder="0"
+              className="w-full border rounded-lg p-2 text-base font-bold text-gray-800 mb-4 outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent"
+            />
+
+            <button
+              onClick={confirmFinishOk}
+              className="w-full bg-green-600 hover:bg-green-700 text-white py-3 rounded-xl font-bold text-sm transition"
+            >
+              ✅ Valider et terminer
+            </button>
+            <button
+              onClick={() => setShowFinalizeModal(false)}
+              className="w-full bg-gray-100 hover:bg-gray-200 text-gray-600 py-2.5 rounded-xl text-sm transition mt-2"
+            >
+              Annuler
+            </button>
           </div>
         </div>
       )}

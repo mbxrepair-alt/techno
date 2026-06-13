@@ -1,7 +1,7 @@
 "use client";
 
 import { Suspense, Fragment } from "react";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
 import { supabase } from "../../lib/supabase"; // used only for client_response updates
 
@@ -36,8 +36,9 @@ function SuiviClientContent() {
   const searchParams = useSearchParams();
   const router = useRouter();
   const codeFromUrl = searchParams.get("code") || "";
+  const nameFromUrl = searchParams.get("name") || "";
 
-  const [nameInput, setNameInput] = useState("");
+  const [nameInput, setNameInput] = useState(nameFromUrl);
   const [codeInput, setCodeInput] = useState(codeFromUrl);
   const [loading, setLoading] = useState(false);
   const [client, setClient] = useState<any>(null);
@@ -49,9 +50,8 @@ function SuiviClientContent() {
   const [showPhotoModal, setShowPhotoModal] = useState(false);
   const [selectedPhoto, setSelectedPhoto] = useState<string | null>(null);
 
-  const handleSearch = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!nameInput.trim() || !codeInput.trim()) {
+  const runSearch = async (name: string, code: string) => {
+    if (!name.trim() || !code.trim()) {
       setError("Veuillez remplir les deux champs.");
       return;
     }
@@ -63,8 +63,8 @@ function SuiviClientContent() {
 
     try {
       const params = new URLSearchParams({
-        code: codeInput.trim().toUpperCase(),
-        name: nameInput.trim(),
+        code: code.trim().toUpperCase(),
+        name: name.trim(),
       });
       const res = await fetch(`/api/client-tracking?${params}`);
       const json = await res.json();
@@ -90,6 +90,19 @@ function SuiviClientContent() {
       setLoading(false);
     }
   };
+
+  const handleSearch = (e: React.FormEvent) => {
+    e.preventDefault();
+    runSearch(nameInput, codeInput);
+  };
+
+  // Lien email : nom + code pré-remplis dans l'URL → chargement automatique
+  useEffect(() => {
+    if (nameFromUrl.trim() && codeFromUrl.trim()) {
+      runSearch(nameFromUrl, codeFromUrl);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   const handleValidate = async () => {
     if (!selectedRepair || !clientResponse.trim()) {

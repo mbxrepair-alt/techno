@@ -537,7 +537,9 @@ export default function RepairDetailPage() {
         if (to) {
           try {
             const BASE_URL = "https://technophone.vercel.app";
-            const trackingLink = client?.client_code ? `${BASE_URL}/suivi-client?code=${client.client_code}` : "";
+            const trackingLink = client?.client_code
+              ? `${BASE_URL}/suivi-client?code=${client.client_code}&name=${encodeURIComponent(client.name || "")}`
+              : "";
             const res = await fetch("/api/send-status-email", {
               method: "POST",
               headers: { "Content-Type": "application/json" },

@@ -511,6 +511,12 @@ export default function RepairDetailPage() {
   const updateStatus = async (newStatus) => {
     const oldStatus = repair?.status;
 
+    // « Rendu » uniquement depuis « Terminé »
+    if (newStatus === "📦 Rendu" && oldStatus !== "✅ Terminé") {
+      showMessage("⚠️ L'appareil doit d'abord être Terminé avant d'être Rendu.", "error");
+      return;
+    }
+
     const { error } = await supabase.from("repairs").update({ status: newStatus }).eq("id", id);
 
     if (error) {

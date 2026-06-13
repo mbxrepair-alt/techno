@@ -13,6 +13,7 @@ import {
   Receipt,
   Banknote,
   Wallet,
+  Store,
   BarChart3,
   Settings,
   LogOut,
@@ -115,6 +116,14 @@ export default function Navigation({ user, permissions }: NavigationProps) {
       icon: Inbox,
       color: "text-pink-400",
       activeBg: "bg-pink-500/15 border-pink-500/30",
+      visible: !!(permissions?.can_access_repairs || isGerant),
+    },
+    {
+      href: "/boutique",
+      label: "Boutique",
+      icon: Store,
+      color: "text-fuchsia-400",
+      activeBg: "bg-fuchsia-500/15 border-fuchsia-500/30",
       visible: !!(permissions?.can_access_repairs || isGerant),
     },
     {

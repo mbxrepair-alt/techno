@@ -12,6 +12,7 @@ import {
   History,
   Receipt,
   Banknote,
+  Wallet,
   BarChart3,
   Settings,
   LogOut,
@@ -147,6 +148,14 @@ export default function Navigation({ user, permissions }: NavigationProps) {
       color: "text-green-400",
       activeBg: "bg-green-500/15 border-green-500/30",
       visible: !!(permissions?.can_access_paiements || isGerant),
+    },
+    {
+      href: "/paie",
+      label: "Paie",
+      icon: Wallet,
+      color: "text-lime-400",
+      activeBg: "bg-lime-500/15 border-lime-500/30",
+      visible: isGerant,
     },
     {
       href: "/statistiques",

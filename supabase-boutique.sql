@@ -9,8 +9,14 @@ CREATE TABLE IF NOT EXISTS products (
   stock integer NOT NULL DEFAULT 0,
   purchase_price numeric NOT NULL DEFAULT 0,
   sale_price numeric NOT NULL DEFAULT 0,
+  barcode text DEFAULT '',
+  imei text DEFAULT '',
   created_at timestamptz NOT NULL DEFAULT now()
 );
+
+-- Si la table products existe déjà, ajouter les colonnes :
+ALTER TABLE products ADD COLUMN IF NOT EXISTS barcode text DEFAULT '';
+ALTER TABLE products ADD COLUMN IF NOT EXISTS imei text DEFAULT '';
 
 CREATE TABLE IF NOT EXISTS product_sales (
   id bigserial PRIMARY KEY,

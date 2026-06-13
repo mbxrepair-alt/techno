@@ -74,8 +74,11 @@ export default function BoutiquePage() {
   }, []);
 
   const addProduct = async () => {
-    if (!form.name.trim()) return;
-    await supabase.from("products").insert({
+    if (!form.name.trim()) {
+      alert("Le nom du produit est requis.");
+      return;
+    }
+    const { error } = await supabase.from("products").insert({
       user_id: userId,
       name: form.name.trim(),
       category: form.category.trim(),
@@ -85,6 +88,11 @@ export default function BoutiquePage() {
       barcode: form.barcode.trim(),
       imei: form.imei.trim(),
     });
+    if (error) {
+      console.error("addProduct error:", error);
+      alert("Erreur enregistrement : " + (error.message || JSON.stringify(error)));
+      return;
+    }
     setForm({ name: "", category: "", stock: "", purchase_price: "", sale_price: "", barcode: "", imei: "" });
     setShowAdd(false);
     await load();

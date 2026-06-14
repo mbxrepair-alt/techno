@@ -303,7 +303,96 @@ export default function FacturesPage() {
   };
 
   /* -------------------------------------------------------------
-     6️⃣ Impression PDF
+     6️⃣ Impression PDF boutique (vente directe sans réparation)
+     ------------------------------------------------------------- */
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const printBoutiqueInvoice = (bg: any) => {
+    const win = window.open("", "_blank", "height=900,width=1000");
+    if (!win) { alert("Autorisez les pop-ups pour imprimer."); return; }
+    const cp = companyProfile;
+    const shortName = cp.name || "MBX";
+    const invoiceRef = `VENTE-${Date.now().toString().slice(-8)}`;
+    const date = new Date(bg.sold_at).toLocaleDateString("fr-FR");
+    const logoHtml = logoBase64
+      ? `<img src="${logoBase64}" style="height:48px;max-width:160px;object-fit:contain;display:block" alt="logo"/>`
+      : `<span style="font-size:28px;font-weight:900;letter-spacing:-1px;color:#0f172a">${shortName}</span>`;
+    win.document.write(`<!DOCTYPE html><html><head><meta charset="UTF-8">
+    <title>Vente ${invoiceRef}</title>
+    <style>
+      *{box-sizing:border-box;margin:0;padding:0}
+      body{font-family:'Segoe UI',system-ui,Arial,sans-serif;background:#f1f5f9;color:#0f172a;padding:32px 20px}
+      .page{max-width:800px;margin:auto;background:#fff;box-shadow:0 4px 32px rgba(0,0,0,.10)}
+      .accent-bar{height:4px;background:linear-gradient(90deg,#a855f7,#6366f1,#06b6d4)}
+      .header{display:flex;justify-content:space-between;align-items:flex-start;padding:32px 40px 24px}
+      .header-contact{font-size:11.5px;color:#64748b;line-height:1.8;margin-top:10px}
+      .header-ref{font-size:13px;font-weight:600;color:#6366f1;font-family:monospace}
+      .pill-paid{display:inline-flex;align-items:center;gap:5px;margin-top:10px;padding:5px 14px;border-radius:99px;font-size:11px;font-weight:700;background:#f0fdf4;color:#16a34a;border:1px solid #bbf7d0}
+      .sep{height:1px;background:#e2e8f0;margin:0 40px}
+      .parties{display:grid;grid-template-columns:1fr 1fr;padding:24px 40px;border-bottom:1px solid #f1f5f9}
+      .party{padding-right:32px}.party+.party{padding-right:0;padding-left:32px;border-left:1px solid #f1f5f9}
+      .party-tag{font-size:9px;font-weight:700;letter-spacing:2.5px;text-transform:uppercase;color:#94a3b8;margin-bottom:8px}
+      .party-name{font-size:17px;font-weight:800;color:#0f172a;margin-bottom:6px}
+      .table-wrap{padding:0 40px}
+      table{width:100%;border-collapse:collapse;margin-top:24px}
+      thead tr{border-bottom:2px solid #0f172a}
+      th{padding:0 12px 10px;text-align:left;font-size:9.5px;font-weight:700;text-transform:uppercase;letter-spacing:1.5px;color:#94a3b8}
+      th.r{text-align:right}
+      tbody tr{border-bottom:1px solid #f1f5f9}
+      td{padding:14px 12px;font-size:13px;color:#334155}
+      td.r{text-align:right}
+      .bottom-wrap{display:flex;justify-content:flex-end;padding:24px 40px 32px;border-top:1px solid #f1f5f9}
+      .totals{width:260px}
+      .t-row{display:flex;justify-content:space-between;font-size:12.5px;color:#64748b;padding:5px 0}
+      .t-row.ttc{border-top:2px solid #0f172a;margin-top:6px;padding-top:12px;font-size:18px;font-weight:800;color:#0f172a}
+      .t-row.paid{color:#16a34a;font-weight:700}
+      .footer{background:#f8fafc;border-top:1px solid #e2e8f0;padding:14px 40px;display:flex;justify-content:space-between}
+      .footer-txt{font-size:10.5px;color:#94a3b8}
+      .footer-ref{font-family:monospace;font-size:10px;background:#0f172a;color:#94a3b8;padding:3px 10px;border-radius:4px}
+      @media print{body{background:#fff;padding:0}.page{box-shadow:none}.no-print{display:none!important}}
+      .print-btn{display:flex;align-items:center;justify-content:center;gap:8px;margin:28px auto 0;padding:12px 40px;background:#0f172a;color:#fff;border:none;border-radius:8px;font-size:13px;font-weight:600;cursor:pointer;width:fit-content}
+    </style></head><body>
+    <div class="page">
+      <div class="accent-bar"></div>
+      <div class="header">
+        <div>${logoHtml}<div class="header-contact">${cp.address ? `${cp.address}<br>` : ""}${cp.phone || ""}${cp.siret ? `<br>SIRET ${cp.siret}` : ""}</div></div>
+        <div style="text-align:right">
+          <div style="font-size:36px;font-weight:800;color:#e2e8f0;letter-spacing:-1px">VENTE</div>
+          <div class="header-ref">${invoiceRef}</div>
+          <div style="font-size:11.5px;color:#94a3b8">Le ${date}</div>
+          <div><span class="pill-paid">✓ Soldée</span></div>
+        </div>
+      </div>
+      <div class="sep"></div>
+      <div class="parties">
+        <div class="party"><div class="party-tag">Vendeur</div><div class="party-name">${shortName}</div></div>
+        <div class="party"><div class="party-tag">Client</div><div class="party-name">${bg.clientName || "Vente directe"}</div></div>
+      </div>
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th>Produit</th><th class="r" style="width:70px">Qté</th><th class="r" style="width:90px">P.U.</th><th class="r" style="width:90px">Total</th></tr></thead>
+          <tbody>
+            ${bg.items.map((s: any) => `<tr><td>${s.product_name}</td><td class="r">${s.quantity}</td><td class="r">${Number(s.unit_price).toFixed(2)} €</td><td class="r" style="font-weight:600">${Number(s.total).toFixed(2)} €</td></tr>`).join("")}
+          </tbody>
+        </table>
+      </div>
+      <div class="bottom-wrap">
+        <div class="totals">
+          <div class="t-row ttc"><span>Total</span><span>${bg.total.toFixed(2)} €</span></div>
+          <div class="t-row paid"><span>✓ Réglé</span><span>${bg.total.toFixed(2)} €</span></div>
+        </div>
+      </div>
+      <div class="footer">
+        <span class="footer-txt">Merci pour votre achat</span>
+        <span class="footer-ref">${invoiceRef} · ${date}</span>
+      </div>
+    </div>
+    <button class="print-btn no-print" onclick="window.print()">🖨️ Imprimer / PDF</button>
+    </body></html>`);
+    win.document.close();
+  };
+
+  /* -------------------------------------------------------------
+     6️⃣b Impression PDF réparations
      ------------------------------------------------------------- */
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const printInvoice = (group, extras: any[] = []) => {
@@ -921,12 +1010,12 @@ export default function FacturesPage() {
           </div>
         </div>
 
-        {/* FACTURES PAYÉES — regroupées par client, 1 paiement = 1 facture */}
-        {paidGroups.length > 0 && (() => {
+        {/* FACTURES SOLDÉES — réparations + ventes boutique */}
+        {(() => {
           // eslint-disable-next-line @typescript-eslint/no-explicit-any
           const byClient = new Map<string, any>();
           paidGroups
-            .filter((g) => g.client?.name?.toLowerCase().includes(searchTerm.toLowerCase()))
+            .filter((g) => !searchTerm || g.client?.name?.toLowerCase().includes(searchTerm.toLowerCase()))
             .forEach((g) => {
               const id = String(g.client?.id);
               if (!byClient.has(id)) byClient.set(id, { client: g.client, payments: [], total: 0 });
@@ -935,12 +1024,32 @@ export default function FacturesPage() {
               e.total += g.totalPaid;
             });
           const clientCards = Array.from(byClient.values());
-          if (clientCards.length === 0) return null;
+          // Ventes boutique sans réparation (invoice_id = VENTE-xxx ou null)
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          const standaloneSales = boutiqueSales.filter((s: any) => !s.invoice_id || s.invoice_id.startsWith("VENTE-"));
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          const filteredStandalone = standaloneSales.filter((s: any) =>
+            !searchTerm ||
+            (s.client_name || "").toLowerCase().includes(searchTerm.toLowerCase()) ||
+            s.product_name?.toLowerCase().includes(searchTerm.toLowerCase())
+          );
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          const boutiqueGroupsMap = new Map<string, any>();
+          filteredStandalone.forEach((s: any) => {
+            const key = s.invoice_id || `solo-${s.id}`;
+            if (!boutiqueGroupsMap.has(key)) boutiqueGroupsMap.set(key, { key, clientName: s.client_name || "", items: [], total: 0, sold_at: s.sold_at });
+            const bg = boutiqueGroupsMap.get(key);
+            bg.items.push(s);
+            bg.total += Number(s.total) || 0;
+          });
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          const boutiqueInvoices = Array.from(boutiqueGroupsMap.values()).sort((a: any, b: any) => new Date(b.sold_at).getTime() - new Date(a.sold_at).getTime());
+          if (clientCards.length === 0 && boutiqueInvoices.length === 0) return null;
           return (
             <div>
               <div className="flex items-center gap-2 mb-3">
                 <span className="w-1.5 h-1.5 rounded-full bg-green-400"></span>
-                <h2 className="text-xs font-bold text-gray-400 uppercase tracking-widest">Soldées · {clientCards.length} client(s)</h2>
+                <h2 className="text-xs font-bold text-gray-400 uppercase tracking-widest">Soldées · {clientCards.length + boutiqueInvoices.length} facture(s)</h2>
               </div>
               <div className="space-y-2">
                 {clientCards.map((cc) => {
@@ -1028,56 +1137,40 @@ export default function FacturesPage() {
                     </div>
                   );
                 })}
+                {/* Ventes boutique standalone */}
+                {boutiqueInvoices.map((bg: any) => (
+                  <div key={bg.key} className="bg-[#16161d] border border-green-500/15 rounded-2xl overflow-hidden">
+                    <div className="px-5 py-4 flex items-center gap-3">
+                      <div className="w-9 h-9 rounded-xl bg-fuchsia-500/10 flex items-center justify-center text-lg shrink-0">🛍️</div>
+                      <div className="flex-1 min-w-0">
+                        <div className="font-semibold text-white text-sm">{bg.clientName || "Vente directe"}</div>
+                        <div className="text-xs text-gray-500 mt-0.5">{bg.items.length} article(s) · {new Date(bg.sold_at).toLocaleDateString("fr-FR")}</div>
+                      </div>
+                      <div className="text-right shrink-0">
+                        <div className="text-xl font-black text-green-400">{bg.total.toFixed(2)} €</div>
+                        <div className="text-[10px] text-fuchsia-400 font-semibold">🛍️ Soldé</div>
+                      </div>
+                    </div>
+                    <div className="border-t border-white/5 divide-y divide-white/5">
+                      {bg.items.map((s: any) => (
+                        <div key={s.id} className="px-5 py-2 flex items-center gap-2 text-xs">
+                          <span className="flex-1 text-gray-300 truncate">{s.product_name}{s.quantity > 1 ? ` × ${s.quantity}` : ""}</span>
+                          <span className="text-gray-500">{Number(s.total).toFixed(2)} €</span>
+                        </div>
+                      ))}
+                    </div>
+                    <div className="px-5 py-3 bg-black/20 border-t border-white/5 flex gap-2">
+                      <button onClick={() => printBoutiqueInvoice(bg)} className="px-3 py-1 bg-indigo-500/15 hover:bg-indigo-500/25 text-indigo-300 rounded-lg text-xs font-semibold transition-all border border-indigo-500/20">
+                        🧾 Facture PDF
+                      </button>
+                    </div>
+                  </div>
+                ))}
               </div>
             </div>
           );
         })()}
       </div>
-
-      {/* VENTES BOUTIQUE SOLDÉES */}
-      {(() => {
-        const filtered = boutiqueSales.filter(s =>
-          !searchTerm ||
-          s.product_name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-          s.sold_by?.toLowerCase().includes(searchTerm.toLowerCase())
-        );
-        if (filtered.length === 0) return null;
-        const total = filtered.reduce((s, v) => s + (Number(v.total) || 0), 0);
-        return (
-          <div className="mt-8">
-            <div className="flex items-center gap-2 mb-3">
-              <span className="w-1.5 h-1.5 rounded-full bg-fuchsia-400"></span>
-              <h2 className="text-xs font-bold text-gray-400 uppercase tracking-widest">
-                Ventes boutique · {filtered.length} vente(s)
-              </h2>
-            </div>
-            <div className="bg-[#16161d] border border-fuchsia-500/15 rounded-2xl overflow-hidden">
-              <div className="divide-y divide-white/5">
-                {filtered.map((s) => (
-                  <div key={s.id} className="px-5 py-3 flex items-center gap-3">
-                    <div className="flex-1 min-w-0">
-                      <div className="text-sm font-medium text-white truncate">
-                        {s.product_name}{s.quantity > 1 ? ` × ${s.quantity}` : ""}
-                      </div>
-                      <div className="text-xs text-gray-500">
-                        {new Date(s.sold_at).toLocaleString("fr-FR")}{s.sold_by ? ` · ${s.sold_by}` : ""}
-                      </div>
-                    </div>
-                    <div className="text-right shrink-0">
-                      <div className="text-sm font-bold text-green-400">{Number(s.total).toFixed(2)} €</div>
-                      <div className="text-[10px] text-fuchsia-400 font-semibold mt-0.5">✓ Soldé</div>
-                    </div>
-                  </div>
-                ))}
-              </div>
-              <div className="px-5 py-3 border-t border-white/5 bg-black/20 flex justify-between items-center">
-                <span className="text-xs text-gray-500">Total boutique</span>
-                <span className="text-base font-black text-fuchsia-400">{total.toFixed(2)} €</span>
-              </div>
-            </div>
-          </div>
-        );
-      })()}
 
       {/* MODAL PAIEMENT */}
       {showPaymentModal && selectedGroup && (() => {

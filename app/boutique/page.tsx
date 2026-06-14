@@ -192,6 +192,7 @@ export default function BoutiquePage() {
           total: unitPrice * item.quantity,
           sold_by: techName || "Boutique",
           invoice_id: result.invoiceId,
+          client_name: selectedClient?.name || "",
         });
         if (!saleError) {
           await supabase.from("products").update({ stock: item.product.stock - item.quantity }).eq("id", item.product.id);

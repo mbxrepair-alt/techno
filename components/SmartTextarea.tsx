@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useRef } from "react";
 import { generateDiagnostic, generateRepairSummary, suggestIssues } from "../lib/ai";
+import { Mic, MicOff, Loader2 } from "lucide-react";
 
 type TextareaType = "diagnostic" | "work" | "invoice" | "chat";
 type ChangeEvent = React.ChangeEvent<HTMLTextAreaElement> | { target: { value: string } };
@@ -83,7 +84,10 @@ export default function SmartTextarea({
   const [isGenerating, setIsGenerating] = useState(false);
   const [showAISuggestions, setShowAISuggestions] = useState(false);
   const [aiSuggestions, setAISuggestions] = useState<string[]>([]);
+  const [isListening, setIsListening] = useState(false);
+  const [transcript, setTranscript] = useState("");
   const ref = useRef<HTMLTextAreaElement>(null);
+  const recognitionRef = useRef<any>(null);
 
   const defaultList = DEFAULTS[type] ?? DEFAULTS.diagnostic;
 
@@ -91,6 +95,12 @@ export default function SmartTextarea({
     const saved = localStorage.getItem(`sugg_${type}`);
     if (saved) setCustom(JSON.parse(saved));
   }, [type]);
+
+  useEffect(() => {
+    return () => {
+      recognitionRef.current?.stop();
+    };
+  }, []);
 
   const save = (list: string[]): void => {
     setCustom(list);
@@ -107,19 +117,9 @@ export default function SmartTextarea({
   const deleteSuggestion = (s: string): void => save(custom.filter((item) => item !== s));
 
   const updateFilter = (text: string): void => {
-    if (!text) {
-      setShow(false);
-      return;
-    }
-    const lastWord =
-      text
-        .split(/[\s\n]/)
-        .at(-1)
-        ?.toLowerCase() ?? "";
-    if (lastWord.length < 2) {
-      setShow(false);
-      return;
-    }
+    if (!text) { setShow(false); return; }
+    const lastWord = text.split(/[\s\n]/).at(-1)?.toLowerCase() ?? "";
+    if (lastWord.length < 2) { setShow(false); return; }
     const filtered = [...custom, ...defaultList].filter((s) => s.toLowerCase().includes(lastWord));
     setSuggestions(filtered.slice(0, 5));
     setShow(filtered.length > 0);
@@ -142,6 +142,68 @@ export default function SmartTextarea({
     onChange({ target: { value: newText } });
     setShow(false);
     textarea.focus();
+  };
+
+  const toggleVoice = (): void => {
+    if (disabled) return;
+
+    const SpeechRecognition =
+      (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
+
+    if (!SpeechRecognition) {
+      alert("La reconnaissance vocale n'est pas supportée par ce navigateur. Utilisez Chrome ou Edge.");
+      return;
+    }
+
+    if (isListening) {
+      recognitionRef.current?.stop();
+      setIsListening(false);
+      return;
+    }
+
+    const recognition = new SpeechRecognition();
+    recognitionRef.current = recognition;
+    recognition.lang = "fr-FR";
+    recognition.continuous = true;
+    recognition.interimResults = true;
+
+    let finalText = "";
+
+    recognition.onstart = () => setIsListening(true);
+
+    recognition.onresult = (event: any) => {
+      let interim = "";
+      for (let i = event.resultIndex; i < event.results.length; i++) {
+        const result = event.results[i];
+        if (result.isFinal) {
+          finalText += result[0].transcript + " ";
+        } else {
+          interim = result[0].transcript;
+        }
+      }
+      setTranscript(interim);
+      const current = value || "";
+      const base = current.trimEnd();
+      onChange({ target: { value: base + (base ? " " : "") + finalText + interim } });
+    };
+
+    recognition.onend = () => {
+      setIsListening(false);
+      setTranscript("");
+      if (finalText) {
+        const current = value || "";
+        const base = current.trimEnd();
+        onChange({ target: { value: base + (base ? " " : "") + finalText.trim() } });
+      }
+    };
+
+    recognition.onerror = (e: any) => {
+      if (e.error !== "aborted") console.error("Speech error:", e.error);
+      setIsListening(false);
+      setTranscript("");
+    };
+
+    recognition.start();
   };
 
   const generateAI = async (): Promise<void> => {
@@ -210,72 +272,96 @@ export default function SmartTextarea({
 
   return (
     <div className="relative">
-      <div className="flex justify-between items-center mb-1">
-        <div className="flex gap-2">
+      <div className="flex justify-between items-center mb-1 gap-2">
+        <div className="flex gap-2 flex-wrap">
           <button
             type="button"
             onClick={() => setShowAdd(!showAdd)}
-            className="text-xs text-blue-500 hover:text-blue-700"
+            className="text-xs text-blue-500 hover:text-blue-400"
           >
-            + Ajouter suggestion
+            + Suggestion
           </button>
           {custom.length > 0 && (
             <button
               type="button"
               onClick={() => setShowList(!showList)}
-              className="text-xs text-orange-500 hover:text-orange-700"
+              className="text-xs text-orange-500 hover:text-orange-400"
             >
-              - Gérer ({custom.length})
+              Gérer ({custom.length})
             </button>
           )}
           <button
             type="button"
             onClick={loadAISuggestions}
-            className="text-xs text-purple-500 hover:text-purple-700 flex items-center gap-1"
+            className="text-xs text-purple-400 hover:text-purple-300 flex items-center gap-1"
           >
-            🤖 Suggestions IA
+            🤖 Suggestions
           </button>
         </div>
+
+        {/* MICRO BUTTON */}
         <button
           type="button"
-          onClick={generateAI}
-          disabled={isGenerating}
-          className="bg-gradient-to-r from-purple-500 to-pink-500 text-white px-3 py-1 rounded-lg text-xs font-medium hover:from-purple-600 hover:to-pink-600 transition disabled:opacity-50 flex items-center gap-1"
+          onClick={toggleVoice}
+          disabled={disabled}
+          title={isListening ? "Arrêter la dictée" : "Dicter par micro"}
+          className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold transition-all disabled:opacity-40 ${
+            isListening
+              ? "bg-red-500/20 border border-red-500/40 text-red-400 shadow-[0_0_12px_rgba(239,68,68,0.3)]"
+              : "bg-white/5 border border-white/10 text-gray-400 hover:bg-white/10 hover:text-white hover:border-white/20"
+          }`}
         >
-          {isGenerating ? (
+          {isListening ? (
             <>
-              <div className="animate-spin rounded-full h-3 w-3 border-2 border-white border-t-transparent"></div>
-              Génération...
+              <MicOff size={13} className="shrink-0" />
+              <span className="flex items-center gap-1">
+                Stop
+                <span className="inline-flex gap-0.5 items-end h-3">
+                  <span className="w-0.5 bg-red-400 rounded-full animate-bounce" style={{ height: "6px", animationDelay: "0ms" }} />
+                  <span className="w-0.5 bg-red-400 rounded-full animate-bounce" style={{ height: "10px", animationDelay: "100ms" }} />
+                  <span className="w-0.5 bg-red-400 rounded-full animate-bounce" style={{ height: "7px", animationDelay: "200ms" }} />
+                  <span className="w-0.5 bg-red-400 rounded-full animate-bounce" style={{ height: "12px", animationDelay: "150ms" }} />
+                </span>
+              </span>
+            </>
+          ) : isGenerating ? (
+            <>
+              <Loader2 size={13} className="animate-spin shrink-0" />
+              <span>IA...</span>
             </>
           ) : (
-            <>🤖 Générer avec IA</>
+            <>
+              <Mic size={13} className="shrink-0" />
+              <span>Dicter</span>
+            </>
           )}
         </button>
       </div>
+
+      {/* TRANSCRIPT PREVIEW */}
+      {isListening && transcript && (
+        <div className="mb-2 px-3 py-2 bg-red-500/8 border border-red-500/20 rounded-xl text-xs text-red-300 italic">
+          🎙️ {transcript}
+        </div>
+      )}
+
       {showList && custom.length > 0 && (
-        <div className="mb-2 p-2 bg-white border rounded-lg shadow-sm">
-          <p className="text-[10px] text-gray-400 mb-2">Cliquez sur ✕ pour supprimer :</p>
+        <div className="mb-2 p-2 bg-white/5 border border-white/8 rounded-xl">
+          <p className="text-[10px] text-gray-500 mb-2">Cliquez sur ✕ pour supprimer :</p>
           <div className="flex flex-wrap gap-2">
             {custom.map((s, idx) => (
-              <div
-                key={idx}
-                className="bg-gray-100 text-gray-700 text-xs px-2 py-1 rounded-full flex items-center gap-1"
-              >
+              <div key={idx} className="bg-white/5 text-gray-300 text-xs px-2 py-1 rounded-full flex items-center gap-1 border border-white/8">
                 {s.length > 25 ? s.substring(0, 25) + "..." : s}
                 <button
-                  onClick={() => {
-                    deleteSuggestion(s);
-                    if (custom.length === 1) setShowList(false);
-                  }}
-                  className="text-red-500 hover:text-red-700 font-bold ml-1"
-                >
-                  ✕
-                </button>
+                  onClick={() => { deleteSuggestion(s); if (custom.length === 1) setShowList(false); }}
+                  className="text-red-400 hover:text-red-300 font-bold ml-1"
+                >✕</button>
               </div>
             ))}
           </div>
         </div>
       )}
+
       {showAdd && (
         <div className="mb-2 flex gap-2">
           <input
@@ -283,46 +369,32 @@ export default function SmartTextarea({
             value={newSugg}
             onChange={(e) => setNewSugg(e.target.value)}
             placeholder="Nouvelle suggestion..."
-            className="flex-1 text-xs border rounded px-2 py-1 focus:ring-2 focus:ring-blue-500"
+            className="flex-1 text-xs bg-black/30 border border-white/10 rounded-xl px-2 py-1.5 text-white outline-none focus:border-orange-500/40 placeholder-gray-600"
             onKeyDown={(e) => e.key === "Enter" && addSuggestion()}
           />
-          <button
-            onClick={addSuggestion}
-            className="bg-green-500 text-white text-xs px-2 py-1 rounded hover:bg-green-600"
-          >
-            OK
-          </button>
-          <button
-            onClick={() => setShowAdd(false)}
-            className="bg-gray-300 text-xs px-2 py-1 rounded hover:bg-gray-400"
-          >
-            X
-          </button>
+          <button onClick={addSuggestion} className="bg-green-600 text-white text-xs px-3 py-1.5 rounded-xl hover:bg-green-500">OK</button>
+          <button onClick={() => setShowAdd(false)} className="bg-white/5 text-gray-400 text-xs px-2 py-1.5 rounded-xl hover:bg-white/10">✕</button>
         </div>
       )}
+
       {showAISuggestions && (
-        <div className="mb-2 p-2 bg-purple-50 border border-purple-200 rounded-lg">
+        <div className="mb-2 p-3 bg-purple-500/5 border border-purple-500/20 rounded-xl">
           <div className="flex justify-between items-center mb-2">
-            <p className="text-xs font-semibold text-purple-700">🤖 Suggestions IA</p>
-            <button
-              onClick={() => setShowAISuggestions(false)}
-              className="text-gray-400 hover:text-gray-600 text-xs"
-            >
-              ✕
-            </button>
+            <p className="text-xs font-semibold text-purple-400">🤖 Suggestions IA</p>
+            <button onClick={() => setShowAISuggestions(false)} className="text-gray-500 hover:text-gray-300 text-xs">✕</button>
           </div>
           {aiSuggestions.length === 0 ? (
-            <div className="text-center py-2">
-              <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-purple-500 mx-auto"></div>
-              <p className="text-xs text-gray-400 mt-1">Chargement...</p>
+            <div className="text-center py-3">
+              <div className="animate-spin rounded-full h-4 w-4 border-t-2 border-purple-500 mx-auto"></div>
+              <p className="text-xs text-gray-500 mt-1">Chargement...</p>
             </div>
           ) : (
-            <div className="flex flex-wrap gap-2">
+            <div className="flex flex-wrap gap-1.5">
               {aiSuggestions.map((sugg, idx) => (
                 <button
                   key={idx}
                   onClick={() => insertAISuggestion(sugg)}
-                  className="bg-white text-purple-700 text-xs px-2 py-1 rounded-full border border-purple-200 hover:bg-purple-100 transition"
+                  className="bg-purple-500/10 text-purple-300 text-xs px-2.5 py-1 rounded-full border border-purple-500/20 hover:bg-purple-500/20 transition"
                 >
                   {sugg}
                 </button>
@@ -331,6 +403,7 @@ export default function SmartTextarea({
           )}
         </div>
       )}
+
       <textarea
         ref={ref}
         value={value}
@@ -341,21 +414,17 @@ export default function SmartTextarea({
         rows={rows}
         disabled={disabled}
       />
+
       {show && suggestions.length > 0 && (
-        <div className="absolute z-50 left-0 right-0 mt-1 bg-white border rounded-lg shadow-lg max-h-48 overflow-y-auto">
+        <div className="absolute z-50 left-0 right-0 mt-1 bg-[#1a1a24] border border-white/10 rounded-xl shadow-2xl max-h-48 overflow-y-auto">
           {suggestions.map((s, i) => (
             <div
               key={i}
-              onMouseDown={(e) => {
-                e.preventDefault();
-                selectSuggestion(s);
-              }}
-              className="px-3 py-2 text-sm hover:bg-gray-100 cursor-pointer border-b last:border-0 flex justify-between items-center"
+              onMouseDown={(e) => { e.preventDefault(); selectSuggestion(s); }}
+              className="px-3 py-2 text-sm text-gray-300 hover:bg-white/5 cursor-pointer border-b border-white/5 last:border-0 flex justify-between items-center"
             >
               <span>{s}</span>
-              {custom.includes(s) && (
-                <span className="text-blue-400 text-xs ml-2">⭐ Personnalisé</span>
-              )}
+              {custom.includes(s) && <span className="text-orange-400 text-xs ml-2">⭐</span>}
             </div>
           ))}
         </div>

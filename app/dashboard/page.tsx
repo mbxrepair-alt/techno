@@ -295,13 +295,11 @@ export default function Dashboard() {
     const { data: repairsData } = await supabase
       .from("repairs")
       .select("*")
-      .eq("user_id", user.id)
       .order("id", { ascending: false });
 
     const { data: clientsData } = await supabase
       .from("clients")
-      .select("id, name, phone, email, client_code")
-      .eq("user_id", user.id);
+      .select("id, name, phone, email, client_code");
 
     if (repairsData) setAllRepairs(repairsData);
     if (clientsData) setAllClients(clientsData);

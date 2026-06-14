@@ -77,14 +77,14 @@ export default function StatistiquesPage() {
         .from("technicians").select("*").eq("is_active", true);
 
       const { data: sales } = await supabase
-        .from("product_sales").select("total_price, sold_at, quantity");
+        .from("product_sales").select("total, created_at, quantity");
 
       const totalRepairs = repairs?.length || 0;
       const completedRepairs = repairs?.filter((r) => r.status === "✅ Terminé" || r.status === "📦 Rendu").length || 0;
       const inProgressRepairs = repairs?.filter((r) => r.status === "🔧 En réparation").length || 0;
       const pendingRepairs = repairs?.filter((r) => !r.status || r.status === "📥 Réceptionné").length || 0;
       const repairsRevenue = repairs?.reduce((sum, r) => sum + (r.final_price || 0), 0) || 0;
-      const salesRevenue = sales?.reduce((sum, s) => sum + (s.total_price || 0), 0) || 0;
+      const salesRevenue = sales?.reduce((sum, s) => sum + (s.total || 0), 0) || 0;
       const totalRevenue = repairsRevenue + salesRevenue;
       const totalSales = sales?.length || 0;
 
@@ -111,10 +111,10 @@ export default function StatistiquesPage() {
       });
 
       sales?.forEach((s) => {
-        const date = new Date(s.sold_at);
+        const date = new Date(s.created_at);
         const monthKey = monthNames[date.getMonth()];
         const monthData = last6Months.find((m) => m.month === monthKey);
-        if (monthData) { monthData.revenue += s.total_price || 0; monthData.salesRev += s.total_price || 0; }
+        if (monthData) { monthData.revenue += s.total || 0; monthData.salesRev += s.total || 0; }
       });
 
       const repairsByMonth = last6Months.map((m) => ({ name: m.month, réparations: m.count }));

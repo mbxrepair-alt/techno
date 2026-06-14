@@ -320,7 +320,7 @@ function SuiviClientContent() {
 
       {/* HEADER */}
       <header className="sticky top-0 z-50 bg-[#0a0a0f]/90 backdrop-blur-2xl border-b border-white/6">
-        <div className="max-w-2xl mx-auto px-4 py-3 flex items-center justify-between gap-3">
+        <div className="max-w-2xl lg:max-w-5xl mx-auto px-4 py-3 flex items-center justify-between gap-3">
           <button onClick={() => router.push("/")} className="flex items-center gap-2.5 group shrink-0">
             <div className="w-9 h-9 bg-gradient-to-br from-orange-500 to-orange-600 rounded-xl overflow-hidden shadow-[0_0_12px_rgba(249,115,22,0.35)]">
               <img src="/logo.png" alt="MBX" className="w-full h-full object-cover" onError={(e) => { (e.target as HTMLImageElement).style.display = "none"; }} />
@@ -358,7 +358,7 @@ function SuiviClientContent() {
 
       {/* ── SEARCH FORM ── */}
       {!client && (
-        <div className="max-w-2xl mx-auto px-4 pt-8 pb-10 relative z-10">
+        <div className="max-w-2xl lg:max-w-5xl mx-auto px-4 pt-8 pb-10 relative z-10">
           <div className="w-full">
             <div className="text-center mb-8">
               <div className="inline-flex items-center justify-center w-16 h-16 bg-orange-500/10 border border-orange-500/20 rounded-3xl mb-4">
@@ -411,7 +411,7 @@ function SuiviClientContent() {
 
       {/* ── RESULTS ── */}
       {client && (
-        <div className="max-w-2xl mx-auto px-4 py-4 pb-10 relative z-10">
+        <div className="max-w-2xl lg:max-w-5xl mx-auto px-4 py-4 pb-10 relative z-10">
 
           {/* Client banner */}
           <div className="bg-white/[0.03] border border-white/8 rounded-3xl px-5 py-4 mb-5 flex flex-wrap items-center gap-4">
@@ -549,7 +549,7 @@ function SuiviClientContent() {
       )}
 
       <footer className="border-t border-white/5 mt-8 py-5 relative z-10">
-        <div className="max-w-2xl mx-auto px-4 text-center">
+        <div className="max-w-2xl lg:max-w-5xl mx-auto px-4 text-center">
           <p className="text-gray-700 text-xs">© {new Date().getFullYear()} MBX Réparations — Suivi sécurisé</p>
         </div>
       </footer>

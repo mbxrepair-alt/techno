@@ -51,6 +51,8 @@ export default function FacturesPage() {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const [extraItems, setExtraItems] = useState<any[]>([]); // produits boutique ajoutés à la facture courante
   const [productSearch, setProductSearch] = useState("");
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const [boutiqueSales, setBoutiqueSales] = useState<any[]>([]);
 
   useEffect(() => {
     const t = getCurrentTechnician();
@@ -73,14 +75,16 @@ export default function FacturesPage() {
       }
 
       // Charger le profil entreprise + TVA + réparations en parallèle
-      const [profileResult, tvaResult, repairsResult, clientsResult, productsResult] = await Promise.all([
+      const [profileResult, tvaResult, repairsResult, clientsResult, productsResult, salesResult] = await Promise.all([
         supabase.from("profiles").select("*").eq("id", user.id).single(),
         supabase.from("clients").select("id, default_tva_rate").eq("user_id", user.id),
         supabase.from("repairs").select("*, clients(*)").eq("user_id", user.id).in("status", ["✅ Terminé", "📦 Rendu", "🚫 Refus client"]).order("created_at", { ascending: false }),
         supabase.from("clients").select("*").eq("user_id", user.id),
         supabase.from("products").select("*").eq("user_id", user.id).gt("stock", 0).order("name"),
+        supabase.from("product_sales").select("*").eq("user_id", user.id).order("sold_at", { ascending: false }).limit(500),
       ]);
       setAvailableProducts(productsResult.data || []);
+      setBoutiqueSales(salesResult.data || []);
       if (profileResult.error) console.error("Profil erreur:", profileResult.error);
       if (profileResult.data) {
         const p = profileResult.data;
@@ -1029,6 +1033,51 @@ export default function FacturesPage() {
           );
         })()}
       </div>
+
+      {/* VENTES BOUTIQUE SOLDÉES */}
+      {(() => {
+        const filtered = boutiqueSales.filter(s =>
+          !searchTerm ||
+          s.product_name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+          s.sold_by?.toLowerCase().includes(searchTerm.toLowerCase())
+        );
+        if (filtered.length === 0) return null;
+        const total = filtered.reduce((s, v) => s + (Number(v.total) || 0), 0);
+        return (
+          <div className="mt-8">
+            <div className="flex items-center gap-2 mb-3">
+              <span className="w-1.5 h-1.5 rounded-full bg-fuchsia-400"></span>
+              <h2 className="text-xs font-bold text-gray-400 uppercase tracking-widest">
+                Ventes boutique · {filtered.length} vente(s)
+              </h2>
+            </div>
+            <div className="bg-[#16161d] border border-fuchsia-500/15 rounded-2xl overflow-hidden">
+              <div className="divide-y divide-white/5">
+                {filtered.map((s) => (
+                  <div key={s.id} className="px-5 py-3 flex items-center gap-3">
+                    <div className="flex-1 min-w-0">
+                      <div className="text-sm font-medium text-white truncate">
+                        {s.product_name}{s.quantity > 1 ? ` × ${s.quantity}` : ""}
+                      </div>
+                      <div className="text-xs text-gray-500">
+                        {new Date(s.sold_at).toLocaleString("fr-FR")}{s.sold_by ? ` · ${s.sold_by}` : ""}
+                      </div>
+                    </div>
+                    <div className="text-right shrink-0">
+                      <div className="text-sm font-bold text-green-400">{Number(s.total).toFixed(2)} €</div>
+                      <div className="text-[10px] text-fuchsia-400 font-semibold mt-0.5">✓ Soldé</div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+              <div className="px-5 py-3 border-t border-white/5 bg-black/20 flex justify-between items-center">
+                <span className="text-xs text-gray-500">Total boutique</span>
+                <span className="text-base font-black text-fuchsia-400">{total.toFixed(2)} €</span>
+              </div>
+            </div>
+          </div>
+        );
+      })()}
 
       {/* MODAL PAIEMENT */}
       {showPaymentModal && selectedGroup && (() => {

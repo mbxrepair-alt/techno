@@ -53,10 +53,7 @@ export default function HomePage() {
   };
 
   const openTrackingModal = () => {
-    setShowTrackingModal(true);
-    setError("");
-    setTrackingCode("");
-    setTrackingName("");
+    router.push("/suivi-client");
   };
 
   const handleTrackSubmit = async (e) => {
@@ -848,7 +845,7 @@ export default function HomePage() {
         )}
 
         {/* Modal de suivi */}
-        {showTrackingModal && (
+        {false && (
           <div
             className="fixed inset-0 bg-black/80 backdrop-blur-md z-50 flex items-center justify-center p-4"
             onClick={() => setShowTrackingModal(false)}

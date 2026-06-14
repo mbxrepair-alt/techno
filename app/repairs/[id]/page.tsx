@@ -192,7 +192,7 @@ export default function RepairDetailPage() {
         // Load company profile for email sending
         const { data: profile } = await supabase
           .from("profiles")
-          .select("company_name, contact_phone, contact_address, email")
+          .select("*")
           .eq("id", user.id)
           .single();
         if (profile) {

@@ -265,7 +265,7 @@ export default function Dashboard() {
         setUserId(user.id);
         const { data: profile } = await supabase
           .from("profiles")
-          .select("company_name, contact_phone, contact_address, email, siret")
+          .select("*")
           .eq("id", user.id)
           .single();
 

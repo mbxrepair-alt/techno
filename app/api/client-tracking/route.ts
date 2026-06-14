@@ -12,17 +12,19 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
   const code = searchParams.get("code")?.trim().toUpperCase();
   const name = searchParams.get("name")?.trim();
 
-  if (!code || !name) {
-    return NextResponse.json({ error: "code et name requis" }, { status: 400 });
+  if (!code) {
+    return NextResponse.json({ error: "code requis" }, { status: 400 });
   }
 
-  // 1. Find client by code + name (case-insensitive partial match)
-  const { data: clientData, error: clientError } = await supabaseAdmin
+  // 1. Find client by code (+ optional name filter)
+  let query = supabaseAdmin
     .from("clients")
     .select("id, name, client_code, phone")
-    .eq("client_code", code)
-    .ilike("name", `%${name}%`)
-    .maybeSingle();
+    .eq("client_code", code);
+
+  if (name) query = query.ilike("name", `%${name}%`);
+
+  const { data: clientData, error: clientError } = await query.maybeSingle();
 
   if (clientError) {
     console.error("[client-tracking] Supabase error:", clientError.code, clientError.message, clientError.details);

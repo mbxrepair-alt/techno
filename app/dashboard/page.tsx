@@ -1120,12 +1120,9 @@ export default function Dashboard() {
   };
 
   const showTicketDetails = (ticket) => {
-    setSelectedRepairDetail(ticket);
-    setSelectedRepairClient(ticket.client);
-    setClientEmail(ticket.client?.email || "");
-    setShowDetailModal(true);
     setSearchQuery("");
     setShowResults(false);
+    router.push(`/repairs/${ticket.id}`);
   };
 
   const createIntake = async () => {

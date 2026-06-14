@@ -1263,22 +1263,8 @@ export default function RepairDetailPage() {
           )
         )}
 
-        {/* HISTORIQUE TOGGLE */}
-        <div className="mb-4 flex justify-end">
-          <button
-            onClick={() => setShowHistorique(!showHistorique)}
-            className="flex items-center gap-2 px-4 py-2 bg-white/5 hover:bg-white/10 border border-white/8 text-gray-300 rounded-xl transition text-sm"
-          >
-            <span>📜</span>
-            <span>{showHistorique ? "Masquer" : "Afficher"} l'historique</span>
-            <span className="text-xs bg-white/8 px-2 py-0.5 rounded-full text-gray-400">
-              {historique.length}
-            </span>
-          </button>
-        </div>
-
         {/* HISTORIQUE LIST */}
-        {showHistorique && (
+        {historique.length > 0 && (
           <div className="mb-6 bg-[#16161d] border border-white/8 rounded-2xl overflow-hidden">
             <div className="px-5 py-3 border-b border-white/8">
               <h3 className="text-white font-bold flex items-center gap-2 text-sm">

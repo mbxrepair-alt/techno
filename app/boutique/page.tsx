@@ -310,6 +310,12 @@ export default function BoutiquePage() {
 
   const searchProductByBarcode = async (barcode: string) => {
     if (!barcode.trim() || !userId) return;
+    // Si le code scanné est un code réparation MBX-xxx → lier la réparation
+    if (/^MBX-\d+$/i.test(barcode.trim())) {
+      await fetchRepairByCode(barcode.trim());
+      setShowClientModal(true);
+      return;
+    }
     const { data, error } = await supabase
       .from("products")
       .select("*")

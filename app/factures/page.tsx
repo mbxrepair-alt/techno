@@ -5,7 +5,6 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { QRCodeSVG } from "qrcode.react";
 import { supabase, getCurrentUser } from "../../lib/supabase";
 import { getCurrentTechnician, addHistoriqueAction } from "../../lib/historique";
 import { useRouter } from "next/navigation";
@@ -56,6 +55,7 @@ export default function FacturesPage() {
   const [boutiqueSales, setBoutiqueSales] = useState<any[]>([]);
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const [qrModalRepair, setQrModalRepair] = useState<any>(null);
+  const [qrDataUrl, setQrDataUrl] = useState<string>("");
 
   useEffect(() => {
     const t = getCurrentTechnician();
@@ -978,11 +978,19 @@ export default function FacturesPage() {
                                 </div>
 
                                 <button
-                                  onClick={(e) => { e.stopPropagation(); setQrModalRepair(r); }}
-                                  className="shrink-0 p-1.5 bg-indigo-600/20 hover:bg-indigo-600/40 text-indigo-400 rounded-lg transition-all border border-indigo-500/20"
+                                  onClick={async (e) => {
+                                    e.stopPropagation();
+                                    try {
+                                      const QRCode = (await import("qrcode")).default;
+                                      const url = await QRCode.toDataURL(`MBX-${r.id}`, { width: 220, margin: 2 });
+                                      setQrDataUrl(url);
+                                    } catch { setQrDataUrl(""); }
+                                    setQrModalRepair(r);
+                                  }}
+                                  className="shrink-0 p-1.5 bg-indigo-600/20 hover:bg-indigo-600/40 text-indigo-400 rounded-lg transition-all border border-indigo-500/20 text-xs"
                                   title="QR code — lier à une vente boutique"
                                 >
-                                  ▦
+                                  QR
                                 </button>
                                 <button
                                   onClick={(e) => { e.stopPropagation(); setSelectedGroup({ ...group, repairs: [r], totalRemaining: r.remainingTtc }); setPaymentAmount(r.remainingTtc.toString()); setShowPaymentModal(true); setExtraItems([]); setProductSearch(""); }}
@@ -1458,19 +1466,23 @@ export default function FacturesPage() {
       )}
       {/* MODAL QR CODE RÉPARATION */}
       {qrModalRepair && (
-        <div className="fixed inset-0 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4 z-[60]" onClick={() => setQrModalRepair(null)}>
+        <div className="fixed inset-0 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4 z-[60]" onClick={() => { setQrModalRepair(null); setQrDataUrl(""); }}>
           <div className="bg-[#16161d] border border-white/10 rounded-2xl p-6 max-w-xs w-full text-center shadow-2xl" onClick={(e) => e.stopPropagation()}>
             <div className="text-xs font-bold text-indigo-400 uppercase tracking-widest mb-1">Code réparation</div>
             <div className="text-white font-semibold mb-0.5">{qrModalRepair.device}</div>
             <div className="text-xs text-gray-500 mb-4">{qrModalRepair.issue}</div>
-            <div className="flex items-center justify-center p-4 bg-white rounded-2xl mb-4 mx-auto w-fit">
-              <QRCodeSVG value={`MBX-${qrModalRepair.id}`} size={160} />
-            </div>
-            <div className="bg-black/40 rounded-xl px-4 py-2 font-mono text-xl font-black text-indigo-300 tracking-widest mb-3">
+            {qrDataUrl ? (
+              <div className="flex items-center justify-center p-3 bg-white rounded-2xl mb-4 mx-auto w-fit">
+                <img src={qrDataUrl} alt="QR code" width={180} height={180} />
+              </div>
+            ) : (
+              <div className="flex items-center justify-center p-6 bg-white/5 rounded-2xl mb-4 text-gray-500 text-sm">Chargement QR…</div>
+            )}
+            <div className="bg-black/40 rounded-xl px-4 py-2.5 font-mono text-2xl font-black text-indigo-300 tracking-widest mb-3 select-all">
               MBX-{qrModalRepair.id}
             </div>
-            <p className="text-xs text-gray-500 mb-4">Scanner dans Boutique → panier → 📷 pour lier la réparation à la vente</p>
-            <button onClick={() => setQrModalRepair(null)} className="w-full bg-white/5 hover:bg-white/10 text-gray-300 py-2.5 rounded-xl text-sm border border-white/10 transition">Fermer</button>
+            <p className="text-xs text-gray-500 mb-4">Scanner dans Boutique → panier → 📷 ou taper le code pour lier la réparation</p>
+            <button onClick={() => { setQrModalRepair(null); setQrDataUrl(""); }} className="w-full bg-white/5 hover:bg-white/10 text-gray-300 py-2.5 rounded-xl text-sm border border-white/10 transition">Fermer</button>
           </div>
         </div>
       )}

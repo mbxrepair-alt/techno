@@ -78,13 +78,19 @@ export default function StatistiquesPage() {
         .select("*")
         .eq("is_active", true);
 
+      const { data: sales } = await supabase
+        .from("product_sales")
+        .select("total_price, sold_at, quantity");
+
       const totalRepairs = repairs?.length || 0;
       const completedRepairs =
         repairs?.filter((r) => r.status === "✅ Terminé" || r.status === "📦 Rendu").length || 0;
       const inProgressRepairs = repairs?.filter((r) => r.status === "🔧 En réparation").length || 0;
       const pendingRepairs =
         repairs?.filter((r) => !r.status || r.status === "📥 Réceptionné").length || 0;
-      const totalRevenue = repairs?.reduce((sum, r) => sum + (r.final_price || 0), 0) || 0;
+      const repairsRevenue = repairs?.reduce((sum, r) => sum + (r.final_price || 0), 0) || 0;
+      const salesRevenue = sales?.reduce((sum, s) => sum + (s.total_price || 0), 0) || 0;
+      const totalRevenue = repairsRevenue + salesRevenue;
 
       const statusCounts = {};
       repairs?.forEach((r) => {
@@ -129,6 +135,15 @@ export default function StatistiquesPage() {
         if (monthData) {
           monthData.count++;
           monthData.revenue += r.final_price || 0;
+        }
+      });
+
+      sales?.forEach((s) => {
+        const date = new Date(s.sold_at);
+        const monthKey = monthNames[date.getMonth()];
+        const monthData = last6Months.find((m) => m.month === monthKey);
+        if (monthData) {
+          monthData.revenue += s.total_price || 0;
         }
       });
 
@@ -271,6 +286,7 @@ export default function StatistiquesPage() {
               <div>
                 <p className="text-teal-100 text-xs uppercase tracking-wider">Chiffre d'affaires</p>
                 <p className="text-3xl font-black mt-1">{stats.totalRevenue.toLocaleString()}€</p>
+                <p className="text-teal-200 text-[10px] mt-1 opacity-80">réparations + ventes stock</p>
               </div>
               <span className="text-3xl">💰</span>
             </div>

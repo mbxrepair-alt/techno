@@ -11,28 +11,35 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
   const raw = searchParams.get("ticket")?.trim().toUpperCase().replace(/^MBX-?/i, "");
   const id = parseInt(raw || "", 10);
 
+  const clientCode = searchParams.get("code")?.trim().toUpperCase();
+
   if (!id || isNaN(id)) {
     return NextResponse.json({ error: "Numéro de ticket invalide" }, { status: 400 });
   }
+  if (!clientCode) {
+    return NextResponse.json({ error: "Code client requis" }, { status: 400 });
+  }
 
+  // Vérifie que le client existe avec ce code
+  const { data: clientData, error: clientError } = await supabaseAdmin
+    .from("clients")
+    .select("id, name, phone, client_code")
+    .eq("client_code", clientCode)
+    .maybeSingle();
+
+  if (clientError) return NextResponse.json({ error: clientError.message }, { status: 500 });
+  if (!clientData) return NextResponse.json({ error: "Code client invalide" }, { status: 403 });
+
+  // Récupère le ticket et vérifie qu'il appartient bien à ce client
   const { data, error } = await supabaseAdmin
     .from("repairs")
     .select("id, device, issue, status, created_at, technician, diagnostic_technicien, repair_description, risks, photos, client_response, client_response_type, imei, estimated_price, final_price, diagnostic_price, client_id")
     .eq("id", id)
+    .eq("client_id", clientData.id)
     .maybeSingle();
 
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });
-  if (!data) return NextResponse.json({ error: "Ticket introuvable" }, { status: 404 });
+  if (!data) return NextResponse.json({ error: "Ticket introuvable ou ne vous appartient pas" }, { status: 404 });
 
-  let client = null;
-  if (data.client_id) {
-    const { data: clientData } = await supabaseAdmin
-      .from("clients")
-      .select("name, phone, client_code")
-      .eq("id", data.client_id)
-      .maybeSingle();
-    client = clientData;
-  }
-
-  return NextResponse.json({ repair: { ...data, clients: client } });
+  return NextResponse.json({ repair: { ...data, clients: clientData } });
 }

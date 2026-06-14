@@ -30,7 +30,8 @@ function SuiviClientContent() {
   const searchParams = useSearchParams();
   const codeFromUrl = searchParams.get("code") || "";
 
-  const [input, setInput] = useState(codeFromUrl ? `MBX-${codeFromUrl}` : "");
+  const [input, setInput] = useState("");
+  const [clientCode, setClientCode] = useState(codeFromUrl);
   const [loading, setLoading] = useState(false);
   const [repair, setRepair] = useState<any>(null);
   const [error, setError] = useState("");
@@ -44,7 +45,7 @@ function SuiviClientContent() {
     if (!ticket) return;
     setLoading(true); setError(""); setRepair(null);
     try {
-      const res = await fetch(`/api/ticket-search?ticket=${encodeURIComponent(ticket)}`);
+      const res = await fetch(`/api/ticket-search?ticket=${encodeURIComponent(ticket)}&code=${encodeURIComponent(clientCode.trim().toUpperCase())}`);
       const json = await res.json();
       if (!res.ok || json.error) { setError(json.error || "Ticket introuvable"); }
       else { setRepair(json.repair); }
@@ -111,22 +112,32 @@ function SuiviClientContent() {
           <h1 className="text-3xl font-black text-white tracking-tight mb-1">Suivi de ticket</h1>
           <p className="text-gray-500 text-sm mb-6">Entrez votre numéro de ticket pour suivre votre réparation</p>
 
-          <form onSubmit={handleSubmit} className="flex gap-3">
-            <div className="relative flex-1">
+          <form onSubmit={handleSubmit} className="space-y-3">
+            <div className="relative">
               <span className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-500 font-mono font-black text-sm pointer-events-none">MBX-</span>
               <input
                 ref={inputRef}
                 type="text"
-                value={input.replace(/^MBX-?/i, "")}
+                inputMode="numeric"
+                value={input}
                 onChange={(e) => setInput(e.target.value.replace(/\D/g, ""))}
                 placeholder="192"
+                required
                 className="w-full pl-14 pr-4 py-4 bg-white/5 border border-white/10 rounded-2xl text-white font-mono text-lg tracking-widest outline-none focus:border-orange-500/50 focus:bg-white/8 transition placeholder-gray-700"
                 autoFocus
               />
             </div>
+            <input
+              type="text"
+              value={clientCode}
+              onChange={(e) => setClientCode(e.target.value.toUpperCase())}
+              placeholder="Code client (ex: SOP966566)"
+              required
+              className="w-full px-4 py-4 bg-white/5 border border-white/10 rounded-2xl text-white font-mono tracking-widest outline-none focus:border-orange-500/50 focus:bg-white/8 transition placeholder-gray-600 text-sm"
+            />
             <button type="submit" disabled={loading}
-              className="px-6 py-4 bg-gradient-to-r from-orange-500 to-orange-600 text-white font-black rounded-2xl shadow-[0_8px_24px_rgba(249,115,22,0.3)] hover:shadow-[0_8px_32px_rgba(249,115,22,0.45)] active:scale-[0.97] transition-all disabled:opacity-60 shrink-0">
-              {loading ? <span className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin block" /> : "→"}
+              className="w-full py-4 bg-gradient-to-r from-orange-500 to-orange-600 text-white font-black rounded-2xl shadow-[0_8px_24px_rgba(249,115,22,0.3)] hover:shadow-[0_8px_32px_rgba(249,115,22,0.45)] active:scale-[0.97] transition-all disabled:opacity-60">
+              {loading ? <span className="flex items-center justify-center gap-2"><span className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" />Recherche…</span> : "🔍 Suivre mon ticket"}
             </button>
           </form>
 

@@ -17,12 +17,22 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
 
   const { data, error } = await supabaseAdmin
     .from("repairs")
-    .select("id, device, issue, status, created_at, technician, diagnostic_technicien, repair_description, risks, photos, client_response, client_response_type, imei, estimated_price, final_price, diagnostic_price, clients(name, phone, client_code)")
+    .select("id, device, issue, status, created_at, technician, diagnostic_technicien, repair_description, risks, photos, client_response, client_response_type, imei, estimated_price, final_price, diagnostic_price, client_id")
     .eq("id", id)
     .maybeSingle();
 
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });
   if (!data) return NextResponse.json({ error: "Ticket introuvable" }, { status: 404 });
 
-  return NextResponse.json({ repair: data });
+  let client = null;
+  if (data.client_id) {
+    const { data: clientData } = await supabaseAdmin
+      .from("clients")
+      .select("name, phone, client_code")
+      .eq("id", data.client_id)
+      .maybeSingle();
+    client = clientData;
+  }
+
+  return NextResponse.json({ repair: { ...data, clients: client } });
 }

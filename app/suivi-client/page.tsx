@@ -112,6 +112,10 @@ function SuiviClientContent() {
   const formatDate = (date?: string) => date ? new Date(date).toLocaleDateString("fr-FR", { day: "2-digit", month: "short", year: "numeric" }) : "—";
   const resetSearch = () => { setClient(null); setRepairs([]); setSelectedRepair(null); setNameInput(""); setCodeInput(""); setError(""); setShowDetail(false); };
 
+  const sixMonthsAgo = new Date(); sixMonthsAgo.setMonth(sixMonthsAgo.getMonth() - 6);
+  const visibleRepairs = repairs.filter((r) => new Date(r.created_at) >= sixMonthsAgo);
+  const hiddenCount = repairs.length - visibleRepairs.length;
+
   const openDetail = (repair: any) => { setSelectedRepair(repair); setClientResponse(""); setShowDetail(true); };
 
   // Photo modal
@@ -429,9 +433,9 @@ function SuiviClientContent() {
             </div>
             <div className="flex items-center gap-2 flex-wrap">
               {[
-                { label: "Total", val: repairs.length, color: "text-white" },
-                { label: "En cours", val: repairs.filter((r) => !["✅ Terminé","📦 Rendu","❌ KO","🚫 Refus client"].includes(r.status)).length, color: "text-orange-400" },
-                { label: "Terminées", val: repairs.filter((r) => r.status === "✅ Terminé" || r.status === "📦 Rendu").length, color: "text-green-400" },
+                { label: "Total", val: visibleRepairs.length, color: "text-white" },
+                { label: "En cours", val: visibleRepairs.filter((r) => !["✅ Terminé","📦 Rendu","❌ KO","🚫 Refus client"].includes(r.status)).length, color: "text-orange-400" },
+                { label: "Terminées", val: visibleRepairs.filter((r) => r.status === "✅ Terminé" || r.status === "📦 Rendu").length, color: "text-green-400" },
               ].map((s) => (
                 <div key={s.label} className="bg-white/5 border border-white/6 rounded-2xl px-3 py-2 text-center min-w-[56px]">
                   <p className={`text-lg font-black ${s.color}`}>{s.val}</p>
@@ -441,10 +445,10 @@ function SuiviClientContent() {
             </div>
           </div>
 
-          {repairs.length === 0 ? (
+          {visibleRepairs.length === 0 ? (
             <div className="bg-white/[0.03] border border-white/8 rounded-3xl p-12 text-center">
               <div className="text-5xl mb-3">📭</div>
-              <p className="text-gray-500">Aucune réparation trouvée pour ce compte.</p>
+              <p className="text-gray-500">{repairs.length === 0 ? "Aucune réparation trouvée pour ce compte." : "Aucune réparation récente (moins de 6 mois)."}</p>
             </div>
           ) : (
             <>
@@ -452,7 +456,7 @@ function SuiviClientContent() {
               <div className="lg:hidden">
                 {!showDetail ? (
                   <div className="space-y-3">
-                    {repairs.map((repair) => {
+                    {visibleRepairs.map((repair) => {
                       const stepIdx = getStepIndex(repair.status);
                       const needsAction = (repair.status === "⏳ Attente validation client" || repair.status === "🔐 Mot de passe incorrect") && !repair.client_response;
                       return (
@@ -497,7 +501,7 @@ function SuiviClientContent() {
               <div className="hidden lg:grid lg:grid-cols-5 gap-4">
                 {/* Liste */}
                 <div className="lg:col-span-2 space-y-3">
-                  {repairs.map((repair) => {
+                  {visibleRepairs.map((repair) => {
                     const stepIdx = getStepIndex(repair.status);
                     const isActive = selectedRepair?.id === repair.id;
                     const needsAction = (repair.status === "⏳ Attente validation client" || repair.status === "🔐 Mot de passe incorrect") && !repair.client_response;
@@ -543,6 +547,20 @@ function SuiviClientContent() {
                   )}
                 </div>
               </div>
+              {/* Message appareils archivés */}
+              {hiddenCount > 0 && (
+                <div className="mt-4 flex items-start gap-3 bg-amber-500/8 border border-amber-500/20 rounded-2xl px-4 py-3.5">
+                  <span className="text-amber-400 text-lg shrink-0">🗂️</span>
+                  <div>
+                    <p className="text-amber-300 text-sm font-semibold">
+                      {hiddenCount} appareil{hiddenCount > 1 ? "s" : ""} archivé{hiddenCount > 1 ? "s" : ""}
+                    </p>
+                    <p className="text-amber-200/60 text-xs mt-0.5 leading-relaxed">
+                      Les réparations de plus de 6 mois ne sont plus affichées. Contactez l'atelier pour consulter votre historique complet.
+                    </p>
+                  </div>
+                </div>
+              )}
             </>
           )}
         </div>

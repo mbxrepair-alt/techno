@@ -97,6 +97,11 @@ export default function BoutiquePage() {
   const [isProcessingSale, setIsProcessingSale] = useState(false);
 
   const [showBarcodeScanner, setShowBarcodeScanner] = useState(false);
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const [linkedRepair, setLinkedRepair] = useState<any>(null);
+  const [repairCodeInput, setRepairCodeInput] = useState("");
+  const [showRepairScanner, setShowRepairScanner] = useState(false);
+  const [salePaymentMethod, setSalePaymentMethod] = useState("Espèces");
 
   const load = async () => {
     setLoading(true);
@@ -163,12 +168,86 @@ export default function BoutiquePage() {
     setClientSearchResults(data || []);
   };
 
+  const fetchRepairByCode = async (code: string) => {
+    const repairId = code.replace(/^MBX-/i, "").trim();
+    if (!repairId || isNaN(Number(repairId))) { alert("Code invalide (ex: MBX-42)"); return; }
+    const { data, error } = await supabase
+      .from("repairs")
+      .select("*, clients(*)")
+      .eq("id", Number(repairId))
+      .eq("user_id", userId)
+      .single();
+    if (error || !data) { alert("Réparation introuvable"); return; }
+    setLinkedRepair(data);
+    if (!selectedClient && data.clients) {
+      setSelectedClient({ id: data.clients.id, name: data.clients.name, phone: data.clients.phone, email: data.clients.email });
+      setClientSearch(data.clients.name);
+    }
+    setRepairCodeInput("");
+  };
+
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const printCombinedBoutiqueInvoice = (invoiceId: string, client: { name: string }, cart: CartItem[], repair: any, tva: number, payMethod: string) => {
+    const win = window.open("", "_blank", "height=900,width=1000");
+    if (!win) return;
+    const date = new Date().toLocaleDateString("fr-FR");
+    const productsHt = cart.reduce((s, i) => s + Number(i.product.sale_price) * i.quantity, 0);
+    const productsTtc = productsHt * (1 + tva / 100);
+    const repairHt = repair ? (repair.final_price ?? repair.estimated_price ?? 0) : 0;
+    const repairTtaRate = repair ? (repair.tva_rate ?? 0) : 0;
+    const repairTtc = repairHt * (1 + repairTtaRate / 100);
+    const grandTotal = productsTtc + repairTtc;
+    const payLabel: Record<string, string> = { "Espèces": "💵 Espèces", "Carte Bancaire": "💳 Carte Bancaire", "Virement": "🏦 Virement", "Chèque": "📄 Chèque" };
+    win.document.write(`<!DOCTYPE html><html><head><meta charset="UTF-8"><title>Facture ${invoiceId}</title>
+    <style>*{box-sizing:border-box;margin:0;padding:0}body{font-family:'Segoe UI',system-ui,sans-serif;background:#f1f5f9;color:#0f172a;padding:32px 20px}.page{max-width:800px;margin:auto;background:#fff;box-shadow:0 4px 32px rgba(0,0,0,.10)}.accent-bar{height:4px;background:linear-gradient(90deg,#a855f7,#6366f1,#06b6d4)}.header{display:flex;justify-content:space-between;align-items:flex-start;padding:32px 40px 24px}.header-right{text-align:right}.ref{font-size:13px;font-weight:600;color:#6366f1;font-family:monospace}.pill{display:inline-flex;align-items:center;margin-top:10px;padding:5px 14px;border-radius:99px;font-size:11px;font-weight:700;background:#f0fdf4;color:#16a34a;border:1px solid #bbf7d0}.sep{height:1px;background:#e2e8f0;margin:0 40px}.parties{display:grid;grid-template-columns:1fr 1fr;padding:24px 40px;border-bottom:1px solid #f1f5f9}.party-tag{font-size:9px;font-weight:700;letter-spacing:2.5px;text-transform:uppercase;color:#94a3b8;margin-bottom:8px}.party-name{font-size:17px;font-weight:800;color:#0f172a}.table-wrap{padding:0 40px}table{width:100%;border-collapse:collapse;margin-top:24px}thead tr{border-bottom:2px solid #0f172a}th{padding:0 12px 10px;text-align:left;font-size:9.5px;font-weight:700;text-transform:uppercase;letter-spacing:1.5px;color:#94a3b8}th.r{text-align:right}tbody tr{border-bottom:1px solid #f1f5f9}td{padding:14px 12px;font-size:13px;color:#334155}td.r{text-align:right}.bottom-wrap{display:flex;justify-content:flex-end;padding:24px 40px 32px;border-top:1px solid #f1f5f9}.totals{width:280px}.t-row{display:flex;justify-content:space-between;font-size:12.5px;color:#64748b;padding:5px 0}.t-row.ttc{border-top:2px solid #0f172a;margin-top:6px;padding-top:12px;font-size:18px;font-weight:800;color:#0f172a}.t-row.paid{color:#16a34a;font-weight:700}.footer{background:#f8fafc;border-top:1px solid #e2e8f0;padding:14px 40px;display:flex;justify-content:space-between}.footer-txt{font-size:10.5px;color:#94a3b8}.footer-ref{font-family:monospace;font-size:10px;background:#0f172a;color:#94a3b8;padding:3px 10px;border-radius:4px}@media print{body{background:#fff;padding:0}.page{box-shadow:none}.no-print{display:none!important}}.print-btn{display:flex;align-items:center;justify-content:center;margin:28px auto 0;padding:12px 40px;background:#0f172a;color:#fff;border:none;border-radius:8px;font-size:13px;font-weight:600;cursor:pointer;width:fit-content}</style></head><body>
+    <div class="page">
+      <div class="accent-bar"></div>
+      <div class="header">
+        <div><span style="font-size:24px;font-weight:900;color:#0f172a">MBX</span><div style="font-size:11px;color:#64748b;margin-top:8px">Réparations & Accessoires</div></div>
+        <div class="header-right">
+          <div style="font-size:36px;font-weight:800;color:#e2e8f0;letter-spacing:-1px">FACTURE</div>
+          <div class="ref">${invoiceId}</div>
+          <div style="font-size:11.5px;color:#94a3b8">Le ${date}</div>
+          <div><span class="pill">✓ Soldée · ${payLabel[payMethod] || payMethod}</span></div>
+        </div>
+      </div>
+      <div class="sep"></div>
+      <div class="parties">
+        <div class="party"><div class="party-tag">Vendeur</div><div class="party-name">MBX</div></div>
+        <div class="party"><div class="party-tag">Client</div><div class="party-name">${client.name}</div></div>
+      </div>
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th>Description</th><th class="r" style="width:70px">Qté</th><th class="r" style="width:90px">P.U. HT</th><th class="r" style="width:90px">Total TTC</th></tr></thead>
+          <tbody>
+            ${repair ? `<tr><td><span style="font-family:monospace;font-size:11px;color:#6366f1;background:#eef2ff;padding:3px 8px;border-radius:4px">MBX-${repair.id}</span>&nbsp;&nbsp;<strong>${repair.device}</strong><div style="font-size:11.5px;color:#94a3b8">${repair.issue || ""}</div></td><td class="r">1</td><td class="r">${repairHt.toFixed(2)} €</td><td class="r" style="font-weight:600">${repairTtc.toFixed(2)} €</td></tr>` : ""}
+            ${cart.map(i => `<tr><td><span style="font-family:monospace;font-size:11px;color:#a855f7;background:#faf5ff;padding:3px 8px;border-radius:4px">🛍️</span>&nbsp;&nbsp;<strong>${i.product.name}</strong></td><td class="r">${i.quantity}</td><td class="r">${Number(i.product.sale_price).toFixed(2)} €</td><td class="r" style="font-weight:600">${(Number(i.product.sale_price) * i.quantity * (1 + tva / 100)).toFixed(2)} €</td></tr>`).join("")}
+          </tbody>
+        </table>
+      </div>
+      <div class="bottom-wrap">
+        <div class="totals">
+          <div class="t-row ttc"><span>Total TTC</span><span>${grandTotal.toFixed(2)} €</span></div>
+          <div class="t-row paid"><span>✓ Réglé · ${payLabel[payMethod] || payMethod}</span><span>${grandTotal.toFixed(2)} €</span></div>
+        </div>
+      </div>
+      <div class="footer"><span class="footer-txt">Merci pour votre confiance</span><span class="footer-ref">${invoiceId} · ${date}</span></div>
+    </div>
+    <button class="print-btn no-print" onclick="window.print()">🖨️ Imprimer / PDF</button>
+    </body></html>`);
+    win.document.close();
+  };
+
   const validateSaleWithInvoice = async () => {
-    if (!selectedClient) { alert("Veuillez sélectionner un client"); return; }
-    if (cartItems.length === 0) { alert("Ajoutez des produits au panier"); return; }
+    if (cartItems.length === 0 && !linkedRepair) { alert("Ajoutez des produits ou liez une réparation"); return; }
     setIsProcessingSale(true);
+    const cartSnapshot = [...cartItems];
+    const repairSnapshot = linkedRepair;
+    const clientForInvoice = selectedClient || { name: "Vente directe" };
+    const currentTva = tvaRate;
+    const currentPayMethod = salePaymentMethod;
     try {
-      const items: InvoiceItem[] = cartItems.map((item) => ({
+      const items: InvoiceItem[] = cartSnapshot.map((item) => ({
         product_id: item.product.id,
         product_name: item.product.name,
         quantity: item.quantity,
@@ -176,13 +255,13 @@ export default function BoutiquePage() {
         total: Number(item.product.sale_price) * item.quantity,
       }));
 
-      const result = await createInvoice(userId, selectedClient, items, tvaRate, "Espèces");
+      const result = await createInvoice(userId, clientForInvoice, items, currentTva, currentPayMethod);
       if (!result.success) { alert("Erreur création facture: " + result.error); return; }
 
-      for (const item of cartItems) {
+      for (const item of cartSnapshot) {
         const unitPrice = Number(item.product.sale_price);
         const unitCost = Number(item.product.purchase_price);
-        const { error: saleError } = await supabase.from("product_sales").insert({
+        await supabase.from("product_sales").insert({
           user_id: userId,
           product_id: item.product.id,
           product_name: item.product.name,
@@ -192,19 +271,34 @@ export default function BoutiquePage() {
           total: unitPrice * item.quantity,
           sold_by: techName || "Boutique",
           invoice_id: result.invoiceId,
-          client_name: selectedClient?.name || "",
+          client_name: clientForInvoice.name,
         });
-        if (!saleError) {
-          await supabase.from("products").update({ stock: item.product.stock - item.quantity }).eq("id", item.product.id);
-        }
+        await supabase.from("products").update({ stock: item.product.stock - item.quantity }).eq("id", item.product.id);
       }
+
+      // Marquer la réparation liée comme payée
+      if (repairSnapshot) {
+        const paidAt = new Date().toISOString();
+        const priceHt = repairSnapshot.final_price ?? repairSnapshot.estimated_price ?? 0;
+        const repairTtc = priceHt * (1 + (repairSnapshot.tva_rate ?? 0) / 100);
+        await supabase.from("repairs").update({
+          paid_amount: repairTtc,
+          payment_status: "payé",
+          payment_method: currentPayMethod,
+          payment_date: paidAt,
+          status: "📦 Rendu",
+        }).eq("id", repairSnapshot.id);
+      }
+
+      printCombinedBoutiqueInvoice(result.invoiceId || "", clientForInvoice, cartSnapshot, repairSnapshot, currentTva, currentPayMethod);
 
       setCartItems([]);
       setSelectedClient(null);
       setClientSearch("");
       setClientSearchResults([]);
+      setLinkedRepair(null);
+      setRepairCodeInput("");
       setShowClientModal(false);
-      alert(`✅ Vente validée ! Facture ${result.invoiceId}`);
       await load();
     } catch (err) {
       console.error("Erreur validation vente:", err);
@@ -537,125 +631,153 @@ export default function BoutiquePage() {
       )}
 
       {/* MODAL PANIER + CLIENT */}
-      {showClientModal && (
-        <div className="fixed inset-0 bg-black/70 backdrop-blur-sm flex items-center justify-center p-4 z-50">
-          <div className="bg-[#16161d] border border-white/10 rounded-2xl w-full max-w-2xl max-h-[90vh] overflow-auto">
-            <div className="sticky top-0 bg-[#16161d] border-b border-white/10 px-5 py-4 flex items-center justify-between">
-              <h2 className="text-lg font-bold text-white tracking-tight">🛒 Validation de la vente</h2>
-              <button onClick={() => setShowClientModal(false)} className="w-8 h-8 bg-white/10 hover:bg-white/20 rounded-full flex items-center justify-center text-gray-400">✕</button>
-            </div>
-            <div className="p-5 space-y-4">
-              {/* Recherche client */}
-              <div>
-                <label className="block text-xs font-semibold text-gray-400 uppercase tracking-widest mb-1.5">Client</label>
-                <input
-                  type="text"
-                  placeholder="Rechercher un client existant..."
-                  value={clientSearch}
-                  onChange={(e) => { setClientSearch(e.target.value); searchExistingClients(e.target.value); }}
-                  className="w-full bg-[#1a1d2e] border border-white/10 rounded-xl px-4 py-2.5 text-white text-sm outline-none focus:border-pink-500/50"
-                />
-                {clientSearchResults.length > 0 && (
-                  <div className="mt-2 space-y-1">
-                    {clientSearchResults.map((client) => (
-                      <div key={client.id} onClick={() => { setSelectedClient(client); setClientSearch(client.name); setClientSearchResults([]); }} className="p-2 bg-white/5 rounded-lg cursor-pointer hover:bg-white/10 transition-colors">
-                        <div className="font-medium text-white text-sm">{client.name}</div>
-                        <div className="text-xs text-gray-500">{client.phone} {client.email}</div>
+      {showClientModal && (() => {
+        const productsHt = cartItems.reduce((s, i) => s + Number(i.product.sale_price) * i.quantity, 0);
+        const productsTtc = productsHt * (1 + tvaRate / 100);
+        const repairHt = linkedRepair ? (linkedRepair.final_price ?? linkedRepair.estimated_price ?? 0) : 0;
+        const repairTtc = repairHt * (1 + (linkedRepair?.tva_rate ?? 0) / 100);
+        const grandTotal = productsTtc + repairTtc;
+        return (
+          <div className="fixed inset-0 bg-black/70 backdrop-blur-sm flex items-center justify-center p-4 z-50">
+            <div className="bg-[#16161d] border border-white/10 rounded-2xl w-full max-w-2xl max-h-[90vh] overflow-auto">
+              <div className="sticky top-0 bg-[#16161d] border-b border-white/10 px-5 py-4 flex items-center justify-between">
+                <h2 className="text-lg font-bold text-white tracking-tight">🛒 Validation de la vente</h2>
+                <button onClick={() => setShowClientModal(false)} className="w-8 h-8 bg-white/10 hover:bg-white/20 rounded-full flex items-center justify-center text-gray-400">✕</button>
+              </div>
+              <div className="p-5 space-y-4">
+
+                {/* Lier à une réparation */}
+                <div>
+                  <label className="block text-xs font-semibold text-gray-400 uppercase tracking-widest mb-1.5">🔗 Réparation à inclure (optionnel)</label>
+                  {linkedRepair ? (
+                    <div className="bg-indigo-500/10 border border-indigo-500/30 rounded-xl p-3 flex items-center justify-between">
+                      <div>
+                        <div className="text-sm font-semibold text-white">MBX-{linkedRepair.id} · {linkedRepair.device}</div>
+                        <div className="text-xs text-gray-400">{linkedRepair.issue} · {repairTtc.toFixed(2)} €</div>
+                        {linkedRepair.clients && <div className="text-xs text-indigo-300 mt-0.5">Client : {linkedRepair.clients.name}</div>}
                       </div>
-                    ))}
-                  </div>
-                )}
-              </div>
-
-              {/* Nouveau client */}
-              <div className="border-t border-white/10 pt-3">
-                <button
-                  onClick={() => {
-                    const name = prompt("Nom du nouveau client :");
-                    if (name) {
-                      const phone = prompt("Téléphone (optionnel) :") || "";
-                      const email = prompt("Email (optionnel) :") || "";
-                      setSelectedClient({ name, phone, email });
-                      setClientSearch(name);
-                    }
-                  }}
-                  className="text-sm text-pink-400 hover:text-pink-300 flex items-center gap-1"
-                >
-                  + Nouveau client
-                </button>
-              </div>
-
-              {selectedClient && (
-                <div className="bg-green-500/10 border border-green-500/30 rounded-xl p-3">
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <span className="text-xs text-green-400">Client sélectionné</span>
-                      <div className="font-medium text-white">{selectedClient.name}</div>
-                      {(selectedClient.phone || selectedClient.email) && <div className="text-xs text-gray-400">{selectedClient.phone} {selectedClient.email}</div>}
+                      <button onClick={() => setLinkedRepair(null)} className="text-red-400 hover:text-red-300 text-xs ml-3">✕ Retirer</button>
                     </div>
-                    <button onClick={() => { setSelectedClient(null); setClientSearch(""); }} className="text-xs text-red-400 hover:text-red-300">Modifier</button>
+                  ) : (
+                    <div className="flex gap-2">
+                      <input
+                        type="text"
+                        placeholder="MBX-42 ou scanner..."
+                        value={repairCodeInput}
+                        onChange={(e) => setRepairCodeInput(e.target.value)}
+                        onKeyDown={(e) => e.key === "Enter" && fetchRepairByCode(repairCodeInput)}
+                        className="flex-1 bg-[#1a1d2e] border border-white/10 rounded-xl px-4 py-2.5 text-white text-sm outline-none focus:border-indigo-500/50"
+                      />
+                      <button onClick={() => fetchRepairByCode(repairCodeInput)} className="px-3 py-2 bg-indigo-500/15 hover:bg-indigo-500/25 text-indigo-300 rounded-xl text-sm border border-indigo-500/20 transition">OK</button>
+                      <button onClick={() => setShowRepairScanner(true)} className="px-3 py-2 bg-indigo-500/15 hover:bg-indigo-500/25 text-indigo-300 rounded-xl text-sm border border-indigo-500/20 transition">📷</button>
+                    </div>
+                  )}
+                </div>
+
+                {/* Client */}
+                <div>
+                  <label className="block text-xs font-semibold text-gray-400 uppercase tracking-widest mb-1.5">Client <span className="text-gray-600 normal-case font-normal">(optionnel — sans sélection = Vente directe)</span></label>
+                  <input
+                    type="text"
+                    placeholder="Rechercher un client existant..."
+                    value={clientSearch}
+                    onChange={(e) => { setClientSearch(e.target.value); searchExistingClients(e.target.value); }}
+                    className="w-full bg-[#1a1d2e] border border-white/10 rounded-xl px-4 py-2.5 text-white text-sm outline-none focus:border-pink-500/50"
+                  />
+                  {clientSearchResults.length > 0 && (
+                    <div className="mt-2 space-y-1">
+                      {clientSearchResults.map((client) => (
+                        <div key={client.id} onClick={() => { setSelectedClient(client); setClientSearch(client.name); setClientSearchResults([]); }} className="p-2 bg-white/5 rounded-lg cursor-pointer hover:bg-white/10 transition-colors">
+                          <div className="font-medium text-white text-sm">{client.name}</div>
+                          <div className="text-xs text-gray-500">{client.phone} {client.email}</div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                  <button
+                    onClick={() => {
+                      const name = prompt("Nom du nouveau client :");
+                      if (name) { const phone = prompt("Téléphone :") || ""; const email = prompt("Email :") || ""; setSelectedClient({ name, phone, email }); setClientSearch(name); }
+                    }}
+                    className="mt-2 text-xs text-pink-400 hover:text-pink-300"
+                  >+ Nouveau client</button>
+                  {selectedClient && (
+                    <div className="mt-2 bg-green-500/10 border border-green-500/30 rounded-xl p-3 flex items-center justify-between">
+                      <div>
+                        <div className="font-medium text-white text-sm">{selectedClient.name}</div>
+                        {(selectedClient.phone || selectedClient.email) && <div className="text-xs text-gray-400">{selectedClient.phone} {selectedClient.email}</div>}
+                      </div>
+                      <button onClick={() => { setSelectedClient(null); setClientSearch(""); }} className="text-xs text-red-400 hover:text-red-300">Modifier</button>
+                    </div>
+                  )}
+                </div>
+
+                {/* Mode de paiement */}
+                <div className="flex gap-3">
+                  <div className="flex-1">
+                    <label className="block text-xs font-semibold text-gray-400 uppercase tracking-widest mb-1.5">Mode de paiement</label>
+                    <select value={salePaymentMethod} onChange={(e) => setSalePaymentMethod(e.target.value)} className="w-full bg-[#1a1d2e] border border-white/10 rounded-xl px-4 py-2.5 text-white text-sm outline-none focus:border-pink-500/50">
+                      <option>Espèces</option>
+                      <option>Carte Bancaire</option>
+                      <option>Virement</option>
+                      <option>Chèque</option>
+                    </select>
+                  </div>
+                  <div className="flex-1">
+                    <label className="block text-xs font-semibold text-gray-400 uppercase tracking-widest mb-1.5">TVA</label>
+                    <select value={tvaRate} onChange={(e) => setTvaRate(Number(e.target.value))} className="w-full bg-[#1a1d2e] border border-white/10 rounded-xl px-4 py-2.5 text-white text-sm outline-none focus:border-pink-500/50">
+                      <option value={0}>0%</option>
+                      <option value={20}>20%</option>
+                    </select>
                   </div>
                 </div>
-              )}
 
-              {/* TVA */}
-              <div>
-                <label className="block text-xs font-semibold text-gray-400 uppercase tracking-widest mb-1.5">TVA</label>
-                <select value={tvaRate} onChange={(e) => setTvaRate(Number(e.target.value))} className="w-full bg-[#1a1d2e] border border-white/10 rounded-xl px-4 py-2.5 text-white text-sm outline-none focus:border-pink-500/50">
-                  <option value={0}>0%</option>
-                  <option value={20}>20%</option>
-                </select>
-              </div>
-
-              {/* Panier */}
-              <div>
-                <h3 className="text-sm font-semibold text-white mb-2">🛍️ Panier</h3>
-                {cartItems.length === 0 ? (
-                  <div className="text-center text-gray-500 py-8 text-sm">Aucun produit dans le panier</div>
-                ) : (
-                  <div className="space-y-2">
-                    {cartItems.map((item, idx) => (
-                      <div key={idx} className="flex items-center justify-between p-3 bg-[#1a1d2e] rounded-xl">
-                        <div className="flex-1">
-                          <div className="text-sm font-medium text-white">{item.product.name}</div>
-                          <div className="text-xs text-gray-500">{item.quantity} × {item.product.sale_price.toFixed(2)} €</div>
+                {/* Panier */}
+                {cartItems.length > 0 && (
+                  <div>
+                    <h3 className="text-xs font-semibold text-gray-400 uppercase tracking-widest mb-2">🛍️ Produits</h3>
+                    <div className="space-y-2">
+                      {cartItems.map((item, idx) => (
+                        <div key={idx} className="flex items-center justify-between p-3 bg-[#1a1d2e] rounded-xl">
+                          <div className="flex-1">
+                            <div className="text-sm font-medium text-white">{item.product.name}</div>
+                            <div className="text-xs text-gray-500">{item.quantity} × {Number(item.product.sale_price).toFixed(2)} €</div>
+                          </div>
+                          <div className="text-right">
+                            <div className="text-sm font-bold text-green-400">{(Number(item.product.sale_price) * item.quantity).toFixed(2)} €</div>
+                            <button onClick={() => setCartItems(cartItems.filter((_, i) => i !== idx))} className="text-xs text-red-400 hover:text-red-300">✕</button>
+                          </div>
                         </div>
-                        <div className="text-right">
-                          <div className="text-sm font-bold text-green-400">{(item.product.sale_price * item.quantity).toFixed(2)} €</div>
-                          <button onClick={() => setCartItems(cartItems.filter((_, i) => i !== idx))} className="text-xs text-red-400 hover:text-red-300">Supprimer</button>
-                        </div>
-                      </div>
-                    ))}
-                    <div className="pt-3 border-t border-white/10">
-                      {tvaRate > 0 && (
-                        <div className="flex justify-between py-1 text-sm">
-                          <span className="text-gray-400">TVA ({tvaRate}%)</span>
-                          <span className="text-white">{(cartItems.reduce((s, i) => s + i.product.sale_price * i.quantity, 0) * tvaRate / 100).toFixed(2)} €</span>
-                        </div>
-                      )}
-                      <div className="flex justify-between py-2 mt-1 border-t border-white/10 font-bold">
-                        <span className="text-white">Total TTC</span>
-                        <span className="text-pink-400 text-lg">{(cartItems.reduce((s, i) => s + i.product.sale_price * i.quantity, 0) * (1 + tvaRate / 100)).toFixed(2)} €</span>
-                      </div>
+                      ))}
                     </div>
                   </div>
                 )}
-              </div>
 
-              <div className="flex gap-3 pt-4">
-                <button
-                  onClick={validateSaleWithInvoice}
-                  disabled={cartItems.length === 0 || !selectedClient || isProcessingSale}
-                  className="flex-1 bg-green-600 hover:bg-green-500 text-white py-3 rounded-xl font-semibold transition-all disabled:opacity-50"
-                >
-                  {isProcessingSale ? "⏳ Traitement..." : "✅ Valider la vente"}
-                </button>
-                <button onClick={() => setShowClientModal(false)} className="flex-1 bg-white/5 hover:bg-white/10 text-gray-300 py-3 rounded-xl transition-all">Annuler</button>
+                {/* Total */}
+                <div className="bg-white/5 rounded-xl px-4 py-3">
+                  {linkedRepair && <div className="flex justify-between text-sm text-gray-400 mb-1"><span>🔧 Réparation MBX-{linkedRepair.id}</span><span>{repairTtc.toFixed(2)} €</span></div>}
+                  {cartItems.length > 0 && <div className="flex justify-between text-sm text-gray-400 mb-1"><span>🛍️ Produits ({cartItems.length})</span><span>{productsTtc.toFixed(2)} €</span></div>}
+                  <div className="flex justify-between font-bold border-t border-white/10 pt-2 mt-1">
+                    <span className="text-white">Total à encaisser</span>
+                    <span className="text-pink-400 text-lg">{grandTotal.toFixed(2)} €</span>
+                  </div>
+                </div>
+
+                <div className="flex gap-3 pt-2">
+                  <button
+                    onClick={validateSaleWithInvoice}
+                    disabled={(cartItems.length === 0 && !linkedRepair) || isProcessingSale}
+                    className="flex-1 bg-green-600 hover:bg-green-500 text-white py-3 rounded-xl font-semibold transition-all disabled:opacity-50"
+                  >
+                    {isProcessingSale ? "⏳ Traitement..." : "✅ Valider · 🖨️ Imprimer"}
+                  </button>
+                  <button onClick={() => setShowClientModal(false)} className="px-5 bg-white/5 hover:bg-white/10 text-gray-300 py-3 rounded-xl transition-all">Annuler</button>
+                </div>
               </div>
             </div>
           </div>
-        </div>
-      )}
+        );
+      })()}
 
       {/* SCANNER formulaire ajout produit */}
       {scanMode && (
@@ -672,6 +794,15 @@ export default function BoutiquePage() {
           onScan={(code) => { setShowBarcodeScanner(false); if (code) searchProductByBarcode(code); }}
           onClose={() => setShowBarcodeScanner(false)}
           label="Scanner un code-barres"
+        />
+      )}
+
+      {/* SCANNER réparation (depuis modal panier) */}
+      {showRepairScanner && (
+        <QrScanner
+          onScan={(code) => { setShowRepairScanner(false); if (code) fetchRepairByCode(code); }}
+          onClose={() => setShowRepairScanner(false)}
+          label="Scanner le QR code de la réparation"
         />
       )}
     </Layout>

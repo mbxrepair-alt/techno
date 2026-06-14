@@ -505,21 +505,19 @@ ${formData.description || "Aucune description"}
 
   if (step === 1) {
     return (
-      <div className="min-h-screen bg-black flex items-center justify-center p-4 relative overflow-hidden">
-        {/* Blobs néon fond */}
-        <div className="absolute inset-0 bg-[linear-gradient(rgba(249,115,22,0.04)_1px,transparent_1px),linear-gradient(90deg,rgba(249,115,22,0.04)_1px,transparent_1px)] bg-[size:50px_50px]" />
-        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[600px] bg-orange-500/10 rounded-full blur-[100px] animate-pulse" />
-        <div className="absolute -top-40 -left-40 w-80 h-80 bg-orange-500/15 rounded-full blur-[80px] animate-pulse" />
-        <div className="absolute -bottom-40 -right-40 w-80 h-80 bg-orange-600/15 rounded-full blur-[80px] animate-pulse" />
+      <div className="min-h-screen bg-[#0a0a0f] flex items-center justify-center p-4 relative overflow-hidden">
+        <div className="absolute inset-0 bg-[linear-gradient(rgba(249,115,22,0.03)_1px,transparent_1px),linear-gradient(90deg,rgba(249,115,22,0.03)_1px,transparent_1px)] bg-[size:40px_40px]" />
+        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[500px] h-[500px] bg-orange-500/8 rounded-full blur-[120px]" />
+        <div className="absolute -top-32 -left-32 w-64 h-64 bg-orange-500/12 rounded-full blur-[80px]" />
+        <div className="absolute -bottom-32 -right-32 w-64 h-64 bg-orange-600/10 rounded-full blur-[80px]" />
 
-        <div className="relative z-10 w-full max-w-md">
-          {/* Logo */}
+        <div className="relative z-10 w-full max-w-sm">
           <div className="text-center mb-8">
             <a href="/" className="inline-flex items-center gap-3 group">
               <div className="relative">
-                <div className="absolute -inset-2 rounded-xl bg-gradient-to-r from-orange-500 to-orange-600 opacity-60 blur-md group-hover:opacity-90 transition" />
-                <div className="relative w-12 h-12 bg-gradient-to-br from-orange-500 to-orange-600 rounded-xl flex items-center justify-center shadow-2xl overflow-hidden">
-                  <img src="/logo.png" alt="MBX" className="w-full h-full object-cover rounded-xl" />
+                <div className="absolute -inset-2 rounded-xl bg-orange-500/30 blur-lg group-hover:bg-orange-500/50 transition" />
+                <div className="relative w-12 h-12 bg-gradient-to-br from-orange-500 to-orange-600 rounded-xl overflow-hidden shadow-2xl">
+                  <img src="/logo.png" alt="MBX" className="w-full h-full object-cover" />
                 </div>
               </div>
               <div className="leading-tight text-left">
@@ -529,50 +527,53 @@ ${formData.description || "Aucune description"}
             </a>
           </div>
 
-          {/* Card */}
-          <div className="bg-gray-900/80 backdrop-blur-xl rounded-2xl border border-gray-700/60 shadow-[0_0_40px_rgba(249,115,22,0.1)] p-8">
-            <div className="text-center mb-6">
-              <div className="inline-flex items-center justify-center w-16 h-16 bg-gradient-to-br from-orange-500 to-orange-600 rounded-2xl mb-4 shadow-[0_0_20px_rgba(249,115,22,0.4)]">
-                <span className="text-3xl">🔑</span>
-              </div>
-              <h1 className="text-2xl font-black text-white mb-1">Soumettre un appareil</h1>
-              <p className="text-gray-400 text-sm">Identifiez-vous avec votre code client</p>
-            </div>
+          <div className="bg-white/[0.03] backdrop-blur-xl rounded-3xl border border-white/8 shadow-2xl overflow-hidden">
+            {/* Top accent */}
+            <div className="h-1 bg-gradient-to-r from-orange-500 via-orange-400 to-orange-600" />
 
-            <div className="bg-orange-500/10 border border-orange-500/30 rounded-xl p-3 mb-6">
-              <p className="text-sm text-orange-300 text-center">💡 Votre code client se trouve sur l&apos;email de confirmation</p>
-            </div>
-
-            <form onSubmit={handleIdentification} className="space-y-4">
-              <div>
-                <label className="block text-sm font-semibold text-gray-300 mb-2">👤 Votre nom</label>
-                <input type="text" value={clientName} onChange={(e) => setClientName(e.target.value)}
-                  placeholder="Ex: Jean Dupont"
-                  className="w-full px-4 py-3 bg-gray-800/70 border border-gray-600 rounded-xl text-white placeholder-gray-500 focus:outline-none focus:border-orange-500 focus:ring-1 focus:ring-orange-500 transition" />
-              </div>
-              <div>
-                <label className="block text-sm font-semibold text-gray-300 mb-2">🔑 Code client *</label>
-                <input type="text" required value={clientCode} onChange={(e) => setClientCode(e.target.value.toUpperCase())}
-                  placeholder="Ex: DOM923167"
-                  className="w-full px-4 py-3 bg-gray-800/70 border border-gray-600 rounded-xl text-white placeholder-gray-500 focus:outline-none focus:border-orange-500 focus:ring-1 focus:ring-orange-500 font-mono text-center text-lg tracking-widest transition"
-                  autoFocus />
-              </div>
-              {error && (
-                <div className="bg-red-500/10 border border-red-500/40 rounded-xl px-4 py-3">
-                  <p className="text-red-400 text-sm text-center">{error}</p>
+            <div className="p-6 sm:p-8">
+              <div className="text-center mb-7">
+                <div className="inline-flex items-center justify-center w-14 h-14 bg-orange-500/10 border border-orange-500/20 rounded-2xl mb-4">
+                  <span className="text-2xl">🔑</span>
                 </div>
-              )}
-              <button type="submit" disabled={loading}
-                className="w-full relative group overflow-hidden bg-gradient-to-r from-orange-500 to-orange-600 text-white py-3.5 rounded-xl font-bold text-sm shadow-[0_0_20px_rgba(249,115,22,0.3)] hover:shadow-[0_0_35px_rgba(249,115,22,0.5)] hover:scale-[1.02] transition-all disabled:opacity-50 disabled:cursor-not-allowed">
-                <span className="absolute inset-0 bg-gradient-to-r from-orange-400 to-orange-500 opacity-0 group-hover:opacity-100 transition" />
-                <span className="relative z-10">
-                  {loading ? "⏳ Vérification..." : "Continuer →"}
-                </span>
-              </button>
-            </form>
+                <h1 className="text-xl font-black text-white mb-1">Soumettre un appareil</h1>
+                <p className="text-gray-500 text-sm">Entrez votre code client pour continuer</p>
+              </div>
 
-            <div className="mt-6 text-center">
-              <a href="/" className="text-gray-500 hover:text-orange-400 text-xs transition">← Retour à l&apos;accueil</a>
+              <div className="flex items-center gap-2 bg-orange-500/8 border border-orange-500/20 rounded-2xl px-4 py-3 mb-6">
+                <span className="text-orange-400 shrink-0">💡</span>
+                <p className="text-xs text-orange-300/90 leading-snug">Votre code client se trouve sur l&apos;email de confirmation reçu lors de votre inscription</p>
+              </div>
+
+              <form onSubmit={handleIdentification} className="space-y-4">
+                <div>
+                  <label className="block text-xs font-bold text-gray-400 uppercase tracking-widest mb-2">Votre nom</label>
+                  <input type="text" value={clientName} onChange={(e) => setClientName(e.target.value)}
+                    placeholder="Jean Dupont"
+                    className="w-full px-4 py-3.5 bg-white/5 border border-white/8 rounded-2xl text-white placeholder-gray-600 focus:outline-none focus:border-orange-500/50 focus:bg-white/8 transition text-sm" />
+                </div>
+                <div>
+                  <label className="block text-xs font-bold text-gray-400 uppercase tracking-widest mb-2">Code client *</label>
+                  <input type="text" required value={clientCode} onChange={(e) => setClientCode(e.target.value.toUpperCase())}
+                    placeholder="DOM923167"
+                    className="w-full px-4 py-3.5 bg-white/5 border border-white/8 rounded-2xl text-white placeholder-gray-600 focus:outline-none focus:border-orange-500/50 focus:bg-white/8 font-mono text-center text-lg tracking-[0.3em] transition"
+                    autoFocus />
+                </div>
+                {error && (
+                  <div className="flex items-center gap-2 bg-red-500/8 border border-red-500/20 rounded-2xl px-4 py-3">
+                    <span className="text-red-400 shrink-0">⚠️</span>
+                    <p className="text-red-400 text-sm">{error}</p>
+                  </div>
+                )}
+                <button type="submit" disabled={loading}
+                  className="w-full bg-gradient-to-r from-orange-500 to-orange-600 text-white py-4 rounded-2xl font-black text-sm shadow-[0_8px_32px_rgba(249,115,22,0.35)] hover:shadow-[0_8px_40px_rgba(249,115,22,0.5)] active:scale-[0.98] transition-all disabled:opacity-50 disabled:cursor-not-allowed mt-2">
+                  {loading ? "⏳ Vérification..." : "Continuer →"}
+                </button>
+              </form>
+
+              <div className="mt-6 text-center">
+                <a href="/" className="text-gray-600 hover:text-orange-400 text-xs transition">← Retour à l&apos;accueil</a>
+              </div>
             </div>
           </div>
         </div>
@@ -586,78 +587,75 @@ ${formData.description || "Aucune description"}
 
   const showMissingMessage = isMissingBoth();
 
+  // Input classes shared
+  const inputCls = "w-full px-4 py-3.5 bg-white/5 border border-white/8 rounded-2xl text-white placeholder-gray-600 focus:outline-none focus:border-orange-500/50 focus:bg-white/8 transition text-sm";
+  const labelCls = "block text-[10px] font-bold text-gray-500 uppercase tracking-widest mb-2";
+
   return (
-    <div className="min-h-screen bg-black relative overflow-x-hidden">
-      {/* Fond grille + blobs */}
-      <div className="fixed inset-0 bg-[linear-gradient(rgba(249,115,22,0.04)_1px,transparent_1px),linear-gradient(90deg,rgba(249,115,22,0.04)_1px,transparent_1px)] bg-[size:50px_50px] pointer-events-none" />
-      <div className="fixed top-0 left-0 w-full h-full pointer-events-none overflow-hidden">
-        <div className="absolute -top-40 -left-40 w-96 h-96 bg-orange-500/10 rounded-full blur-[100px] animate-pulse" />
-        <div className="absolute -bottom-40 -right-40 w-96 h-96 bg-orange-600/10 rounded-full blur-[100px] animate-pulse" />
-      </div>
+    <div className="min-h-screen bg-[#0a0a0f] relative overflow-x-hidden">
+      <div className="fixed inset-0 bg-[linear-gradient(rgba(249,115,22,0.025)_1px,transparent_1px),linear-gradient(90deg,rgba(249,115,22,0.025)_1px,transparent_1px)] bg-[size:40px_40px] pointer-events-none" />
+      <div className="fixed -top-32 -left-32 w-80 h-80 bg-orange-500/8 rounded-full blur-[100px] pointer-events-none" />
+      <div className="fixed -bottom-32 -right-32 w-80 h-80 bg-orange-600/8 rounded-full blur-[100px] pointer-events-none" />
 
       {/* Header */}
-      <header className="sticky top-0 z-50 bg-black/90 backdrop-blur-2xl border-b border-orange-500/30 shadow-[0_0_30px_rgba(249,115,22,0.1)]">
-        <div className="max-w-3xl mx-auto px-4 py-3 flex items-center justify-between">
-          <a href="/" className="flex items-center gap-2.5 group">
-            <div className="relative">
-              <div className="absolute -inset-1.5 rounded-lg bg-gradient-to-r from-orange-500 to-orange-600 opacity-50 blur-sm group-hover:opacity-80 transition" />
-              <div className="relative w-9 h-9 bg-gradient-to-br from-orange-500 to-orange-600 rounded-lg overflow-hidden">
-                <img src="/logo.png" alt="MBX" className="w-full h-full object-cover" />
-              </div>
+      <header className="sticky top-0 z-50 bg-[#0a0a0f]/90 backdrop-blur-2xl border-b border-white/6">
+        <div className="max-w-2xl mx-auto px-4 py-3 flex items-center justify-between gap-3">
+          <a href="/" className="flex items-center gap-2.5 shrink-0">
+            <div className="relative w-9 h-9 bg-gradient-to-br from-orange-500 to-orange-600 rounded-xl overflow-hidden shadow-[0_0_12px_rgba(249,115,22,0.4)]">
+              <img src="/logo.png" alt="MBX" className="w-full h-full object-cover" />
             </div>
-            <div className="leading-tight">
-              <span className="text-white font-black text-lg tracking-tight">MBX</span>
+            <div className="leading-tight hidden xs:block">
+              <span className="text-white font-black text-base tracking-tight">MBX</span>
               <span className="text-orange-400 text-[9px] block -mt-0.5 font-bold tracking-[0.2em]">RÉPARATIONS</span>
             </div>
           </a>
 
-          <div className="flex items-center gap-3">
-            {/* Badge client connecté */}
-            <div className="hidden sm:flex items-center gap-2 bg-orange-500/10 border border-orange-500/30 rounded-full px-3 py-1.5">
-              <span className="relative flex h-2 w-2">
+          <div className="flex items-center gap-2 min-w-0">
+            <div className="flex items-center gap-2 bg-white/3 border border-white/8 rounded-full px-3 py-1.5 min-w-0">
+              <span className="relative flex h-2 w-2 shrink-0">
                 <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75" />
                 <span className="relative inline-flex rounded-full h-2 w-2 bg-green-500" />
               </span>
-              <span className="text-orange-300 text-xs font-semibold">{client?.name}</span>
-              <span className="text-gray-500 text-xs font-mono">{client?.client_code}</span>
+              <span className="text-white text-xs font-semibold truncate">{client?.name}</span>
+              <span className="text-gray-500 text-xs font-mono shrink-0">{client?.client_code}</span>
             </div>
             {submittedTickets.length > 0 && (
-              <span className="bg-green-500/10 border border-green-500/40 text-green-400 px-2.5 py-1 rounded-full text-xs font-bold">
-                ✅ {submittedTickets.length} ticket{submittedTickets.length > 1 ? "s" : ""}
+              <span className="bg-green-500/10 border border-green-500/30 text-green-400 px-2.5 py-1 rounded-full text-xs font-bold shrink-0">
+                ✅ {submittedTickets.length}
               </span>
             )}
           </div>
         </div>
       </header>
 
-      <div className="relative z-10 max-w-3xl mx-auto px-4 py-6 space-y-4">
+      <div className="relative z-10 max-w-2xl mx-auto px-4 py-5 space-y-4 pb-10">
 
-        {/* Tickets déjà soumis */}
+        {/* Tickets soumis */}
         {submittedTickets.length > 0 && (
-          <div className="bg-green-500/5 border border-green-500/30 rounded-2xl p-4 backdrop-blur-sm">
+          <div className="bg-green-500/5 border border-green-500/20 rounded-3xl p-4">
             <div className="flex items-center justify-between mb-3">
               <p className="text-sm font-bold text-green-400 flex items-center gap-2">
-                <span className="w-2 h-2 bg-green-400 rounded-full animate-pulse inline-block" />
-                📦 Appareils déclarés
+                <span className="w-2 h-2 bg-green-400 rounded-full animate-pulse" />
+                {submittedTickets.length} appareil{submittedTickets.length > 1 ? "s" : ""} déclaré{submittedTickets.length > 1 ? "s" : ""}
               </p>
               <button onClick={printAllTickets}
-                className="bg-orange-500/10 border border-orange-500/40 text-orange-400 px-3 py-1.5 rounded-lg text-xs font-bold hover:bg-orange-500/20 transition flex items-center gap-1">
+                className="bg-white/5 border border-white/8 text-gray-300 px-3 py-1.5 rounded-xl text-xs font-bold hover:bg-white/10 transition">
                 🖨️ Tout imprimer
               </button>
             </div>
             <div className="space-y-2">
               {submittedTickets.map((ticket) => (
-                <div key={ticket.id} className="flex items-center justify-between bg-gray-800/50 rounded-xl p-3 border border-gray-700/50">
-                  <div className="flex items-center gap-3">
-                    <span className="text-xs font-mono bg-orange-500/10 border border-orange-500/30 text-orange-400 px-2 py-1 rounded-lg font-bold">MBX-{ticket.id}</span>
-                    <div>
-                      <div className="text-sm font-semibold text-white">{ticket.device}</div>
-                      <div className="text-xs text-gray-400">{ticket.issue}</div>
+                <div key={ticket.id} className="flex items-center justify-between bg-white/3 rounded-2xl p-3 border border-white/6">
+                  <div className="flex items-center gap-3 min-w-0">
+                    <span className="text-xs font-mono font-black text-orange-400 shrink-0">MBX-{ticket.id}</span>
+                    <div className="min-w-0">
+                      <div className="text-sm font-semibold text-white truncate">{ticket.device}</div>
+                      <div className="text-xs text-gray-500 truncate">{ticket.issue}</div>
                     </div>
                   </div>
                   <button onClick={() => printTicket(ticket)}
-                    className="bg-orange-500/10 border border-orange-500/40 text-orange-400 px-3 py-1.5 rounded-lg text-xs font-bold hover:bg-orange-500/20 transition flex items-center gap-1">
-                    🖨️ Ticket
+                    className="bg-orange-500/10 border border-orange-500/20 text-orange-400 px-3 py-1.5 rounded-xl text-xs font-bold hover:bg-orange-500/20 transition shrink-0 ml-2">
+                    🖨️
                   </button>
                 </div>
               ))}
@@ -665,255 +663,238 @@ ${formData.description || "Aucune description"}
           </div>
         )}
 
-        {/* Formulaire principal */}
-        <div className="bg-gray-900/70 backdrop-blur-xl rounded-2xl border border-gray-700/60 shadow-[0_0_40px_rgba(249,115,22,0.08)] overflow-hidden">
+        {/* Formulaire */}
+        <div className="bg-white/[0.025] backdrop-blur-xl rounded-3xl border border-white/8 overflow-hidden">
+          {/* Top accent */}
+          <div className="h-0.5 bg-gradient-to-r from-orange-500/0 via-orange-500 to-orange-500/0" />
 
-          {/* Header formulaire */}
-          <div className="relative bg-gradient-to-r from-gray-900 via-gray-800 to-gray-900 px-6 py-5 border-b border-orange-500/20 overflow-hidden">
-            <div className="absolute inset-0 bg-[linear-gradient(rgba(249,115,22,0.06)_1px,transparent_1px),linear-gradient(90deg,rgba(249,115,22,0.06)_1px,transparent_1px)] bg-[size:30px_30px]" />
-            <div className="absolute -right-10 -top-10 w-40 h-40 bg-orange-500/10 rounded-full blur-3xl" />
-            <div className="relative z-10 flex items-center gap-3">
-              <div className="w-10 h-10 bg-gradient-to-br from-orange-500 to-orange-600 rounded-xl flex items-center justify-center shadow-[0_0_15px_rgba(249,115,22,0.4)] text-xl">📱</div>
-              <div>
-                <h1 className="text-lg font-black text-white">Déclaration d&apos;appareil</h1>
-                <p className="text-orange-400/70 text-xs">Remplissez les informations de votre appareil</p>
-              </div>
-              <div className="ml-auto hidden sm:flex items-center gap-1.5 bg-orange-500/10 border border-orange-500/30 rounded-full px-3 py-1">
-                <span className="relative flex h-1.5 w-1.5"><span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-orange-400 opacity-75" /><span className="relative inline-flex rounded-full h-1.5 w-1.5 bg-orange-500" /></span>
-                <span className="text-orange-400 text-[10px] font-bold tracking-wider">EXPERT EN RÉPARATION</span>
-              </div>
+          {/* Header */}
+          <div className="px-5 py-4 border-b border-white/6 flex items-center gap-3">
+            <div className="w-10 h-10 bg-orange-500/10 border border-orange-500/20 rounded-2xl flex items-center justify-center text-xl shrink-0">📱</div>
+            <div>
+              <h1 className="text-base font-black text-white">Déclaration d&apos;appareil</h1>
+              <p className="text-gray-500 text-xs">Remplissez les informations de votre appareil</p>
             </div>
           </div>
 
-          <form onSubmit={handleSubmitAppareil} className="p-6 space-y-5">
+          <form onSubmit={handleSubmitAppareil} className="p-4 sm:p-5 space-y-4">
 
-            {/* Modèle — autocomplete */}
-            <div ref={deviceRef} className="relative">
-              <label className="block text-sm font-semibold text-gray-300 mb-1.5 flex items-center gap-2">
-                📱 Modèle du téléphone *
-              </label>
-              <input
-                type="text"
-                name="device"
-                required
-                placeholder="Ex: Apple iPhone 15 Pro A2848, Samsung Galaxy S24..."
-                value={formData.device}
-                onChange={(e) => handleDeviceInput(e.target.value)}
-                onFocus={() => { if (deviceSuggestions.length > 0) setShowDeviceSuggestions(true); }}
-                className="w-full px-4 py-3 bg-gray-800/70 border border-gray-600 rounded-xl text-white placeholder-gray-500 focus:outline-none focus:border-orange-500 focus:ring-1 focus:ring-orange-500 transition"
-              />
-              {showDeviceSuggestions && deviceSuggestions.length > 0 && (
-                <div className="absolute z-30 w-full mt-1 bg-gray-800 border border-gray-600 rounded-xl shadow-2xl overflow-hidden max-h-52 overflow-y-auto">
-                  {deviceSuggestions.map((d, i) => (
-                    <div key={i} onMouseDown={() => selectDevice(d)}
-                      className="px-4 py-2.5 hover:bg-orange-500/10 cursor-pointer text-sm text-gray-200 border-b border-gray-700 last:border-0 flex items-center gap-2 transition">
-                      <span className="text-orange-400">📱</span>
-                      <span>{d}</span>
-                    </div>
-                  ))}
-                </div>
-              )}
-              <p className="text-xs text-gray-500 mt-1">Tapez la marque, le modèle ou le numéro (ex: SM-G973F, A2197)</p>
+            {/* Section appareil */}
+            <div className="bg-white/3 rounded-2xl p-4 space-y-4">
+              <p className="text-[10px] font-black text-gray-500 uppercase tracking-widest">Appareil</p>
+
+              {/* Modèle */}
+              <div ref={deviceRef} className="relative">
+                <label className={labelCls}>📱 Modèle *</label>
+                <input type="text" name="device" required
+                  placeholder="iPhone 15 Pro, Samsung Galaxy S24..."
+                  value={formData.device}
+                  onChange={(e) => handleDeviceInput(e.target.value)}
+                  onFocus={() => { if (deviceSuggestions.length > 0) setShowDeviceSuggestions(true); }}
+                  className={inputCls}
+                />
+                {showDeviceSuggestions && deviceSuggestions.length > 0 && (
+                  <div className="absolute z-30 w-full mt-1 bg-[#16161d] border border-white/10 rounded-2xl shadow-2xl overflow-hidden max-h-52 overflow-y-auto">
+                    {deviceSuggestions.map((d, i) => (
+                      <div key={i} onMouseDown={() => selectDevice(d)}
+                        className="px-4 py-3 hover:bg-orange-500/8 cursor-pointer text-sm text-gray-200 border-b border-white/5 last:border-0 flex items-center gap-2 transition active:bg-orange-500/15">
+                        <span className="text-orange-400 shrink-0">📱</span>
+                        <span className="truncate">{d}</span>
+                      </div>
+                    ))}
+                  </div>
+                )}
+                <p className="text-[10px] text-gray-600 mt-1.5">Tapez la marque, le modèle ou le numéro</p>
+              </div>
+
+              {/* Panne */}
+              <div ref={issueRef} className="relative">
+                <label className={labelCls}>
+                  🔧 Panne / Problème *
+                  {formData.device && <span className="ml-2 text-orange-400 normal-case font-semibold tracking-normal">✨ suggestions auto</span>}
+                </label>
+                <input type="text" name="issue" required
+                  placeholder="Ne charge plus, écran noir, batterie..."
+                  value={formData.issue}
+                  onChange={(e) => handleIssueInput(e.target.value)}
+                  onFocus={() => {
+                    if (issueSuggestions.length > 0) { setShowIssueSuggestions(true); return; }
+                    if (formData.device) {
+                      const q = getQuickIssues(formData.device).filter((i) => !hiddenIssues.has(i));
+                      setIssueSuggestions(q); setShowIssueSuggestions(q.length > 0);
+                    }
+                  }}
+                  className={inputCls}
+                />
+                {showIssueSuggestions && issueSuggestions.length > 0 && (
+                  <div className="absolute z-30 w-full mt-1 bg-[#16161d] border border-white/10 rounded-2xl shadow-2xl overflow-hidden max-h-52 overflow-y-auto">
+                    {formData.device && (
+                      <div className="px-4 py-2 text-[10px] font-bold text-orange-400 bg-orange-500/8 border-b border-orange-500/15 uppercase tracking-wider">
+                        ✨ Pour {formData.device.split(" ").slice(0, 3).join(" ")}
+                      </div>
+                    )}
+                    {issueSuggestions.map((s, i) => (
+                      <div key={i} onMouseDown={() => selectIssue(s)}
+                        className="px-4 py-3 hover:bg-orange-500/8 cursor-pointer text-sm text-gray-200 border-b border-white/5 last:border-0 flex items-center gap-2 transition active:bg-orange-500/15">
+                        <span className="shrink-0">🔧</span>
+                        <span className="truncate">{s}</span>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
             </div>
 
-            {/* Panne — autocomplete intelligent */}
-            <div ref={issueRef} className="relative">
-              <label className="block text-sm font-semibold text-gray-300 mb-1.5 flex items-center gap-2">
-                🔧 Panne / Problème *
-                {formData.device && (
-                  <span className="text-[10px] font-bold text-orange-400 bg-orange-500/10 border border-orange-500/30 px-2 py-0.5 rounded-full">
-                    ✨ Suggestions auto
-                  </span>
-                )}
-              </label>
-              <input
-                type="text"
-                name="issue"
-                required
-                placeholder="Ex: Ne charge plus, écran noir, batterie gonflée..."
-                value={formData.issue}
-                onChange={(e) => handleIssueInput(e.target.value)}
-                onFocus={() => {
-                  if (issueSuggestions.length > 0) { setShowIssueSuggestions(true); return; }
-                  if (formData.device) {
-                    const q = getQuickIssues(formData.device).filter((i) => !hiddenIssues.has(i));
-                    setIssueSuggestions(q);
-                    setShowIssueSuggestions(q.length > 0);
-                  }
-                }}
-                className="w-full px-4 py-3 bg-gray-800/70 border border-gray-600 rounded-xl text-white placeholder-gray-500 focus:outline-none focus:border-orange-500 focus:ring-1 focus:ring-orange-500 transition"
-              />
-              {showIssueSuggestions && issueSuggestions.length > 0 && (
-                <div className="absolute z-30 w-full mt-1 bg-gray-800 border border-gray-600 rounded-xl shadow-2xl overflow-hidden max-h-52 overflow-y-auto">
-                  {formData.device && (
-                    <div className="px-4 py-1.5 text-[10px] font-bold text-orange-400 bg-orange-500/10 border-b border-orange-500/20 uppercase tracking-wider">
-                      ✨ Suggestions pour {formData.device.split(" ").slice(0, 3).join(" ")}
-                    </div>
+            {/* Section déverrouillage */}
+            <div className="bg-white/3 rounded-2xl p-4 space-y-4">
+              <p className="text-[10px] font-black text-gray-500 uppercase tracking-widest">Déverrouillage</p>
+
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className={labelCls}>🔢 IMEI</label>
+                  <input type="tel" name="imei" placeholder="*#06#"
+                    value={formData.imei} onChange={handleInputChange}
+                    className={inputCls} />
+                </div>
+                <div>
+                  <label className={labelCls}>🔑 Code</label>
+                  <input type="text" name="unlock_code" placeholder="4 ou 6 chiffres"
+                    value={formData.unlock_code} onChange={handleInputChange}
+                    className={inputCls} />
+                </div>
+              </div>
+
+              <div>
+                <div className="flex items-center justify-between mb-3">
+                  <label className={labelCls + " mb-0"}>🎨 Schéma</label>
+                  {patternValue && (
+                    <span className="text-[10px] text-green-400 font-bold bg-green-500/10 border border-green-500/20 px-2 py-0.5 rounded-full">
+                      ✓ {patternValue.split("-").length} points
+                    </span>
                   )}
-                  {issueSuggestions.map((s, i) => (
-                    <div key={i} onMouseDown={() => selectIssue(s)}
-                      className="px-4 py-2.5 hover:bg-orange-500/10 cursor-pointer text-sm text-gray-200 border-b border-gray-700 last:border-0 flex items-center gap-2 transition">
-                      <span>{s.startsWith("Remplacement") ? "🔩" : "🔧"}</span>
-                      <span>{s}</span>
-                    </div>
-                  ))}
                 </div>
-              )}
-            </div>
-
-            {/* IMEI + Code — 2 colonnes */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              <div>
-                <label className="block text-sm font-semibold text-gray-300 mb-1.5">🔢 IMEI</label>
-                <input type="text" name="imei" placeholder="*#06# pour l'obtenir"
-                  value={formData.imei} onChange={handleInputChange}
-                  className="w-full px-4 py-3 bg-gray-800/70 border border-gray-600 rounded-xl text-white placeholder-gray-500 focus:outline-none focus:border-orange-500 focus:ring-1 focus:ring-orange-500 transition" />
-              </div>
-              <div>
-                <label className="block text-sm font-semibold text-gray-300 mb-1.5">🔑 Code déverrouillage</label>
-                <input type="text" name="unlock_code" placeholder="4 ou 6 chiffres"
-                  value={formData.unlock_code} onChange={handleInputChange}
-                  className="w-full px-4 py-3 bg-gray-800/70 border border-gray-600 rounded-xl text-white placeholder-gray-500 focus:outline-none focus:border-orange-500 focus:ring-1 focus:ring-orange-500 transition" />
-              </div>
-            </div>
-
-            {/* Schéma */}
-            <div className="bg-gray-800/40 border border-gray-700 rounded-xl p-4">
-              <div className="flex items-center justify-between mb-3">
-                <label className="text-sm font-semibold text-gray-300 flex items-center gap-2">🎨 Schéma déverrouillage</label>
-                {patternValue && (
-                  <span className="text-[10px] text-green-400 font-bold bg-green-500/10 border border-green-500/30 px-2 py-0.5 rounded-full">✓ {patternValue.split("-").length} points</span>
+                <div className="flex justify-center">
+                  <PatternLock onComplete={handlePatternComplete} onClear={handlePatternClear} />
+                </div>
+                {showMissingMessage && (
+                  <div className="mt-3 flex items-center gap-2 bg-red-500/8 border border-red-500/20 rounded-2xl px-4 py-3">
+                    <span className="text-red-400 shrink-0 text-sm">⚠️</span>
+                    <p className="text-xs text-red-400 font-semibold">Code et schéma non fournis — test impossible, pas pris en garantie</p>
+                  </div>
                 )}
               </div>
-              <PatternLock onComplete={handlePatternComplete} onClear={handlePatternClear} />
-              {showMissingMessage && (
-                <div className="mt-3 bg-red-500/10 border border-red-500/30 rounded-lg px-3 py-2">
-                  <p className="text-xs text-red-400 text-center font-semibold">
-                    ⚠️ CODE ET SCHÉMA NON FOURNIS — Test impossible, pas pris en garantie
-                  </p>
-                </div>
-              )}
             </div>
 
-            {/* État de l'appareil */}
-            <div className="bg-gray-800/40 border border-gray-700 rounded-xl p-4">
-              <label className="block text-sm font-bold text-gray-200 mb-3 flex items-center gap-2">
-                <span className="w-6 h-6 bg-gradient-to-br from-orange-500 to-orange-600 rounded-lg flex items-center justify-center text-xs">📱</span>
-                État de l&apos;appareil
-              </label>
+            {/* État physique */}
+            <div className="bg-white/3 rounded-2xl p-4">
+              <p className="text-[10px] font-black text-gray-500 uppercase tracking-widest mb-3">État physique de l&apos;appareil</p>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
                 {[
-                  { name: "screen_broken",      label: "📱 Écran cassé / fissuré",               warn: false },
-                  { name: "back_broken",         label: "🔧 Dos cassé",                           warn: false },
-                  { name: "oxidation",           label: "💧 Oxydation",                           warn: true  },
-                  { name: "missing_sim_tray",    label: "📭 Tiroir SIM manquant",                 warn: true  },
-                  { name: "buttons_broken",      label: "🔇 Boutons cassés (power / volume)",     warn: false },
-                  { name: "camera_broken",       label: "📷 Caméra cassée / vitre fêlée",         warn: false },
-                  { name: "charge_port_broken",  label: "🔌 Connecteur de charge endommagé",      warn: true  },
-                ].map(({ name, label, warn }) => (
-                  <label key={name} className="flex items-center gap-3 cursor-pointer bg-gray-900/50 hover:bg-orange-500/5 rounded-lg px-3 py-2.5 border border-gray-700 hover:border-orange-500/40 transition group">
-                    <input type="checkbox" name={name}
-                      checked={(formData as any)[name]}
-                      onChange={handleInputChange}
-                      className="w-4 h-4 accent-orange-500 shrink-0" />
-                    <span className="text-sm text-gray-300 group-hover:text-white transition">{label}</span>
-                    {warn && <span className="text-orange-500 text-xs font-bold ml-auto shrink-0">⚠️</span>}
-                  </label>
-                ))}
+                  { name: "screen_broken",       label: "Écran cassé / fissuré",            emoji: "📱", warn: false },
+                  { name: "back_broken",          label: "Dos cassé",                        emoji: "🔧", warn: false },
+                  { name: "oxidation",            label: "Oxydation (eau)",                  emoji: "💧", warn: true  },
+                  { name: "missing_sim_tray",     label: "Tiroir SIM manquant",              emoji: "📭", warn: true  },
+                  { name: "buttons_broken",       label: "Boutons cassés",                   emoji: "🔇", warn: false },
+                  { name: "camera_broken",        label: "Caméra cassée",                    emoji: "📷", warn: false },
+                  { name: "charge_port_broken",   label: "Connecteur charge endommagé",      emoji: "🔌", warn: true  },
+                ].map(({ name, label, emoji, warn }) => {
+                  const checked = (formData as any)[name];
+                  return (
+                    <label key={name} className={`flex items-center gap-3 cursor-pointer rounded-2xl px-3 py-3 border transition-all active:scale-[0.98] ${
+                      checked
+                        ? "bg-orange-500/10 border-orange-500/30 text-white"
+                        : "bg-white/3 border-white/6 text-gray-400 hover:border-white/15 hover:text-gray-200"
+                    }`}>
+                      <div className={`w-5 h-5 rounded-lg border-2 flex items-center justify-center shrink-0 transition ${
+                        checked ? "bg-orange-500 border-orange-500" : "border-white/20 bg-white/5"
+                      }`}>
+                        {checked && <span className="text-white text-[10px] font-black">✓</span>}
+                      </div>
+                      <span className="text-sm leading-tight flex-1">{emoji} {label}</span>
+                      {warn && <span className="text-orange-500 text-xs font-bold shrink-0">⚠️</span>}
+                      <input type="checkbox" name={name} checked={checked} onChange={handleInputChange} className="hidden" />
+                    </label>
+                  );
+                })}
               </div>
             </div>
 
-            {/* Pièces manquantes */}
-            <div>
-              <label className="block text-sm font-semibold text-gray-300 mb-1.5">⚠️ Pièces manquantes</label>
-              <input type="text" name="missing_parts"
-                placeholder="Ex: Vis, cache batterie, carte SIM, écouteur..."
-                value={formData.missing_parts} onChange={handleInputChange}
-                className="w-full px-4 py-3 bg-gray-800/70 border border-gray-600 rounded-xl text-white placeholder-gray-500 focus:outline-none focus:border-orange-500 focus:ring-1 focus:ring-orange-500 transition" />
-            </div>
-
-            {/* Description */}
-            <div>
-              <label className="block text-sm font-semibold text-gray-300 mb-1.5">📝 Description complète</label>
-              <textarea name="description" rows={3}
-                placeholder="Décrivez précisément les problèmes constatés, l'état général, depuis quand..."
-                value={formData.description} onChange={handleInputChange}
-                className="w-full px-4 py-3 bg-gray-800/70 border border-gray-600 rounded-xl text-white placeholder-gray-500 focus:outline-none focus:border-orange-500 focus:ring-1 focus:ring-orange-500 transition resize-none" />
+            {/* Pièces manquantes + description */}
+            <div className="bg-white/3 rounded-2xl p-4 space-y-4">
+              <p className="text-[10px] font-black text-gray-500 uppercase tracking-widest">Informations complémentaires</p>
+              <div>
+                <label className={labelCls}>⚠️ Pièces manquantes</label>
+                <input type="text" name="missing_parts"
+                  placeholder="Vis, cache batterie, carte SIM..."
+                  value={formData.missing_parts} onChange={handleInputChange}
+                  className={inputCls} />
+              </div>
+              <div>
+                <label className={labelCls}>📝 Description</label>
+                <textarea name="description" rows={3}
+                  placeholder="Décrivez les problèmes constatés, depuis quand, contexte..."
+                  value={formData.description} onChange={handleInputChange}
+                  className={inputCls + " resize-none"} />
+              </div>
             </div>
 
             {/* Disclaimer */}
-            <div className="bg-red-500/5 border border-red-500/30 rounded-xl p-4">
-              <div className="flex items-start gap-3">
-                <span className="text-red-500 text-lg shrink-0">⚠️</span>
-                <div>
-                  <p className="text-sm font-bold text-red-400">Information importante</p>
-                  <p className="text-xs text-red-400/80 mt-1 leading-relaxed">
-                    Si les informations fournies (modèle, CODE, SCHÉMA, état, etc.) ne correspondent pas
-                    à votre appareil, nous nous réservons le droit de refuser la réparation.
-                  </p>
-                </div>
-              </div>
+            <div className="flex items-start gap-3 bg-red-500/5 border border-red-500/15 rounded-2xl px-4 py-3">
+              <span className="text-red-400 shrink-0">⚠️</span>
+              <p className="text-xs text-red-400/80 leading-relaxed">
+                <span className="font-bold text-red-400">Information importante — </span>
+                Si les informations fournies ne correspondent pas à votre appareil, nous nous réservons le droit de refuser la réparation.
+              </p>
             </div>
 
             {error && (
-              <div className="bg-red-500/10 border border-red-500/30 rounded-xl px-4 py-3">
-                <p className="text-red-400 text-sm text-center font-semibold">{error}</p>
+              <div className="flex items-center gap-2 bg-red-500/8 border border-red-500/20 rounded-2xl px-4 py-3">
+                <span className="text-red-400 shrink-0">⚠️</span>
+                <p className="text-red-400 text-sm font-semibold">{error}</p>
               </div>
             )}
 
-            {/* Boutons */}
+            {/* CTA */}
             <div className="flex gap-3 pt-1">
               <button type="submit" disabled={loading}
-                className="flex-1 relative group overflow-hidden bg-gradient-to-r from-orange-500 to-orange-600 text-white py-4 rounded-xl font-black text-sm shadow-[0_0_25px_rgba(249,115,22,0.3)] hover:shadow-[0_0_40px_rgba(249,115,22,0.5)] hover:scale-[1.02] transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2">
-                <span className="absolute inset-0 bg-gradient-to-r from-orange-400 to-orange-500 opacity-0 group-hover:opacity-100 transition" />
-                <span className="relative z-10 flex items-center gap-2">
-                  {loading ? (
-                    <><span className="animate-spin">⏳</span> Enregistrement...</>
-                  ) : submittedTickets.length > 0 ? (
-                    <>➕ Ajouter cet appareil</>
-                  ) : (
-                    <>✨ Déclarer cet appareil</>
-                  )}
-                </span>
+                className="flex-1 bg-gradient-to-r from-orange-500 to-orange-600 text-white py-4 rounded-2xl font-black text-sm shadow-[0_8px_32px_rgba(249,115,22,0.35)] hover:shadow-[0_8px_40px_rgba(249,115,22,0.5)] active:scale-[0.98] transition-all disabled:opacity-50 disabled:cursor-not-allowed">
+                {loading ? "⏳ Enregistrement..." : submittedTickets.length > 0 ? "➕ Ajouter cet appareil" : "✨ Déclarer cet appareil"}
               </button>
               {submittedTickets.length > 0 && (
                 <button type="button" onClick={finishAndGoHome}
-                  className="px-5 bg-green-500/10 border border-green-500/40 text-green-400 py-4 rounded-xl font-bold hover:bg-green-500/20 transition text-sm">
-                  ✅ Terminer
+                  className="px-5 bg-green-500/10 border border-green-500/20 text-green-400 py-4 rounded-2xl font-bold hover:bg-green-500/20 active:scale-[0.98] transition text-sm">
+                  ✅ Fin
                 </button>
               )}
             </div>
-            <p className="text-xs text-gray-500 text-center -mt-1">
-              💡 Après validation, le formulaire se vide pour ajouter un <span className="text-orange-300">autre appareil (modèle différent)</span>. Cliquez « Terminer » quand vous avez fini.
+            <p className="text-[11px] text-gray-600 text-center">
+              Le formulaire se vide après chaque déclaration — ajoutez plusieurs appareils si besoin
             </p>
-
           </form>
         </div>
 
-        {/* Résumé final */}
+        {/* Récap final */}
         {submittedTickets.length > 0 && (
-          <div className="bg-gray-900/70 backdrop-blur-xl rounded-2xl border border-green-500/30 shadow-[0_0_30px_rgba(34,197,94,0.05)] p-5">
+          <div className="bg-white/[0.025] border border-green-500/20 rounded-3xl p-5">
             <div className="flex items-center gap-3 mb-4">
-              <div className="w-10 h-10 bg-green-500/10 border border-green-500/30 rounded-xl flex items-center justify-center text-xl">🎉</div>
+              <div className="w-10 h-10 bg-green-500/10 border border-green-500/20 rounded-2xl flex items-center justify-center text-xl shrink-0">🎉</div>
               <div>
-                <h2 className="font-black text-white">Récapitulatif</h2>
-                <p className="text-sm text-gray-400">{submittedTickets.length} appareil(s) enregistré(s) — imprimez les tickets</p>
+                <h2 className="font-black text-white text-sm">Récapitulatif</h2>
+                <p className="text-xs text-gray-500">{submittedTickets.length} appareil(s) — imprimez vos tickets</p>
               </div>
             </div>
             <div className="flex gap-3">
               <button onClick={printAllTickets}
-                className="flex-1 relative group overflow-hidden bg-gradient-to-r from-orange-500 to-orange-600 text-white py-3 rounded-xl font-bold shadow-[0_0_20px_rgba(249,115,22,0.2)] hover:shadow-[0_0_30px_rgba(249,115,22,0.4)] transition text-sm flex items-center justify-center gap-2">
-                <span className="absolute inset-0 bg-gradient-to-r from-orange-400 to-orange-500 opacity-0 group-hover:opacity-100 transition" />
-                <span className="relative z-10 flex items-center gap-2">🖨️ Imprimer tous les tickets ({submittedTickets.length})</span>
+                className="flex-1 bg-gradient-to-r from-orange-500 to-orange-600 text-white py-3.5 rounded-2xl font-bold shadow-[0_4px_20px_rgba(249,115,22,0.3)] hover:shadow-[0_4px_30px_rgba(249,115,22,0.45)] active:scale-[0.98] transition text-sm">
+                🖨️ Imprimer les tickets ({submittedTickets.length})
               </button>
               <button onClick={finishAndGoHome}
-                className="px-5 bg-gray-800/70 border border-gray-600 text-gray-300 py-3 rounded-xl font-bold hover:bg-gray-700 transition text-sm">
+                className="px-5 bg-white/5 border border-white/8 text-gray-400 py-3.5 rounded-2xl font-bold hover:bg-white/10 active:scale-[0.98] transition text-sm">
                 ← Retour
               </button>
             </div>
           </div>
         )}
-
       </div>
     </div>
   );

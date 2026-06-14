@@ -5,6 +5,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { ShoppingBag } from "lucide-react";
 import { supabase, getCurrentUser } from "../../lib/supabase";
 import { getCurrentTechnician, addHistoriqueAction } from "../../lib/historique";
 import { useRouter } from "next/navigation";
@@ -1159,14 +1160,16 @@ export default function FacturesPage() {
                 {boutiqueInvoices.map((bg: any) => (
                   <div key={bg.key} className="bg-[#16161d] border border-green-500/15 rounded-2xl overflow-hidden">
                     <div className="px-5 py-4 flex items-center gap-3">
-                      <div className="w-9 h-9 rounded-xl bg-fuchsia-500/10 flex items-center justify-center text-lg shrink-0">🛍️</div>
+                      <div className="w-9 h-9 rounded-xl bg-fuchsia-500/10 flex items-center justify-center shrink-0">
+                        <ShoppingBag size={18} className="text-fuchsia-400" />
+                      </div>
                       <div className="flex-1 min-w-0">
                         <div className="font-semibold text-white text-sm">{bg.clientName || "Vente directe"}</div>
                         <div className="text-xs text-gray-500 mt-0.5">{bg.items.length} article(s) · {new Date(bg.sold_at).toLocaleDateString("fr-FR")}</div>
                       </div>
                       <div className="text-right shrink-0">
                         <div className="text-xl font-black text-green-400">{bg.total.toFixed(2)} €</div>
-                        <div className="text-[10px] text-fuchsia-400 font-semibold">🛍️ Soldé</div>
+                        <div className="text-[10px] text-fuchsia-400 font-semibold">Boutique · Soldé</div>
                       </div>
                     </div>
                     <div className="border-t border-white/5 divide-y divide-white/5">

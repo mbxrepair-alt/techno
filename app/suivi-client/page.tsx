@@ -300,8 +300,11 @@ function SuiviClientContent() {
             {ticketFilter && <button onClick={() => setTicketFilter("")} className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-600 hover:text-gray-400 text-sm">✕</button>}
           </div>
 
-          {recentRepairs.length === 0 ? (
-            <div className="bg-white/[0.03] border border-white/8 rounded-3xl p-12 text-center"><div className="text-5xl mb-3">📭</div><p className="text-gray-500">Aucune réparation récente.</p></div>
+          {!ticketFilter.trim() ? (
+            <div className="bg-white/[0.03] border border-white/8 rounded-2xl px-5 py-8 text-center">
+              <span className="text-4xl block mb-3">🔍</span>
+              <p className="text-gray-500 text-sm">Entrez votre numéro de ticket pour afficher votre réparation</p>
+            </div>
           ) : filteredRepairs.length === 0 ? (
             <div className="bg-white/[0.03] border border-white/8 rounded-3xl p-8 text-center"><p className="text-gray-500 text-sm">Aucun ticket MBX-{ticketFilter} trouvé.</p></div>
           ) : (

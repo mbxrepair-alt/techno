@@ -11,6 +11,16 @@ import ReturnModal from "../../components/ReturnModal";
 import PatternLock from "../../components/PatternLock";
 import QrScanner from "../../components/QrScanner";
 import type { ExtractedFormData } from "../../lib/ai";
+import { ScanLine, ShoppingCart, X, Check } from "lucide-react";
+
+interface Product {
+  id: number;
+  name: string;
+  stock: number;
+  sale_price: number;
+  purchase_price: number;
+  barcode: string;
+}
 
 export default function Dashboard() {
   const router = useRouter();
@@ -21,6 +31,7 @@ export default function Dashboard() {
   const searchInputRef = useRef(null);
   const searchContainerRef = useRef(null);
   const formRef = useRef<HTMLDivElement>(null);
+  const barcodeInputRef = useRef<HTMLInputElement>(null);
 
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState({ text: "", type: "" });
@@ -80,9 +91,16 @@ export default function Dashboard() {
   const [showPhoneSuggestions, setShowPhoneSuggestions] = useState(false);
 
   // MODÈLES, PANNES, CODES
-  // → catalogue complet importé depuis lib/devices-catalog.ts
   const [customDevices, setCustomDevices] = useState([]);
   const allDevices = [...DEVICES_LIST, ...customDevices];
+
+  // ========== VENTE PAR CODE-BARRES ==========
+  const [showBarcodeModal, setShowBarcodeModal] = useState(false);
+  const [barcodeInput, setBarcodeInput] = useState("");
+  const [scannedProduct, setScannedProduct] = useState<Product | null>(null);
+  const [saleQuantity, setSaleQuantity] = useState(1);
+  const [isScanning, setIsScanning] = useState(false);
+  const [userId, setUserId] = useState<string>("");
 
   // Chargement depuis Supabase (via /api/catalog)
   const loadCatalog = async () => {
@@ -106,7 +124,6 @@ export default function Dashboard() {
   }, []);
 
   const saveCustomDevices = async (newList) => {
-    // Utilisé uniquement pour suppression locale — les ajouts passent par addCustomDevice
     setCustomDevices(newList);
   };
 
@@ -138,7 +155,6 @@ export default function Dashboard() {
   const allIssues = [...defaultIssues, ...customIssues].filter((i) => !hiddenIssues.has(i));
 
   const saveCustomIssues = async (newList) => {
-    // Utilisé uniquement pour suppression locale — les ajouts passent par addCustomIssue
     setCustomIssues(newList);
   };
 
@@ -200,7 +216,6 @@ export default function Dashboard() {
   const [showDeviceSuggestionsMap, setShowDeviceSuggestionsMap] = useState({});
   const [showIssueSuggestionsMap, setShowIssueSuggestionsMap] = useState({});
   const [showCodeSuggestionsMap, setShowCodeSuggestionsMap] = useState({});
-  // ID de la repair card qui a déclenché le modal + (pour rafraîchir les suggestions après ajout)
   const [addModalSourceRepairId, setAddModalSourceRepairId] = useState<number | null>(null);
   const [deviceCategoryMap, setDeviceCategoryMap] = useState({});
   const [deviceSuggestionIndex, setDeviceSuggestionIndex] = useState({});
@@ -221,13 +236,12 @@ export default function Dashboard() {
   const [showAddIssue, setShowAddIssue] = useState(false);
   const [showAddCode, setShowAddCode] = useState(false);
 
-
-
   // Charger les infos de l'atelier
   useEffect(() => {
     const loadCompanyInfo = async () => {
       const user = await getCurrentUser();
       if (user) {
+        setUserId(user.id);
         const { data: profile } = await supabase
           .from("profiles")
           .select("company_name, contact_phone, contact_address, email, siret")
@@ -276,19 +290,16 @@ export default function Dashboard() {
     loadAllData();
   }, []);
 
-  // Listen for "assistant:fillForm" events dispatched by AssistantPro
+  // Listen for "assistant:fillForm" events
   useEffect(() => {
     const handleFillForm = (e: Event) => {
       const data = (e as CustomEvent<ExtractedFormData>).detail;
       if (!data) return;
 
-      // Fill client fields
       if (data.clientName) setIntakeClient(data.clientName);
       if (data.clientPhone) setIntakePhone(data.clientPhone);
       if (data.clientEmail) setIntakeEmail(data.clientEmail);
 
-      // Build pre-filled repair slots in one atomic update
-      // (equivalent to generateRepairSlots() followed by updateRepairField() for each field)
       const incoming = Array.isArray(data.repairs) && data.repairs.length > 0
         ? data.repairs.slice(0, 20)
         : [];
@@ -311,7 +322,6 @@ export default function Dashboard() {
 
       setRepairsList(newList);
 
-      // Reset all suggestion dropdowns
       setDeviceSuggestionsMap({});
       setIssueSuggestionsMap({});
       setCodeSuggestionsMap({});
@@ -332,7 +342,7 @@ export default function Dashboard() {
 
     window.addEventListener("assistant:fillForm", handleFillForm);
     return () => window.removeEventListener("assistant:fillForm", handleFillForm);
-  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+  }, []);
 
   const showMessage = (text, type = "success") => {
     setMessage({ text, type });
@@ -631,7 +641,6 @@ export default function Dashboard() {
     const category = getCategoryFromDevice(device);
     setDeviceCategoryMap((prev) => ({ ...prev, [id]: category }));
     setShowDeviceSuggestionsMap((prev) => ({ ...prev, [id]: false }));
-    // Pré-charger les suggestions intelligentes de panne
     const quickIssues = getQuickIssues(device);
     setIssueSuggestionsMap((prev) => ({ ...prev, [id]: quickIssues }));
     setShowIssueSuggestionsMap((prev) => ({ ...prev, [id]: false }));
@@ -647,16 +656,13 @@ export default function Dashboard() {
       const lower = input.toLowerCase();
       results = allIssues.filter((i) => i.toLowerCase().includes(lower)).slice(0, 8);
     }
-    // Filtrer les suggestions masquées par l'utilisateur
     return results.filter((s) => !hiddenIssues.has(s));
   };
 
   const handleIssueSearch = (id, value) => {
     updateRepairField(id, "issue", value);
-    // Chercher le modèle sélectionné pour cette réparation
     const deviceModel = repairsList.find((r) => r.id === id)?.device || "";
     if (!value.trim() && deviceModel) {
-      // Champ vide + modèle connu → afficher les quick issues
       const quick = getQuickIssues(deviceModel);
       setIssueSuggestionsMap((prev) => ({ ...prev, [id]: quick }));
       setShowIssueSuggestionsMap((prev) => ({ ...prev, [id]: true }));
@@ -713,7 +719,6 @@ export default function Dashboard() {
     setNewDeviceInput("");
     setShowAddDevice(false);
     showMessage(`✅ "${newDevice}" ajouté`, "success");
-    // Rafraîchir les suggestions de la carte qui a déclenché le +
     if (addModalSourceRepairId !== null) {
       const repair = repairsList.find((r) => r.id === addModalSourceRepairId);
       const currentVal = repair?.device || "";
@@ -741,15 +746,12 @@ export default function Dashboard() {
     const newList = [...customIssues, newIssue];
     setCustomIssues(newList);
     setNewIssueInput("");
-    // Modal reste ouvert pour voir la panne apparaître dans la liste
     showMessage(`✅ "${newIssue}" ajoutée`, "success");
-    // Rafraîchir les suggestions de la carte qui a déclenché le +
     if (addModalSourceRepairId !== null) {
       const repair = repairsList.find((r) => r.id === addModalSourceRepairId);
       const currentVal = repair?.issue || "";
       const deviceModel = repair?.device || "";
       const filtered = getSmartIssueSuggestions(deviceModel, currentVal || newIssue);
-      // Injecter le nouveau en tête s'il n'y est pas
       const withNew = [newIssue, ...filtered.filter((i) => i !== newIssue)].slice(0, 10);
       setIssueSuggestionsMap((prev) => ({ ...prev, [addModalSourceRepairId]: withNew }));
       setShowIssueSuggestionsMap((prev) => ({ ...prev, [addModalSourceRepairId]: true }));
@@ -770,7 +772,6 @@ export default function Dashboard() {
     showMessage(`Code "${newCode}" ajouté`, "success");
   };
 
-  // Sauvegarde reçu dans Supabase
   const saveReceiptToSupabase = async (tickets, client) => {
     const user = await getCurrentUser();
     if (!user) return false;
@@ -799,7 +800,6 @@ export default function Dashboard() {
     }
   };
 
-  // GÉNÉRER OU RÉCUPÉRER LE LIEN DE SUIVI
   const genererLienSuivi = async (repair, client) => {
     try {
       const { data: existingLink } = await supabase
@@ -838,11 +838,9 @@ export default function Dashboard() {
     }
   };
 
-  // Générer TICKET (2 parties : technicien + client)
   const generateCreditCardTicket = async (ticket, client, trackingUrl = null) => {
     const BASE_URL = "https://technophone.vercel.app";
 
-    // QR 1 — Technicien : accès direct à la fiche réparation (scan zipette)
     let qrTechUrl = null;
     try {
       qrTechUrl = await QRCode.toDataURL(`${BASE_URL}/repairs/${ticket.id}`, {
@@ -852,7 +850,6 @@ export default function Dashboard() {
       });
     } catch (err) { console.error("QR tech:", err); }
 
-    // QR 2 — Client : suivi de réparation
     let qrClientUrl = null;
     if (client?.client_code) {
       try {
@@ -878,8 +875,6 @@ export default function Dashboard() {
       *{margin:0;padding:0;box-sizing:border-box}
       body{font-family:'Courier New',monospace;background:#e5e7eb;display:flex;justify-content:center;padding:16px}
       .wrapper{display:flex;flex-direction:column;align-items:center;gap:0;width:90mm}
-
-      /* ── PARTIE TECHNICIEN ── */
       .tech-card{width:90mm;background:#fff;border-radius:4mm;padding:4mm;border:1px solid #c7d2fe}
       .tech-header{display:flex;justify-content:space-between;align-items:flex-start;border-bottom:1px solid #e0e7ff;padding-bottom:2mm;margin-bottom:2mm}
       .tech-header-left h2{font-size:11px;font-weight:900;color:#1e3a8a;letter-spacing:.5px}
@@ -897,11 +892,7 @@ export default function Dashboard() {
       .qr-tech-area img{width:28mm;height:28mm;display:block}
       .qr-tech-label{font-size:6.5px;color:#1e3a8a;font-weight:700;text-align:center;margin-top:1mm;line-height:1.2}
       .tech-footer{display:flex;justify-content:space-between;font-size:7.5px;color:#94a3b8;border-top:1px solid #e2e8f0;padding-top:1.5mm;margin-top:2mm}
-
-      /* ── LIGNE DE DÉCOUPE ── */
       .cut{width:90mm;text-align:center;font-size:8px;color:#9ca3af;letter-spacing:2px;padding:1.5mm 0;border-top:1.5px dashed #9ca3af}
-
-      /* ── PARTIE CLIENT ── */
       .client-card{width:90mm;background:#fff;border-radius:4mm;padding:3mm 4mm;border:1px solid #bbf7d0}
       .client-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:2mm}
       .client-header-title{font-size:10px;font-weight:900;color:#166534}
@@ -913,7 +904,6 @@ export default function Dashboard() {
       .qr-client-area{text-align:center;min-width:28mm}
       .qr-client-area img{width:28mm;height:28mm;display:block}
       .qr-client-label{font-size:6.5px;color:#166534;font-weight:700;text-align:center;margin-top:1mm;line-height:1.2}
-
       @media print{
         body{background:#fff;padding:0}
         .wrapper{gap:0}
@@ -925,8 +915,6 @@ export default function Dashboard() {
       button.close{background:#64748b}
     </style></head>
     <body><div class="wrapper">
-
-      <!-- PARTIE TECHNICIEN -->
       <div class="tech-card">
         <div class="tech-header">
           <div class="tech-header-left">
@@ -956,11 +944,7 @@ export default function Dashboard() {
           <span>Réparation · ${escapeHtml(companyInfo.name).substring(0, 15)}</span>
         </div>
       </div>
-
-      <!-- LIGNE DE DÉCOUPE -->
       <div class="cut">✂ - - - - - - - - -  DÉCOUPER · partie client  - - - - - - - - - ✂</div>
-
-      <!-- PARTIE CLIENT -->
       <div class="client-card">
         <div class="client-header">
           <div class="client-header-title">
@@ -987,7 +971,6 @@ export default function Dashboard() {
           </div>
         </div>
       </div>
-
       <div class="no-print">
         <button onclick="window.print()">🖨️ Imprimer</button>
         <button class="close" onclick="window.close()">✕ Fermer</button>
@@ -1036,7 +1019,6 @@ export default function Dashboard() {
     }
     setSendingEmail(true);
     try {
-      // Envoyer un ticket par réparation via l'API centralisée
       const results = await Promise.all(
         tickets.map((t) =>
           fetch("/api/send-ticket-email", {
@@ -1070,9 +1052,6 @@ export default function Dashboard() {
     }
   };
 
-  // Auto-assigne la réparation au technicien connecté (recherche dashboard / scan QR).
-  // Un gérant n'est jamais auto-assigné. Si la réparation est déjà à un autre
-  // technicien, on demande confirmation avant de réassigner.
   const assignToConnectedTech = async (repairId, knownTech = undefined) => {
     const tech = getCurrentTechnician();
     if (!tech || tech.is_gerant) return;
@@ -1087,7 +1066,7 @@ export default function Dashboard() {
       oldTech = data?.technician ?? null;
     }
 
-    if (oldTech === tech.name) return; // déjà assignée au technicien connecté
+    if (oldTech === tech.name) return;
 
     if (oldTech) {
       const ok = window.confirm(
@@ -1115,8 +1094,6 @@ export default function Dashboard() {
   };
 
   const showTicketDetails = (ticket) => {
-    // Pas d'assignation ici : juste consulter. L'assignation se fait au clic
-    // sur « Ouvrir fiche » (avec confirmation si un autre technicien).
     setSelectedRepairDetail(ticket);
     setSelectedRepairClient(ticket.client);
     setClientEmail(ticket.client?.email || "");
@@ -1286,23 +1263,19 @@ export default function Dashboard() {
 
   const inputCls ="w-full bg-[#1a1d2e] border border-white/10 rounded-xl px-4 py-3.5 text-white placeholder-gray-600 text-sm outline-none focus:border-blue-500/50 focus:ring-2 focus:ring-blue-500/15 transition-all duration-200";
 
-  // Scan QR technicien : le QR encode une URL .../repairs/<id> → on assigne au
-  // technicien connecté puis on ouvre la fiche.
+  // SCANNER QR pour tickets (technicien)
   const handleQrScan = async (text: string) => {
     setShowScanner(false);
     if (!text) return;
     const value = text.trim();
     let repairId: string | null = null;
 
-    // Cas 1 : URL contenant /repairs/<id>
     const match = value.match(/\/repairs\/([^/?#]+)/);
     if (match) {
       repairId = match[1];
     } else if (/^\d+$/.test(value)) {
-      // Cas 2 : juste un identifiant numérique
       repairId = value;
     } else {
-      // Cas 3 : URL valide quelconque sur notre domaine → on suit le lien
       try {
         const url = new URL(value);
         if (url.pathname && url.pathname !== "/") {
@@ -1310,7 +1283,7 @@ export default function Dashboard() {
           return;
         }
       } catch {
-        /* pas une URL */
+        // pas une URL
       }
     }
 
@@ -1322,12 +1295,96 @@ export default function Dashboard() {
     }
   };
 
+  // FONCTIONS VENTE PAR CODE-BARRES
+  const searchProductByBarcode = async (barcode: string) => {
+    if (!barcode.trim() || !userId) return;
+    
+    setIsScanning(true);
+    try {
+      const { data, error } = await supabase
+        .from("products")
+        .select("*")
+        .eq("user_id", userId)
+        .eq("barcode", barcode.trim())
+        .single();
+
+      if (error || !data) {
+        showMessage(`Produit non trouvé: ${barcode}`, "error");
+        setScannedProduct(null);
+      } else {
+        setScannedProduct(data as Product);
+        setSaleQuantity(1);
+        if (barcodeInputRef.current) barcodeInputRef.current.value = "";
+      }
+    } catch (err) {
+      console.error("Erreur recherche:", err);
+      showMessage("Erreur lors de la recherche", "error");
+    } finally {
+      setIsScanning(false);
+      setBarcodeInput("");
+    }
+  };
+
+  const confirmSale = async () => {
+    if (!scannedProduct || !userId) return;
+
+    const tech = getCurrentTechnician();
+    const techName = tech?.name || "Boutique";
+
+    const qty = Math.max(1, saleQuantity);
+    if (qty > scannedProduct.stock) {
+      showMessage(`Stock insuffisant (${scannedProduct.stock} disponible)`, "error");
+      return;
+    }
+
+    const unit = Number(scannedProduct.sale_price) || 0;
+    const cost = Number(scannedProduct.purchase_price) || 0;
+
+    const { error: saleError } = await supabase.from("product_sales").insert({
+      user_id: userId,
+      product_id: scannedProduct.id,
+      product_name: scannedProduct.name,
+      quantity: qty,
+      unit_price: unit,
+      unit_cost: cost,
+      total: unit * qty,
+      sold_by: techName,
+    });
+
+    if (saleError) {
+      console.error("Erreur vente:", saleError);
+      showMessage("Erreur lors de la vente", "error");
+      return;
+    }
+
+    await supabase
+      .from("products")
+      .update({ stock: scannedProduct.stock - qty })
+      .eq("id", scannedProduct.id);
+
+    showMessage(`✅ Vendu: ${qty} x ${scannedProduct.name}`, "success");
+    setScannedProduct(null);
+    setSaleQuantity(1);
+  };
+
   return (
     <Layout>
+      {/* SCANNER QR pour tickets */}
       {showScanner && (
         <QrScanner onScan={handleQrScan} onClose={() => setShowScanner(false)} />
       )}
-      {/* ── KEYFRAMES ── */}
+      
+      {/* MODAL SCANNER pour ventes */}
+      {showBarcodeModal && (
+        <QrScanner 
+          onScan={(code) => {
+            setShowBarcodeModal(false);
+            searchProductByBarcode(code);
+          }} 
+          onClose={() => setShowBarcodeModal(false)} 
+        />
+      )}
+      
       <style>{`
         @keyframes shimmer { 0% { transform: translateX(-150%); } 100% { transform: translateX(150%); } }
         @keyframes count-in { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }
@@ -1335,7 +1392,6 @@ export default function Dashboard() {
         .animate-count-in { animation: count-in 0.45s ease-out forwards; }
       `}</style>
 
-      {/* ── TOAST ── */}
       {message.text && (
         <div className={`fixed bottom-5 right-5 px-5 py-3.5 rounded-xl shadow-2xl z-50 border text-sm font-semibold tracking-tight flex items-center gap-2 ${
           message.type === "error" ? "bg-red-500/20 border-red-500/30 text-red-400" : "bg-green-500/20 border-green-500/30 text-green-400"
@@ -1349,85 +1405,32 @@ export default function Dashboard() {
           onSuccess={() => { setShowReturnModal(false); setSelectedRepair(null); loadAllData(); }} />
       )}
 
-      {/* ── SUCCESS MODAL ── */}
-      {showSuccessModal && recentTickets.length > 0 && (
-        <div className="fixed inset-0 bg-black/70 backdrop-blur-sm flex items-center justify-center p-4 z-50">
-          <div className="bg-[#16161d] border-t-2 border-t-blue-500 border border-white/10 rounded-2xl shadow-2xl p-6 max-w-md w-full">
-            <div className="text-center mb-5">
-              <div className="w-16 h-16 bg-green-500/20 rounded-full flex items-center justify-center text-4xl mx-auto mb-3 border border-green-500/30 animate-pulse">🎉</div>
-              <h2 className="text-xl font-black text-white tracking-tight">{recentTickets.length} ticket(s) créé(s)</h2>
-              <p className="text-gray-400 text-sm mt-1">Impression ou envoi par email</p>
-            </div>
-            <div className="bg-black/20 rounded-xl border border-white/5 p-3 mb-5 max-h-40 overflow-auto space-y-0.5">
-              {recentTickets.map((ticket) => (
-                <div key={ticket.id} className="flex justify-between items-center py-1.5 px-2 rounded-lg hover:bg-white/5">
-                  <span className="font-mono font-bold text-blue-400 text-sm">MBX-{ticket.id}</span>
-                  <span className="text-gray-400 text-sm">{ticket.device}</span>
-                </div>
-              ))}
-            </div>
-            <div className="space-y-2.5">
-              <button onClick={async () => {
-                const clientId = recentTickets[0]?.client_id;
-                if (clientId) {
-                  const { data: clientData } = await supabase.from("clients").select("*").eq("id", clientId).single();
-                  if (clientData) {
-                    for (const ticket of recentTickets) {
-                      const trackingUrl = await genererLienSuivi(ticket, clientData);
-                      await printTicket(ticket, clientData, trackingUrl);
-                      await new Promise((r) => setTimeout(r, 1000));
-                    }
-                    showMessage(`${recentTickets.length} ticket(s) imprimé(s)`, "success");
-                  }
-                }
-              }} className="w-full bg-gradient-to-r from-blue-600 to-blue-500 text-white py-3 rounded-xl font-bold hover:from-blue-500 hover:to-blue-400 transition-all duration-200 text-sm flex items-center justify-center gap-2">
-                🖨️ Imprimer ({recentTickets.length})
-              </button>
-              <button onClick={async () => {
-                const clientId = recentTickets[0]?.client_id;
-                if (clientId) {
-                  const { data: clientData } = await supabase.from("clients").select("*").eq("id", clientId).single();
-                  if (clientData) {
-                    let email = emailTo;
-                    if (!email || email === "NC") {
-                      email = prompt("Entrez l'email du client:", clientData.email !== "NC" ? clientData.email : "");
-                      if (!email) return;
-                    }
-                    const trackingUrl = await genererLienSuivi(recentTickets[0], clientData);
-                    await sendEmailReceipt(recentTickets, clientData, email, trackingUrl);
-                  }
-                }
-              }} className="w-full bg-gradient-to-r from-green-600 to-green-500 text-white py-3 rounded-xl font-bold hover:from-green-500 hover:to-green-400 transition-all duration-200 text-sm flex items-center justify-center gap-2">
-                ✉️ Envoyer par email
-              </button>
-              <button onClick={() => { setShowSuccessModal(false); setRecentTickets([]); }}
-                className="w-full bg-white/5 hover:bg-white/10 text-gray-300 py-3 rounded-xl font-semibold border border-white/10 transition-all duration-200 text-sm">
-                ✕ Fermer
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* ════════════════ HEADER ════════════════ */}
+      {/* ========== HEADER AVEC SCANNER QR ET RECHERCHE ========== */}
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-8">
-        <div>
-          <button
-            onClick={() => setShowScanner(true)}
-            className="flex items-center gap-2 px-4 py-3 bg-orange-500/10 border border-orange-500/40 text-orange-300 rounded-xl text-sm font-semibold hover:bg-orange-500/20 hover:text-white transition-all duration-200 active:scale-95"
-            title="Scanner le QR code d'un ticket"
-          >
-            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.8} d="M4 7V5a1 1 0 011-1h2M4 17v2a1 1 0 001 1h2m10-16h2a1 1 0 011 1v2m-3 13h2a1 1 0 001-1v-2M7 12h10" />
-            </svg>
-            Scanner QR
-          </button>
-        </div>
+        <button
+          onClick={() => setShowScanner(true)}
+          className="flex items-center gap-2 px-4 py-3 bg-orange-500/10 border border-orange-500/40 text-orange-300 rounded-xl text-sm font-semibold hover:bg-orange-500/20 hover:text-white transition-all duration-200 active:scale-95"
+        >
+          <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.8} d="M4 7V5a1 1 0 011-1h2M4 17v2a1 1 0 001 1h2m10-16h2a1 1 0 011 1v2m-3 13h2a1 1 0 001-1v-2M7 12h10" />
+          </svg>
+          Scanner QR Ticket
+        </button>
+        
         <div ref={searchContainerRef} className="relative w-full sm:w-96">
           <div className="flex items-center gap-3 bg-[#16161d] border border-white/10 rounded-xl px-4 py-3 focus-within:border-blue-500/50 focus-within:ring-2 focus-within:ring-blue-500/10 transition-all duration-200">
-            <input ref={searchInputRef} className="flex-1 bg-transparent text-white placeholder-gray-600 text-sm outline-none"
-              placeholder="Rechercher client, appareil, ticket..." value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} />
-            {searchQuery && <button className="text-gray-500 hover:text-gray-300 transition flex-shrink-0" onClick={() => setSearchQuery("")}>✕</button>}
+            <input 
+              ref={searchInputRef} 
+              className="flex-1 bg-transparent text-white placeholder-gray-600 text-sm outline-none"
+              placeholder="Rechercher client, appareil, ticket..." 
+              value={searchQuery} 
+              onChange={(e) => setSearchQuery(e.target.value)} 
+            />
+            {searchQuery && (
+              <button className="text-gray-500 hover:text-gray-300 transition flex-shrink-0" onClick={() => setSearchQuery("")}>
+                ✕
+              </button>
+            )}
           </div>
           {showResults && searchResults.length > 0 && (
             <div className="absolute top-full left-0 right-0 mt-2 bg-[#16161d] border border-white/10 rounded-2xl shadow-2xl z-30 max-h-80 overflow-y-auto">
@@ -1454,16 +1457,100 @@ export default function Dashboard() {
         </div>
       </div>
 
-      {/* ════════════════ SECTION LABEL ════════════════ */}
+      {/* ========== BANDEAU VENTE RAPIDE ========== */}
+      <div className="mb-8 bg-gradient-to-r from-green-600/20 to-emerald-600/20 border border-green-500/30 rounded-2xl p-4">
+        <div className="flex items-center justify-between flex-wrap gap-4">
+          <div className="flex items-center gap-3">
+            <div className="p-2 bg-green-500/20 rounded-xl">
+              <ShoppingCart className="w-5 h-5 text-green-400" />
+            </div>
+            <div>
+              <h2 className="text-sm font-bold text-white">Vente rapide</h2>
+              <p className="text-xs text-gray-400">Scanner un code-barres pour vendre</p>
+            </div>
+          </div>
+          
+          <div className="flex gap-2 flex-1 max-w-md">
+            <div className="relative flex-1">
+              <input
+                ref={barcodeInputRef}
+                type="text"
+                placeholder="Code-barres..."
+                value={barcodeInput}
+                onChange={(e) => setBarcodeInput(e.target.value)}
+                onKeyDown={(e) => e.key === "Enter" && searchProductByBarcode(barcodeInput)}
+                className="w-full bg-[#1a1d2e] border border-white/10 rounded-xl px-4 py-2.5 text-white text-sm outline-none focus:border-green-500/50"
+              />
+            </div>
+            <button
+              onClick={() => setShowBarcodeModal(true)}
+              className="px-4 py-2.5 bg-green-600 hover:bg-green-500 text-white rounded-xl text-sm font-semibold transition flex items-center gap-2"
+              disabled={isScanning}
+            >
+              <ScanLine size={16} />
+              Scanner
+            </button>
+          </div>
+        </div>
+
+        {/* Produit scanné */}
+        {scannedProduct && (
+          <div className="mt-4 p-4 bg-[#1a1d2e] rounded-xl border border-green-500/30 animate-count-in">
+            <div className="flex items-center justify-between flex-wrap gap-4">
+              <div className="flex-1">
+                <div className="flex items-center gap-2">
+                  <Check className="w-4 h-4 text-green-400" />
+                  <span className="font-bold text-white">{scannedProduct.name}</span>
+                </div>
+                <div className="text-xs text-gray-400 mt-1">
+                  Prix: {Number(scannedProduct.sale_price).toFixed(2)} € | 
+                  Stock: {scannedProduct.stock}
+                </div>
+              </div>
+              <div className="flex items-center gap-3">
+                <div className="flex items-center gap-2">
+                  <label className="text-xs text-gray-400">Quantité:</label>
+                  <input
+                    type="number"
+                    min={1}
+                    max={scannedProduct.stock}
+                    value={saleQuantity}
+                    onChange={(e) => setSaleQuantity(Math.min(scannedProduct.stock, Math.max(1, Number(e.target.value) || 1)))}
+                    className="w-16 bg-black/30 border border-white/10 rounded-lg px-2 py-1.5 text-white text-center text-sm outline-none focus:border-green-500/50"
+                  />
+                </div>
+                <div className="text-right">
+                  <div className="text-sm text-gray-400">Total</div>
+                  <div className="text-lg font-bold text-green-400">
+                    {(Number(scannedProduct.sale_price) * saleQuantity).toFixed(2)} €
+                  </div>
+                </div>
+                <button
+                  onClick={confirmSale}
+                  className="px-4 py-2 bg-green-600 hover:bg-green-500 text-white rounded-xl text-sm font-semibold transition flex items-center gap-2"
+                >
+                  <ShoppingCart size={14} />
+                  Vendre
+                </button>
+                <button
+                  onClick={() => setScannedProduct(null)}
+                  className="p-2 bg-white/5 hover:bg-white/10 rounded-xl transition"
+                >
+                  <X size={16} className="text-gray-400" />
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+      </div>
+
+      {/* ========== SECTION NOUVELLE RÉPARATION ========== */}
       <div className="flex items-center gap-2 mb-4">
         <span className="w-2 h-2 rounded-full bg-green-400 shrink-0" />
         <h2 className="text-xs font-semibold text-gray-300 uppercase tracking-wider">Nouvelle réparation</h2>
       </div>
 
-      {/* ════════════════ FORM ════════════════ */}
       <div ref={formRef} className="bg-[#16161d] border border-white/5 rounded-2xl overflow-hidden shadow-xl mb-6">
-
-        {/* FORM HEADER */}
         <div className="relative overflow-hidden bg-gradient-to-r from-blue-600 via-purple-600 to-blue-600 px-6 py-5">
           <div className="absolute inset-0 opacity-[0.08]" style={{ backgroundImage: "radial-gradient(circle, white 1px, transparent 1px)", backgroundSize: "18px 18px" }} />
           <h2 className="relative text-white font-black text-xl tracking-tight">✨ Nouvelle Réparation</h2>
@@ -1471,12 +1558,10 @@ export default function Dashboard() {
         </div>
 
         <div className="p-6 space-y-6">
-
-          {/* CLIENT */}
+          {/* CLIENT - garder ton code existant */}
           <div>
             <h3 className="text-xs font-semibold text-gray-400 uppercase tracking-widest mb-3">👤 Client</h3>
             <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-
               <div className="relative">
                 <label className="block text-xs font-semibold text-gray-400 uppercase tracking-widest mb-1.5">Nom *</label>
                 <input ref={clientInputRef} className={inputCls} placeholder="Nom du client"
@@ -1546,11 +1631,10 @@ export default function Dashboard() {
             </div>
           </div>
 
-          {/* REPAIR CARDS */}
+          {/* REPAIR CARDS - garder ton code existant */}
           <div className="space-y-4">
             {repairsList.map((repair, idx) => (
               <div key={repair.id} className="bg-[#1a1d2e] border border-white/5 hover:border-blue-500/20 rounded-2xl overflow-hidden transition-all duration-200">
-
                 <div className="bg-gradient-to-r from-blue-500/10 to-purple-500/5 px-5 pt-4 pb-3 flex items-center justify-between">
                   <span className="text-xs font-black bg-gradient-to-r from-blue-400 to-purple-400 bg-clip-text text-transparent tracking-tight">
                     Appareil #{idx + 1}
@@ -1674,7 +1758,6 @@ export default function Dashboard() {
                     </div>
                   </div>
 
-
                   <div className="border-t border-white/5 pt-4">
                     <PatternLock
                       onComplete={(pattern) => updateRepairField(repair.id, "unlockPattern", pattern.join("-"))}
@@ -1686,7 +1769,6 @@ export default function Dashboard() {
             ))}
           </div>
 
-          {/* SUBMIT */}
           <button onClick={createIntake} disabled={loading}
             className="relative w-full overflow-hidden bg-gradient-to-r from-blue-600 via-purple-600 to-blue-600 text-white py-4 rounded-xl font-bold text-lg hover:opacity-90 hover:scale-[1.01] hover:shadow-lg hover:shadow-purple-500/30 active:scale-[0.99] transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2">
             <span className="absolute inset-0 -translate-x-full animate-shimmer bg-gradient-to-r from-transparent via-white/15 to-transparent pointer-events-none" />
@@ -1695,7 +1777,7 @@ export default function Dashboard() {
         </div>
       </div>
 
-      {/* ── ADD MODALS ── */}
+      {/* ADD MODALS - garder ton code existant */}
       {showAddDevice && (
         <div className="fixed inset-0 bg-black/70 backdrop-blur-sm flex items-center justify-center z-50 p-4" onClick={() => setShowAddDevice(false)}>
           <div className="bg-[#16161d] border-t-2 border-t-blue-500 border border-white/10 rounded-2xl p-5 w-full max-w-sm shadow-2xl" onClick={(e) => e.stopPropagation()}>
@@ -1703,14 +1785,12 @@ export default function Dashboard() {
               <h3 className="text-sm font-bold text-white tracking-tight">Modèles personnalisés</h3>
               <button onClick={() => setShowAddDevice(false)} className="w-7 h-7 bg-white/10 hover:bg-white/20 rounded-full flex items-center justify-center text-gray-400 transition text-xs">✕</button>
             </div>
-            {/* Champ ajout */}
             <div className="flex gap-2 mb-4">
               <input type="text" className={`${inputCls} flex-1 !py-2.5`} placeholder="Ex: Samsung Galaxy S25"
                 value={newDeviceInput} onChange={(e) => setNewDeviceInput(e.target.value)}
                 onKeyDown={(e) => e.key === "Enter" && addCustomDevice()} autoFocus />
               <button onClick={addCustomDevice} className="px-4 bg-blue-600 hover:bg-blue-500 text-white rounded-xl text-sm font-bold transition-colors">+</button>
             </div>
-            {/* Liste custom existante */}
             {customDevices.length > 0 && (
               <div>
                 <div className="text-[10px] font-bold text-gray-500 uppercase tracking-widest mb-2">Mes modèles ({customDevices.length})</div>
@@ -1736,13 +1816,11 @@ export default function Dashboard() {
       )}
 
       {showAddIssue && (() => {
-        // Toutes les suggestions visibles pour la carte source
         const sourceRepair = repairsList.find((r) => r.id === addModalSourceRepairId);
         const deviceModel = sourceRepair?.device || "";
         const catalogSuggestions = deviceModel
           ? getSmartIssueSuggestions(deviceModel, "")
           : [...defaultIssues];
-        // Ajouter les pannes custom qui ne sont pas déjà dans le catalogue
         const allSuggestions = [
           ...customIssues.filter((c) => !catalogSuggestions.includes(c)),
           ...catalogSuggestions,
@@ -1760,7 +1838,6 @@ export default function Dashboard() {
                 <button onClick={() => setShowAddIssue(false)} className="w-7 h-7 bg-white/10 hover:bg-white/20 rounded-full flex items-center justify-center text-gray-400 transition text-xs">✕</button>
               </div>
 
-              {/* Champ ajout */}
               <div className="flex gap-2 mb-4 shrink-0">
                 <input type="text" className={`${inputCls} flex-1 !py-2.5`} placeholder="Ajouter une panne…"
                   value={newIssueInput} onChange={(e) => setNewIssueInput(e.target.value)}
@@ -1769,7 +1846,6 @@ export default function Dashboard() {
               </div>
 
               <div className="overflow-auto flex-1 space-y-3">
-                {/* Suggestions actives */}
                 {visibleSuggestions.length > 0 && (
                   <div>
                     <div className="text-[10px] font-bold text-gray-500 uppercase tracking-widest mb-1.5">
@@ -1787,7 +1863,6 @@ export default function Dashboard() {
                   </div>
                 )}
 
-                {/* Suggestions masquées */}
                 {hiddenList.length > 0 && (
                   <div>
                     <div className="text-[10px] font-bold text-gray-500 uppercase tracking-widest mb-1.5">
@@ -1829,7 +1904,7 @@ export default function Dashboard() {
         </div>
       )}
 
-      {/* ── DETAIL MODAL ── */}
+      {/* DETAIL MODAL */}
       {showDetailModal && selectedRepairDetail && selectedRepairClient && (
         <div className="fixed inset-0 bg-black/70 backdrop-blur-sm flex items-center justify-center p-4 z-50" onClick={() => setShowDetailModal(false)}>
           <div className="bg-[#16161d] border-t-2 border-t-blue-500 border border-white/10 rounded-2xl w-full max-w-2xl max-h-[90vh] overflow-auto shadow-2xl"
@@ -1842,21 +1917,18 @@ export default function Dashboard() {
               <button onClick={() => setShowDetailModal(false)} className="w-8 h-8 bg-white/10 hover:bg-white/20 rounded-full flex items-center justify-center text-gray-400 transition text-sm">✕</button>
             </div>
             <div className="p-5 space-y-4">
-              {/* Statut */}
               <div className="flex items-center gap-2">
                 <span className={`px-3 py-1 rounded-full text-xs font-bold text-white ${statusColors[selectedRepairDetail.status] || "bg-gray-500"}`}>
                   {selectedRepairDetail.status || "📥 Réceptionné"}
                 </span>
                 <span className="text-xs text-gray-500">#{selectedRepairDetail.id}</span>
               </div>
-              {/* Client */}
               <div className="bg-black/20 border border-white/10 rounded-xl p-4 space-y-1.5">
                 <div className="font-semibold text-white">👤 {selectedRepairClient.name}</div>
                 {selectedRepairClient.phone !== "NC" && <div className="text-sm text-gray-400">📞 {selectedRepairClient.phone}</div>}
                 {selectedRepairClient.email !== "NC" && <div className="text-sm text-gray-400">✉️ {selectedRepairClient.email}</div>}
                 {selectedRepairClient.client_code && <div className="text-sm font-mono text-blue-400">🔑 Code : {selectedRepairClient.client_code}</div>}
               </div>
-              {/* Réparation */}
               <div className="bg-black/20 border border-white/10 rounded-xl overflow-hidden">
                 {[
                   { label: "📱 Appareil", value: selectedRepairDetail.device },
@@ -1872,7 +1944,6 @@ export default function Dashboard() {
                   </div>
                 ))}
               </div>
-              {/* Boutons */}
               <div className="flex gap-2 flex-wrap">
                 <button onClick={async () => {
                   const { data: clientData } = await supabase.from("clients").select("*").eq("id", selectedRepairDetail.client_id).single();
@@ -1903,6 +1974,66 @@ export default function Dashboard() {
               <button onClick={() => setShowDetailModal(false)}
                 className="w-full bg-white/5 hover:bg-white/10 text-gray-300 py-2 rounded-xl font-semibold text-sm border border-white/10 transition-all duration-200">
                 Fermer
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* SUCCESS MODAL */}
+      {showSuccessModal && recentTickets.length > 0 && (
+        <div className="fixed inset-0 bg-black/70 backdrop-blur-sm flex items-center justify-center p-4 z-50">
+          <div className="bg-[#16161d] border-t-2 border-t-blue-500 border border-white/10 rounded-2xl shadow-2xl p-6 max-w-md w-full">
+            <div className="text-center mb-5">
+              <div className="w-16 h-16 bg-green-500/20 rounded-full flex items-center justify-center text-4xl mx-auto mb-3 border border-green-500/30 animate-pulse">🎉</div>
+              <h2 className="text-xl font-black text-white tracking-tight">{recentTickets.length} ticket(s) créé(s)</h2>
+              <p className="text-gray-400 text-sm mt-1">Impression ou envoi par email</p>
+            </div>
+            <div className="bg-black/20 rounded-xl border border-white/5 p-3 mb-5 max-h-40 overflow-auto space-y-0.5">
+              {recentTickets.map((ticket) => (
+                <div key={ticket.id} className="flex justify-between items-center py-1.5 px-2 rounded-lg hover:bg-white/5">
+                  <span className="font-mono font-bold text-blue-400 text-sm">MBX-{ticket.id}</span>
+                  <span className="text-gray-400 text-sm">{ticket.device}</span>
+                </div>
+              ))}
+            </div>
+            <div className="space-y-2.5">
+              <button onClick={async () => {
+                const clientId = recentTickets[0]?.client_id;
+                if (clientId) {
+                  const { data: clientData } = await supabase.from("clients").select("*").eq("id", clientId).single();
+                  if (clientData) {
+                    for (const ticket of recentTickets) {
+                      const trackingUrl = await genererLienSuivi(ticket, clientData);
+                      await printTicket(ticket, clientData, trackingUrl);
+                      await new Promise((r) => setTimeout(r, 1000));
+                    }
+                    showMessage(`${recentTickets.length} ticket(s) imprimé(s)`, "success");
+                  }
+                }
+              }} className="w-full bg-gradient-to-r from-blue-600 to-blue-500 text-white py-3 rounded-xl font-bold hover:from-blue-500 hover:to-blue-400 transition-all duration-200 text-sm flex items-center justify-center gap-2">
+                🖨️ Imprimer ({recentTickets.length})
+              </button>
+              <button onClick={async () => {
+                const clientId = recentTickets[0]?.client_id;
+                if (clientId) {
+                  const { data: clientData } = await supabase.from("clients").select("*").eq("id", clientId).single();
+                  if (clientData) {
+                    let email = emailTo;
+                    if (!email || email === "NC") {
+                      email = prompt("Entrez l'email du client:", clientData.email !== "NC" ? clientData.email : "");
+                      if (!email) return;
+                    }
+                    const trackingUrl = await genererLienSuivi(recentTickets[0], clientData);
+                    await sendEmailReceipt(recentTickets, clientData, email, trackingUrl);
+                  }
+                }
+              }} className="w-full bg-gradient-to-r from-green-600 to-green-500 text-white py-3 rounded-xl font-bold hover:from-green-500 hover:to-green-400 transition-all duration-200 text-sm flex items-center justify-center gap-2">
+                ✉️ Envoyer par email
+              </button>
+              <button onClick={() => { setShowSuccessModal(false); setRecentTickets([]); }}
+                className="w-full bg-white/5 hover:bg-white/10 text-gray-300 py-3 rounded-xl font-semibold border border-white/10 transition-all duration-200 text-sm">
+                ✕ Fermer
               </button>
             </div>
           </div>

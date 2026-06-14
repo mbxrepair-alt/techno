@@ -389,9 +389,11 @@ export default function StatistiquesPage() {
                 <Pie
                   data={stats.repairsByStatus}
                   cx="50%" cy="50%"
-                  innerRadius={50} outerRadius={75}
+                  innerRadius={48} outerRadius={72}
                   paddingAngle={3}
                   dataKey="value"
+                  label={({ percent }) => percent > 0.08 ? `${(percent * 100).toFixed(0)}%` : ""}
+                  labelLine={false}
                 >
                   {stats.repairsByStatus.map((_, index) => (
                     <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
@@ -400,14 +402,14 @@ export default function StatistiquesPage() {
                 <Tooltip content={<CustomTooltip />} />
               </PieChart>
             </ResponsiveContainer>
-            <div className="space-y-1.5 mt-2">
-              {stats.repairsByStatus.slice(0, 4).map((s, i) => (
+            <div className="space-y-2 mt-3">
+              {stats.repairsByStatus.slice(0, 5).map((s, i) => (
                 <div key={s.name} className="flex items-center justify-between text-xs">
-                  <div className="flex items-center gap-2">
-                    <span className="w-2 h-2 rounded-full shrink-0" style={{ background: COLORS[i % COLORS.length] }} />
-                    <span className="text-gray-400 truncate max-w-[120px]">{s.name}</span>
+                  <div className="flex items-center gap-2 min-w-0">
+                    <span className="w-3 h-3 rounded-sm shrink-0 border border-white/10" style={{ background: COLORS[i % COLORS.length] }} />
+                    <span className="text-gray-300 truncate">{s.name}</span>
                   </div>
-                  <span className="text-white font-bold">{s.value}</span>
+                  <span className="text-white font-black ml-2 shrink-0">{s.value}</span>
                 </div>
               ))}
             </div>

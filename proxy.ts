@@ -8,6 +8,7 @@ const PUBLIC_PATHS = [
   "/client",
   "/api/assistant-public",
   "/api/client-tracking",
+  "/api/ticket-search",
 ];
 
 function isPublic(pathname: string): boolean {

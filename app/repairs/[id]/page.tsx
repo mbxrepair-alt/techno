@@ -5,6 +5,7 @@ import { supabase, getCurrentUser } from "../../../lib/supabase";
 import { useRouter, useParams } from "next/navigation";
 import Layout from "../../../components/Layout";
 import SmartTextarea from "../../../components/SmartTextarea";
+import ClientResponsesBell from "../../../components/ClientResponsesBell";
 import QRCode from "qrcode";
 
 // Schema de deverrouillage (niveau module - evite la re-creation a chaque render)
@@ -754,14 +755,20 @@ export default function RepairDetailPage() {
 
   return (
     <Layout>
+      {/* TOAST MESSAGE */}
       {message.text && (
         <div
-          className={`fixed bottom-6 right-6 px-4 py-2 rounded-lg text-white shadow-lg z-50 text-sm ${message.type === "error" ? "bg-red-500" : "bg-green-500"}`}
+          className={`fixed bottom-6 right-6 px-4 py-3 rounded-xl text-white shadow-2xl z-50 text-sm font-medium border ${
+            message.type === "error"
+              ? "bg-red-600/90 border-red-500/40"
+              : "bg-green-600/90 border-green-500/40"
+          }`}
         >
           {message.text}
         </div>
       )}
 
+      {/* PHOTO MODAL */}
       {showPhotoModal && selectedPhoto && (
         <div
           className="fixed inset-0 bg-black/90 z-50 flex items-center justify-center p-4"
@@ -771,11 +778,11 @@ export default function RepairDetailPage() {
             <img
               src={selectedPhoto}
               alt="Photo"
-              className="max-w-full max-h-[90vh] object-contain rounded-lg"
+              className="max-w-full max-h-[90vh] object-contain rounded-xl"
             />
             <button
               onClick={() => setShowPhotoModal(false)}
-              className="absolute top-2 right-2 bg-black/50 text-white rounded-full w-8 h-8 flex items-center justify-center"
+              className="absolute top-3 right-3 bg-black/60 text-white rounded-full w-9 h-9 flex items-center justify-center hover:bg-black/80 transition"
             >
               ✕
             </button>
@@ -783,28 +790,30 @@ export default function RepairDetailPage() {
         </div>
       )}
 
+      {/* EMAIL MODAL */}
       {showEmailModal && (
-        <div className="fixed inset-0 bg-black/50 z-50 flex justify-center items-center p-4">
-          <div className="bg-white rounded-xl w-full max-w-md p-5">
-            <h2 className="text-lg font-bold mb-3">✉️ Envoi par email</h2>
+        <div className="fixed inset-0 bg-black/80 z-50 flex justify-center items-center p-4">
+          <div className="bg-[#16161d] border border-white/8 rounded-2xl w-full max-w-md p-6 shadow-2xl">
+            <h2 className="text-lg font-bold text-white mb-1">✉️ Envoi par email</h2>
+            <p className="text-gray-400 text-sm mb-4">Ticket de réparation MBX-{id}</p>
             <input
               type="email"
-              className="w-full border rounded-lg p-2 mb-3"
+              className="w-full bg-black/30 border border-white/10 rounded-xl px-3 py-2 text-white outline-none focus:border-orange-500/40 mb-4 placeholder-gray-600"
               value={emailTo}
               onChange={(e) => setEmailTo(e.target.value)}
               placeholder="Email du client"
             />
-            <div className="flex gap-2">
+            <div className="flex gap-3">
               <button
                 onClick={sendEmailReceipt}
                 disabled={sendingEmail}
-                className="flex-1 bg-green-600 text-white py-2 rounded-lg"
+                className="flex-1 bg-orange-500 hover:bg-orange-400 disabled:opacity-50 text-white py-2.5 rounded-xl font-semibold text-sm transition"
               >
                 {sendingEmail ? "Envoi..." : "Envoyer"}
               </button>
               <button
                 onClick={() => setShowEmailModal(false)}
-                className="flex-1 bg-gray-200 py-2 rounded-lg"
+                className="flex-1 bg-white/5 hover:bg-white/10 text-gray-300 py-2.5 rounded-xl text-sm transition"
               >
                 Annuler
               </button>
@@ -813,17 +822,24 @@ export default function RepairDetailPage() {
         </div>
       )}
 
+      {/* QUICK ACTIONS MODAL */}
       {showQuickActions && (
-        <div className="fixed inset-0 bg-black/50 z-50 flex justify-center items-center p-4" onClick={() => setShowQuickActions(false)}>
-          <div className="bg-white rounded-xl w-full max-w-md p-5 relative" onClick={(e) => e.stopPropagation()}>
+        <div
+          className="fixed inset-0 bg-black/80 z-50 flex justify-center items-center p-4"
+          onClick={() => setShowQuickActions(false)}
+        >
+          <div
+            className="bg-[#16161d] border border-white/8 rounded-2xl w-full max-w-md p-6 shadow-2xl relative"
+            onClick={(e) => e.stopPropagation()}
+          >
             <button
               onClick={() => setShowQuickActions(false)}
-              className="absolute top-3 right-3 w-8 h-8 bg-gray-100 hover:bg-gray-200 text-gray-500 rounded-full flex items-center justify-center text-sm"
+              className="absolute top-4 right-4 w-8 h-8 bg-white/5 hover:bg-white/10 text-gray-400 rounded-full flex items-center justify-center text-sm transition"
               aria-label="Fermer"
             >
               ✕
             </button>
-            <h2 className="text-lg font-bold mb-3">⚡ Actions rapides</h2>
+            <h2 className="text-lg font-bold text-white mb-4">⚡ Actions rapides</h2>
             <div className="grid grid-cols-1 gap-2">
               {quickActions.map((action, idx) => (
                 <button
@@ -831,12 +847,12 @@ export default function RepairDetailPage() {
                   onClick={() => {
                     setShowQuickActions(false);
                     if (action.status === "✅ Terminé") {
-                      setShowOkKoModal(true); // demander le résultat OK / KO
+                      setShowOkKoModal(true);
                     } else {
                       updateStatus(action.status);
                     }
                   }}
-                  className={`${action.color} ${action.textColor} py-2 rounded-lg text-sm font-semibold`}
+                  className={`${action.color} ${action.textColor} py-2.5 rounded-xl text-sm font-semibold transition`}
                 >
                   {action.label}
                 </button>
@@ -846,75 +862,79 @@ export default function RepairDetailPage() {
         </div>
       )}
 
-      {/* MODAL RÉSULTAT OK / KO */}
+      {/* OK/KO MODAL */}
       {showOkKoModal && (
-        <div className="fixed inset-0 bg-black/50 z-50 flex justify-center items-center p-4">
-          <div className="bg-white rounded-xl w-full max-w-md p-5">
-            <h2 className="text-lg font-bold mb-1">Résultat de la réparation</h2>
-            <p className="text-sm text-gray-500 mb-4">L&apos;appareil a-t-il été réparé ?</p>
+        <div className="fixed inset-0 bg-black/80 z-50 flex justify-center items-center p-4">
+          <div className="bg-[#16161d] border border-white/8 rounded-2xl w-full max-w-md p-6 shadow-2xl">
+            <h2 className="text-lg font-bold text-white mb-1">Résultat de la réparation</h2>
+            <p className="text-sm text-gray-400 mb-5">L&apos;appareil a-t-il été réparé ?</p>
             <div className="grid grid-cols-1 gap-3">
               <button
                 onClick={() => finishRepair("OK")}
-                className="bg-green-600 hover:bg-green-700 text-white py-3 rounded-xl font-bold text-sm transition flex items-center justify-center gap-2"
+                className="bg-green-600 hover:bg-green-500 text-white py-3 rounded-xl font-bold text-sm transition flex items-center justify-center gap-2"
               >
                 ✅ Réparé (OK) — facturable
               </button>
               <button
                 onClick={() => finishRepair("KO")}
-                className="bg-red-600 hover:bg-red-700 text-white py-3 rounded-xl font-bold text-sm transition flex items-center justify-center gap-2"
+                className="bg-red-600 hover:bg-red-500 text-white py-3 rounded-xl font-bold text-sm transition flex items-center justify-center gap-2"
               >
                 ❌ Non réparé (KO) — rien facturé
               </button>
               <button
                 onClick={() => setShowOkKoModal(false)}
-                className="bg-gray-100 hover:bg-gray-200 text-gray-600 py-2.5 rounded-xl text-sm transition"
+                className="bg-white/5 hover:bg-white/10 text-gray-300 py-2.5 rounded-xl text-sm transition"
               >
                 Annuler
               </button>
             </div>
-            <p className="text-xs text-gray-400 mt-3 text-center">
+            <p className="text-xs text-gray-500 mt-4 text-center">
               KO = appareil irréparable (manque de pièce, panne non trouvée). Aucune facture ne sera générée.
             </p>
           </div>
         </div>
       )}
 
-      {/* MODAL FINALISATION (OK) : travaux + prix */}
+      {/* FINALIZE MODAL */}
       {showFinalizeModal && (
-        <div className="fixed inset-0 bg-black/50 z-50 flex justify-center items-center p-4">
-          <div className="bg-white rounded-xl w-full max-w-md p-5">
-            <h2 className="text-lg font-bold mb-1">✅ Finaliser la réparation</h2>
-            <p className="text-sm text-gray-500 mb-4">Renseignez les travaux et le montant.</p>
+        <div className="fixed inset-0 bg-black/80 z-50 flex justify-center items-center p-4">
+          <div className="bg-[#16161d] border border-white/8 rounded-2xl w-full max-w-md p-6 shadow-2xl">
+            <h2 className="text-lg font-bold text-white mb-1">✅ Finaliser la réparation</h2>
+            <p className="text-sm text-gray-400 mb-5">Renseignez les travaux et le montant.</p>
 
-            <label className="block text-xs font-semibold text-gray-600 mb-1">🔧 Travaux effectués</label>
+            <label className="block text-[10px] font-bold text-gray-500 uppercase tracking-widest mb-2">
+              🔧 Travaux effectués
+            </label>
             <textarea
               rows={4}
               value={finalizeTravaux}
               onChange={(e) => setFinalizeTravaux(e.target.value)}
               placeholder="Détail des travaux effectués..."
-              className="w-full border rounded-lg p-2 text-sm text-gray-700 mb-3 resize-none focus:ring-2 focus:ring-green-500 focus:border-transparent outline-none"
+              className="w-full bg-black/30 border border-white/10 rounded-xl px-3 py-2 text-white outline-none focus:border-orange-500/40 text-sm resize-none mb-4 placeholder-gray-600"
               autoFocus
             />
 
-            <label className="block text-xs font-semibold text-gray-600 mb-1">💰 Prix (€)</label>
+            <label className="block text-[10px] font-bold text-gray-500 uppercase tracking-widest mb-2">
+              💰 Prix (€)
+            </label>
             <input
               type="number"
               step="1"
               value={finalizePrice}
               onChange={(e) => setFinalizePrice(e.target.value)}
               placeholder="0"
-              className="w-full border rounded-lg p-2 text-base font-bold text-gray-800 mb-4 outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent"
+              className="w-full bg-black/30 border border-white/10 rounded-xl px-3 py-2 text-white text-base font-bold outline-none focus:border-orange-500/40 mb-5 placeholder-gray-600"
             />
 
             <button
               onClick={confirmFinishOk}
-              className="w-full bg-green-600 hover:bg-green-700 text-white py-3 rounded-xl font-bold text-sm transition"
+              className="w-full bg-green-600 hover:bg-green-500 text-white py-3 rounded-xl font-bold text-sm transition"
             >
               ✅ Valider et terminer
             </button>
             <button
               onClick={() => setShowFinalizeModal(false)}
-              className="w-full bg-gray-100 hover:bg-gray-200 text-gray-600 py-2.5 rounded-xl text-sm transition mt-2"
+              className="w-full bg-white/5 hover:bg-white/10 text-gray-300 py-2.5 rounded-xl text-sm transition mt-2"
             >
               Annuler
             </button>
@@ -922,22 +942,23 @@ export default function RepairDetailPage() {
         </div>
       )}
 
+      {/* PART MODAL */}
       {showPartModal && (
-        <div className="fixed inset-0 bg-black/50 z-50 flex justify-center items-center p-4">
-          <div className="bg-white rounded-xl w-full max-w-md p-5">
-            <h2 className="text-lg font-bold mb-3">🔧 Ajouter une pièce</h2>
+        <div className="fixed inset-0 bg-black/80 z-50 flex justify-center items-center p-4">
+          <div className="bg-[#16161d] border border-white/8 rounded-2xl w-full max-w-md p-6 shadow-2xl">
+            <h2 className="text-lg font-bold text-white mb-4">🔧 Ajouter une pièce</h2>
             <input
               type="text"
-              placeholder="Nom"
-              className="w-full border rounded-lg p-2 mb-2"
+              placeholder="Nom de la pièce"
+              className="w-full bg-black/30 border border-white/10 rounded-xl px-3 py-2 text-white outline-none focus:border-orange-500/40 mb-3 placeholder-gray-600"
               value={currentPart.name}
               onChange={(e) => setCurrentPart({ ...currentPart, name: e.target.value })}
             />
-            <div className="flex gap-2 mb-3">
+            <div className="flex gap-3 mb-5">
               <input
                 type="number"
                 placeholder="Qté"
-                className="flex-1 border rounded-lg p-2"
+                className="flex-1 bg-black/30 border border-white/10 rounded-xl px-3 py-2 text-white outline-none focus:border-orange-500/40 placeholder-gray-600"
                 value={currentPart.quantity}
                 onChange={(e) =>
                   setCurrentPart({ ...currentPart, quantity: parseInt(e.target.value) || 1 })
@@ -945,21 +966,24 @@ export default function RepairDetailPage() {
               />
               <input
                 type="number"
-                placeholder="Prix"
-                className="flex-1 border rounded-lg p-2"
+                placeholder="Prix €"
+                className="flex-1 bg-black/30 border border-white/10 rounded-xl px-3 py-2 text-white outline-none focus:border-orange-500/40 placeholder-gray-600"
                 value={currentPart.price}
                 onChange={(e) =>
                   setCurrentPart({ ...currentPart, price: parseFloat(e.target.value) || 0 })
                 }
               />
             </div>
-            <div className="flex gap-2">
-              <button onClick={addPart} className="flex-1 bg-blue-600 text-white py-2 rounded-lg">
+            <div className="flex gap-3">
+              <button
+                onClick={addPart}
+                className="flex-1 bg-orange-500 hover:bg-orange-400 text-white py-2.5 rounded-xl font-semibold text-sm transition"
+              >
                 Ajouter
               </button>
               <button
                 onClick={() => setShowPartModal(false)}
-                className="flex-1 bg-gray-200 py-2 rounded-lg"
+                className="flex-1 bg-white/5 hover:bg-white/10 text-gray-300 py-2.5 rounded-xl text-sm transition"
               >
                 Annuler
               </button>
@@ -968,45 +992,44 @@ export default function RepairDetailPage() {
         </div>
       )}
 
-      <div className="w-full mx-auto px-0 py-4">
-        {/* BARRE DE RECHERCHE */}
+      {/* MAIN CONTENT */}
+      <div className="w-full mx-auto px-0 py-4 bg-[#0f0f13] min-h-screen">
+        {/* SEARCH BAR */}
         <div className="mb-5 relative">
-          <div className="bg-white rounded-lg shadow-sm border p-3">
+          <div className="bg-[#16161d] border border-white/8 rounded-2xl p-3">
             <div className="flex gap-2">
               <div className="flex-1 relative">
                 <input
                   type="text"
                   value={searchTerm}
                   onChange={(e) => handleSearch(e.target.value)}
-                  placeholder="🔍 Rechercher par nom client ou numéro de ticket..."
-                  className="w-full p-2 pl-8 border rounded-lg text-sm"
+                  placeholder="Rechercher par nom client ou numéro de ticket..."
+                  className="w-full bg-black/30 border border-white/10 rounded-xl px-3 py-2 pl-9 text-white outline-none focus:border-orange-500/40 text-sm placeholder-gray-600"
                 />
-                <div className="absolute left-2 top-1/2 -translate-y-1/2 text-gray-400 text-sm">
-                  🔍
-                </div>
+                <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500 text-sm">🔍</span>
               </div>
               <button
                 onClick={() => setShowSearchResults(false)}
-                className="px-3 py-2 bg-gray-100 rounded-lg text-sm"
+                className="px-3 py-2 bg-white/5 hover:bg-white/10 text-gray-400 rounded-xl text-sm transition"
               >
                 ✕
               </button>
             </div>
             {showSearchResults && searchResults.length > 0 && (
-              <div className="absolute z-20 left-0 right-0 mt-1 bg-white border rounded-lg shadow-lg max-h-60 overflow-auto">
+              <div className="absolute z-20 left-0 right-0 mt-2 bg-[#16161d] border border-white/8 rounded-2xl shadow-2xl max-h-60 overflow-auto">
                 {searchResults.map((result) => (
                   <div
                     key={result.id}
                     onClick={() => goToRepair(result.id)}
-                    className="p-2 hover:bg-gray-50 cursor-pointer border-b flex justify-between items-center text-sm"
+                    className="p-3 hover:bg-white/5 cursor-pointer border-b border-white/5 flex justify-between items-center text-sm last:border-0"
                   >
                     <div>
-                      <span className="font-bold text-blue-600 text-base">🎫 MBX-{result.id}</span>
-                      <span className="ml-2 text-gray-700">- {result.clientName}</span>
+                      <span className="font-bold text-orange-400 font-mono">MBX-{result.id}</span>
+                      <span className="ml-2 text-gray-300">— {result.clientName}</span>
                       <br />
                       <span className="text-xs text-gray-500">{result.device}</span>
                     </div>
-                    <button className="bg-blue-600 text-white px-3 py-1 rounded text-xs">
+                    <button className="bg-orange-500 hover:bg-orange-400 text-white px-3 py-1 rounded-lg text-xs transition">
                       Voir
                     </button>
                   </div>
@@ -1016,32 +1039,33 @@ export default function RepairDetailPage() {
           </div>
         </div>
 
-        {/* HEADER CARD AVEC INFOS IMPORTANTES EN EVIDENCE */}
-        <div className="bg-gradient-to-r from-blue-600 to-blue-800 rounded-xl shadow-lg mb-6 overflow-hidden">
-          <div className="p-6">
-            {/* Ligne 1 : Ticket et statut */}
-            <div className="flex flex-wrap justify-between items-start gap-3 mb-4">
+        {/* HEADER */}
+        <div className="bg-[#16161d] border border-white/8 rounded-2xl mb-6 overflow-hidden">
+          <div className="p-5">
+            {/* Row 1: ticket badge + bell + status + actions */}
+            <div className="flex flex-wrap justify-between items-center gap-3 mb-5">
               <div className="flex items-center gap-3 flex-wrap">
-                <span className="bg-white text-blue-700 font-bold text-2xl px-4 py-2 rounded-xl shadow-lg">
-                  🎫 MBX-{id}
+                <span className="bg-black/40 border border-orange-500/30 text-orange-400 font-bold text-xl px-4 py-2 rounded-xl font-mono tracking-tight">
+                  MBX-{id}
                 </span>
+                {currentUserId && <ClientResponsesBell userId={currentUserId} />}
                 <span
                   className={`px-3 py-1 rounded-full text-sm font-semibold ${
                     repair?.status === "✅ Terminé"
-                      ? "bg-green-500 text-white"
+                      ? "bg-green-500/20 text-green-400 border border-green-500/30"
                       : repair?.status === "📦 Rendu"
-                        ? "bg-gray-600 text-white"
+                        ? "bg-gray-500/20 text-gray-400 border border-gray-500/30"
                         : repair?.status === "🔧 En réparation"
-                          ? "bg-orange-500 text-white"
+                          ? "bg-orange-500/20 text-orange-400 border border-orange-500/30"
                           : repair?.status === "🔬 Diagnostic"
-                            ? "bg-blue-500 text-white"
+                            ? "bg-blue-500/20 text-blue-400 border border-blue-500/30"
                             : repair?.status === "📥 Réceptionné"
-                              ? "bg-amber-500 text-white"
+                              ? "bg-amber-500/20 text-amber-400 border border-amber-500/30"
                               : repair?.status === "❌ KO"
-                                ? "bg-red-600 text-white"
+                                ? "bg-red-600/20 text-red-400 border border-red-600/30"
                                 : repair?.status === "🚫 Refus client"
-                                  ? "bg-pink-600 text-white"
-                                  : "bg-gray-500 text-white"
+                                  ? "bg-pink-600/20 text-pink-400 border border-pink-600/30"
+                                  : "bg-gray-500/20 text-gray-400 border border-gray-500/30"
                   }`}
                 >
                   {repair?.status || "📥 Réceptionné"}
@@ -1050,90 +1074,90 @@ export default function RepairDetailPage() {
               <div className="flex gap-2 flex-wrap">
                 <button
                   onClick={printRepairTicket}
-                  className="bg-white/20 hover:bg-white/30 text-white px-3 py-2 rounded-lg text-sm font-medium transition"
+                  className="bg-white/5 hover:bg-white/10 text-gray-300 px-3 py-2 rounded-xl text-sm font-medium transition border border-white/8"
                 >
                   🖨️ Ticket
                 </button>
                 <button
                   onClick={() => setShowEmailModal(true)}
-                  className="bg-white/20 hover:bg-white/30 text-white px-3 py-2 rounded-lg text-sm font-medium transition"
+                  className="bg-white/5 hover:bg-white/10 text-gray-300 px-3 py-2 rounded-xl text-sm font-medium transition border border-white/8"
                 >
                   ✉️ Email
                 </button>
                 {repair?.status === "✅ Terminé" && (
                   <button
                     onClick={() => updateStatus("📦 Rendu")}
-                    className="bg-gray-600 hover:bg-gray-500 text-white px-3 py-2 rounded-lg text-sm font-bold transition"
+                    className="bg-gray-600/30 hover:bg-gray-600/50 text-gray-300 border border-gray-600/40 px-3 py-2 rounded-xl text-sm font-bold transition"
                   >
                     📦 Rendu
                   </button>
                 )}
                 <button
                   onClick={() => setShowQuickActions(true)}
-                  className="bg-white/20 hover:bg-white/30 text-white w-10 h-10 rounded-lg text-xl font-bold transition"
+                  className="bg-orange-500 hover:bg-orange-400 text-white w-10 h-10 rounded-xl text-xl font-bold transition flex items-center justify-center"
                 >
-                  +
+                  ⚡
                 </button>
               </div>
             </div>
 
-            {/* Ligne 2 : Nom client + Téléphone + Code + IMEI */}
-            <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-4">
-              <div className="bg-white/10 rounded-lg p-3">
-                <p className="text-blue-200 text-xs mb-1">👤 CLIENT</p>
-                <p className="text-white font-bold text-xl">{client?.name || "Client inconnu"}</p>
+            {/* Row 2: client info grid */}
+            <div className="grid grid-cols-1 md:grid-cols-4 gap-3 mb-4">
+              <div className="bg-black/30 border border-white/5 rounded-xl p-3">
+                <p className="text-[10px] font-bold text-gray-500 uppercase tracking-widest mb-1">👤 Client</p>
+                <p className="text-white font-bold text-lg leading-tight">{client?.name || "Client inconnu"}</p>
               </div>
-              <div className="bg-white/10 rounded-lg p-3">
-                <p className="text-blue-200 text-xs mb-1">📞 TÉLÉPHONE</p>
-                <p className="text-white font-bold text-xl">
-                  {client?.phone !== "NC" ? client?.phone : "Non renseigné"}
+              <div className="bg-black/30 border border-white/5 rounded-xl p-3">
+                <p className="text-[10px] font-bold text-gray-500 uppercase tracking-widest mb-1">📞 Téléphone</p>
+                <p className="text-white font-bold text-lg leading-tight">
+                  {client?.phone !== "NC" ? client?.phone : <span className="text-gray-600">Non renseigné</span>}
                 </p>
               </div>
-              <div className="bg-white/10 rounded-lg p-3">
-                <p className="text-blue-200 text-xs mb-1">🔑 CODE DÉVERROUILLAGE</p>
+              <div className="bg-black/30 border border-white/5 rounded-xl p-3">
+                <p className="text-[10px] font-bold text-gray-500 uppercase tracking-widest mb-1">🔑 Code déverrouillage</p>
                 <div className="flex items-center gap-2">
-                  <p className="text-white font-bold text-xl">
-                    {repair?.unlock_code !== "NC" ? repair?.unlock_code : "Non fourni"}
+                  <p className="text-white font-bold text-lg leading-tight">
+                    {repair?.unlock_code !== "NC" ? repair?.unlock_code : <span className="text-gray-600">Non fourni</span>}
                   </p>
                   {repair?.unlock_pattern && repair.unlock_pattern !== "" && (
                     <PatternSmall pattern={repair.unlock_pattern} />
                   )}
                 </div>
               </div>
-              <div className="bg-white/10 rounded-lg p-3">
-                <p className="text-blue-200 text-xs mb-1">🔢 IMEI</p>
-                <p className="text-white font-mono text-lg">
-                  {repair?.imei !== "NC" ? repair?.imei : "Non renseigné"}
+              <div className="bg-black/30 border border-white/5 rounded-xl p-3">
+                <p className="text-[10px] font-bold text-gray-500 uppercase tracking-widest mb-1">🔢 IMEI</p>
+                <p className="text-white font-mono text-base leading-tight">
+                  {repair?.imei !== "NC" ? repair?.imei : <span className="text-gray-600">Non renseigné</span>}
                 </p>
               </div>
             </div>
 
-            {/* Ligne 3 : Appareil + Panne + Description */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div className="bg-white/10 rounded-lg p-3">
-                <p className="text-blue-200 text-xs mb-1">📱 APPAREIL</p>
-                <p className="text-white font-bold text-lg">{repair?.device || "-"}</p>
+            {/* Row 3: device + issue */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-3 mb-3">
+              <div className="bg-black/30 border border-white/5 rounded-xl p-3">
+                <p className="text-[10px] font-bold text-gray-500 uppercase tracking-widest mb-1">📱 Appareil</p>
+                <p className="text-white font-bold text-base">{repair?.device || "-"}</p>
               </div>
-              <div className="bg-white/10 rounded-lg p-3">
-                <p className="text-blue-200 text-xs mb-1">🔧 PANNE</p>
-                <p className="text-white font-bold text-lg">{repair?.issue || "-"}</p>
+              <div className="bg-black/30 border border-white/5 rounded-xl p-3">
+                <p className="text-[10px] font-bold text-gray-500 uppercase tracking-widest mb-1">🔧 Panne</p>
+                <p className="text-white font-bold text-base">{repair?.issue || "-"}</p>
               </div>
             </div>
 
-            {/* Description si présente */}
+            {/* Description */}
             {repair?.description && repair.description !== "NC" && repair.description !== "" && (
-              <div className="mt-4 bg-white/10 rounded-lg p-3">
-                <p className="text-blue-200 text-xs mb-1">📝 DESCRIPTION</p>
-                <p className="text-white">{repair.description}</p>
+              <div className="bg-black/30 border border-white/5 rounded-xl p-3 mb-3">
+                <p className="text-[10px] font-bold text-gray-500 uppercase tracking-widest mb-1">📝 Description</p>
+                <p className="text-gray-300 text-sm">{repair.description}</p>
               </div>
             )}
 
-            {/* Suivi des statuts avec progression */}
-            <div className="mt-6 pt-4 border-t border-white/20">
+            {/* Progress stepper */}
+            <div className="mt-5 pt-5 border-t border-white/8">
               <div className="relative">
-                <div className="absolute top-1/2 left-0 right-0 h-0.5 bg-white/20 -translate-y-1/2 rounded-full"></div>
+                <div className="absolute top-5 left-0 right-0 h-0.5 bg-white/8 rounded-full"></div>
                 <div
-                  className="absolute top-1/2 left-0 h-0.5 bg-gradient-to-r from-blue-300 to-blue-400 -translate-y-1/2 rounded-full transition-all duration-500 shadow-[0_0_8px_rgba(59,130,246,0.8)]"
+                  className="absolute top-5 left-0 h-0.5 bg-gradient-to-r from-orange-500 to-orange-400 rounded-full transition-all duration-500 shadow-[0_0_8px_rgba(249,115,22,0.6)]"
                   style={{ width: `${((currentStep - 1) / (steps.length - 1)) * 100}%` }}
                 ></div>
                 <div className="relative flex justify-between">
@@ -1142,7 +1166,7 @@ export default function RepairDetailPage() {
                       key={idx}
                       onClick={() => {
                         if (step.status === "✅ Terminé") {
-                          setShowOkKoModal(true); // choix résultat OK / KO
+                          setShowOkKoModal(true);
                         } else {
                           updateStatus(step.status);
                         }
@@ -1152,22 +1176,22 @@ export default function RepairDetailPage() {
                       <div
                         className={`w-10 h-10 rounded-full flex items-center justify-center text-base transition-all duration-300 ${
                           currentStep >= step.step
-                            ? `${
-                                step.status === "✅ Terminé"
-                                  ? "bg-green-500 shadow-[0_0_15px_rgba(34,197,94,0.6)]"
-                                  : step.status === "📦 Rendu"
-                                    ? "bg-gray-500 shadow-[0_0_15px_rgba(107,114,128,0.6)]"
-                                    : step.status === "🔧 En réparation"
-                                      ? "bg-orange-500 shadow-[0_0_15px_rgba(249,115,22,0.6)]"
-                                      : "bg-blue-500 shadow-[0_0_15px_rgba(59,130,246,0.6)]"
-                              } text-white`
-                            : "bg-white/20 text-white/50"
+                            ? step.status === "✅ Terminé"
+                              ? "bg-green-500 shadow-[0_0_14px_rgba(34,197,94,0.5)] text-white"
+                              : step.status === "📦 Rendu"
+                                ? "bg-gray-500 shadow-[0_0_14px_rgba(107,114,128,0.5)] text-white"
+                                : step.status === "🔧 En réparation"
+                                  ? "bg-orange-500 shadow-[0_0_14px_rgba(249,115,22,0.5)] text-white"
+                                  : "bg-blue-500 shadow-[0_0_14px_rgba(59,130,246,0.5)] text-white"
+                            : "bg-white/8 text-gray-600"
                         }`}
                       >
                         {step.icon}
                       </div>
                       <span
-                        className={`text-xs mt-2 font-medium ${currentStep >= step.step ? "text-white" : "text-white/50"}`}
+                        className={`text-xs mt-2 font-medium ${
+                          currentStep >= step.step ? "text-gray-300" : "text-gray-600"
+                        }`}
                       >
                         {step.label}
                       </span>
@@ -1179,116 +1203,41 @@ export default function RepairDetailPage() {
           </div>
         </div>
 
-        {/* RÉPONSE CLIENT */}
+        {/* CLIENT RESPONSE */}
         {repair?.client_response && (
-          <div className="mb-6 bg-amber-50 border-l-4 border-amber-500 rounded-lg p-4">
-            <div className="flex items-center gap-2 mb-1">
-              <span className="text-amber-600 font-semibold text-sm">📝 Réponse client</span>
+          <div className="mb-5 bg-amber-500/8 border border-amber-500/20 rounded-2xl p-4">
+            <div className="flex items-center gap-2 mb-2">
+              <span className="text-amber-400 font-semibold text-sm">📝 Réponse client</span>
               {repair.client_response_type === "accepte" && (
-                <span className="text-xs bg-green-100 text-green-700 px-2 py-0.5 rounded">
+                <span className="text-xs bg-green-500/15 text-green-400 border border-green-500/25 px-2 py-0.5 rounded-full">
                   Accepté
                 </span>
               )}
               {repair.client_response_type === "refuse" && (
-                <span className="text-xs bg-red-100 text-red-700 px-2 py-0.5 rounded">Refusé</span>
+                <span className="text-xs bg-red-500/15 text-red-400 border border-red-500/25 px-2 py-0.5 rounded-full">
+                  Refusé
+                </span>
               )}
             </div>
-            <p className="text-gray-700 text-sm italic">"{repair.client_response}"</p>
-            <p className="text-xs text-gray-400 mt-1">
+            <p className="text-gray-300 text-sm italic">"{repair.client_response}"</p>
+            <p className="text-xs text-gray-600 mt-1">
               Le {new Date(repair.updated_at).toLocaleString("fr-FR")}
             </p>
           </div>
         )}
 
-        {/* BOUTON HISTORIQUE */}
-        <div className="mb-5 flex justify-end">
-          <button
-            onClick={() => setShowHistorique(!showHistorique)}
-            className="flex items-center gap-2 px-4 py-2 bg-gray-800 text-white rounded-lg hover:bg-gray-900 transition"
-          >
-            <span className="text-lg">📜</span>
-            <span>{showHistorique ? "Masquer" : "Afficher"} l'historique</span>
-            <span className="text-xs bg-gray-700 px-2 py-0.5 rounded-full">
-              {historique.length}
-            </span>
-          </button>
-        </div>
-
-        {/* HISTORIQUE - AFFICHAGE CORRIGÉ AVEC LE NOM DU TECHNICIEN */}
-        {showHistorique && (
-          <div className="mb-6 bg-white rounded-lg shadow-lg border border-gray-200 overflow-hidden">
-            <div className="bg-gradient-to-r from-gray-800 to-gray-900 px-4 py-3">
-              <h3 className="text-white font-bold flex items-center gap-2">
-                <span>📜</span> Historique complet
-              </h3>
-            </div>
-            <div className="p-4 max-h-96 overflow-y-auto">
-              {historique.length === 0 ? (
-                <div className="text-center py-8 text-gray-400">
-                  <p className="text-2xl mb-2">📭</p>
-                  <p>Aucun historique enregistré pour cet appareil</p>
-                </div>
-              ) : (
-                <div className="space-y-3">
-                  {historique.map((entry) => (
-                    <div
-                      key={entry.id}
-                      className={`rounded-lg p-3 border-l-4 ${
-                        entry.action === "changement_statut"
-                          ? "border-purple-500 bg-purple-50"
-                          : entry.action === "changement_technicien"
-                            ? "border-orange-500 bg-orange-50"
-                            : entry.action === "modification"
-                              ? "border-blue-500 bg-blue-50"
-                              : "border-gray-400 bg-gray-50"
-                      }`}
-                    >
-                      <div className="flex justify-between items-start flex-wrap gap-2">
-                        <p className="text-sm text-gray-700 flex-1">{entry.description}</p>
-                        <span className="text-xs text-gray-500 whitespace-nowrap">
-                          ⏱️ {new Date(entry.created_at).toLocaleString("fr-FR")}
-                        </span>
-                      </div>
-                      <div className="flex justify-between items-center mt-2">
-                        <span className="text-xs text-gray-400">
-                          👤 {entry.user_name || "Inconnu"}
-                        </span>
-                        <span
-                          className={`text-xs px-2 py-0.5 rounded-full ${entry.user_type === "client" ? "bg-green-100 text-green-700" : "bg-blue-100 text-blue-700"}`}
-                        >
-                          {entry.user_type === "client"
-                            ? "👤 Client"
-                            : `🔧 ${entry.user_name || "Technicien"}`}
-                        </span>
-                      </div>
-                      {entry.old_value && entry.new_value && (
-                        <div className="mt-2 text-xs text-gray-500 bg-white/50 rounded p-1">
-                          🔄 {entry.old_value} → {entry.new_value}
-                        </div>
-                      )}
-                    </div>
-                  ))}
-                </div>
-              )}
-            </div>
-            <div className="bg-gray-50 px-4 py-2 border-t text-xs text-gray-500">
-              📊 Total: {historique.length} action(s)
-            </div>
-          </div>
-        )}
-
-        {/* BANDEAU VERROUILLAGE (fiche Terminée / Rendue / KO) */}
+        {/* LOCK/UNLOCK BANNER */}
         {["✅ Terminé", "📦 Rendu", "❌ KO"].includes(repair?.status) && (
           locked ? (
-            <div className="mb-4 bg-amber-50 border border-amber-200 rounded-xl px-4 py-3 flex flex-col sm:flex-row sm:items-center gap-3">
-              <div className="flex-1 text-sm text-amber-800">
+            <div className="mb-4 bg-amber-500/8 border border-amber-500/20 rounded-2xl px-4 py-3 flex flex-col sm:flex-row sm:items-center gap-3">
+              <div className="flex-1 text-sm text-amber-400">
                 🔒 <strong>Fiche {repair.status}</strong> — en lecture seule. Pour modifier :
               </div>
               <div className="flex gap-2">
                 {isGerant && (
                   <button
                     onClick={() => setUnlocked(true)}
-                    className="px-3 py-1.5 bg-white border border-amber-300 text-amber-700 rounded-lg text-xs font-semibold hover:bg-amber-100 transition"
+                    className="px-3 py-1.5 bg-white/5 border border-amber-500/30 text-amber-400 rounded-xl text-xs font-semibold hover:bg-amber-500/10 transition"
                     title="Petite correction sans changer le statut (gérant)"
                   >
                     ✏️ Corriger
@@ -1301,7 +1250,7 @@ export default function RepairDetailPage() {
                       setUnlocked(true);
                     }
                   }}
-                  className="px-3 py-1.5 bg-orange-500 text-white rounded-lg text-xs font-semibold hover:bg-orange-600 transition"
+                  className="px-3 py-1.5 bg-orange-500 text-white rounded-xl text-xs font-semibold hover:bg-orange-400 transition"
                   title="L'appareil revient (retour client / problème) → rouvre la réparation"
                 >
                   🔄 SAV / Retour
@@ -1309,22 +1258,103 @@ export default function RepairDetailPage() {
               </div>
             </div>
           ) : (
-            <div className="mb-4 bg-blue-50 border border-blue-200 rounded-xl px-4 py-2.5 text-sm text-blue-700 flex items-center gap-2">
+            <div className="mb-4 bg-blue-500/8 border border-blue-500/20 rounded-2xl px-4 py-2.5 text-sm text-blue-400 flex items-center gap-2">
               ✏️ <strong>Mode édition</strong> — les modifications sont enregistrées automatiquement.
             </div>
           )
         )}
 
-        {/* GRILLE 2 COLONNES */}
-        <div className="grid lg:grid-cols-2 gap-6">
-          {/* COLONNE GAUCHE */}
-          <div className="space-y-5">
-            {/* DIAGNOSTIC TECHNICIEN */}
-            <div className="bg-white rounded-lg shadow-sm border overflow-hidden">
-              <div className="bg-gray-50 px-4 py-2 border-b">
-                <h2 className="font-semibold text-gray-700 text-sm">🔍 Diagnostic technicien</h2>
+        {/* HISTORIQUE TOGGLE */}
+        <div className="mb-4 flex justify-end">
+          <button
+            onClick={() => setShowHistorique(!showHistorique)}
+            className="flex items-center gap-2 px-4 py-2 bg-white/5 hover:bg-white/10 border border-white/8 text-gray-300 rounded-xl transition text-sm"
+          >
+            <span>📜</span>
+            <span>{showHistorique ? "Masquer" : "Afficher"} l'historique</span>
+            <span className="text-xs bg-white/8 px-2 py-0.5 rounded-full text-gray-400">
+              {historique.length}
+            </span>
+          </button>
+        </div>
+
+        {/* HISTORIQUE LIST */}
+        {showHistorique && (
+          <div className="mb-6 bg-[#16161d] border border-white/8 rounded-2xl overflow-hidden">
+            <div className="px-5 py-3 border-b border-white/8">
+              <h3 className="text-white font-bold flex items-center gap-2 text-sm">
+                <span>📜</span> Historique complet
+              </h3>
+            </div>
+            <div className="p-4 max-h-96 overflow-y-auto">
+              {historique.length === 0 ? (
+                <div className="text-center py-8 text-gray-600">
+                  <p className="text-2xl mb-2">📭</p>
+                  <p className="text-sm">Aucun historique enregistré pour cet appareil</p>
+                </div>
+              ) : (
+                <div className="space-y-2">
+                  {historique.map((entry) => (
+                    <div
+                      key={entry.id}
+                      className={`rounded-xl p-3 border-l-2 bg-black/20 ${
+                        entry.action === "changement_statut"
+                          ? "border-purple-500/60"
+                          : entry.action === "changement_technicien"
+                            ? "border-orange-500/60"
+                            : entry.action === "modification"
+                              ? "border-blue-500/60"
+                              : "border-gray-600/60"
+                      }`}
+                    >
+                      <div className="flex justify-between items-start flex-wrap gap-2">
+                        <p className="text-sm text-gray-300 flex-1">{entry.description}</p>
+                        <span className="text-xs text-gray-600 whitespace-nowrap">
+                          ⏱️ {new Date(entry.created_at).toLocaleString("fr-FR")}
+                        </span>
+                      </div>
+                      <div className="flex justify-between items-center mt-1.5">
+                        <span className="text-xs text-gray-600">
+                          👤 {entry.user_name || "Inconnu"}
+                        </span>
+                        <span
+                          className={`text-xs px-2 py-0.5 rounded-full ${
+                            entry.user_type === "client"
+                              ? "bg-green-500/15 text-green-400"
+                              : "bg-blue-500/15 text-blue-400"
+                          }`}
+                        >
+                          {entry.user_type === "client"
+                            ? "👤 Client"
+                            : `🔧 ${entry.user_name || "Technicien"}`}
+                        </span>
+                      </div>
+                      {entry.old_value && entry.new_value && (
+                        <div className="mt-1.5 text-xs text-gray-600 bg-white/3 rounded-lg px-2 py-1">
+                          🔄 {entry.old_value} → {entry.new_value}
+                        </div>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+            <div className="px-5 py-2 border-t border-white/8 text-xs text-gray-600">
+              📊 Total: {historique.length} action(s)
+            </div>
+          </div>
+        )}
+
+        {/* MAIN 2-COL GRID */}
+        <div className="grid lg:grid-cols-2 gap-5">
+          {/* LEFT COLUMN */}
+          <div className="space-y-4">
+            {/* DIAGNOSTIC */}
+            <div className="bg-[#16161d] border border-white/8 rounded-2xl overflow-hidden">
+              <div className="px-4 py-3 border-b border-white/8">
+                <p className="text-[10px] font-bold text-gray-500 uppercase tracking-widest">🔍 Diagnostic technicien</p>
               </div>
-              <div className="p-3">
+              <div className="p-4">
                 <SmartTextarea
                   value={diagnosticTechnicien}
                   onChange={(e) => setDiagnosticTechnicien(e.target.value)}
@@ -1332,54 +1362,54 @@ export default function RepairDetailPage() {
 🔍 Tests effectués:
 🔧 Actions à prévoir:
 💰 Devis estimé:"
-                  className="w-full border-0 focus:ring-0 text-gray-700 resize-none text-sm font-mono"
+                  className="w-full bg-transparent text-gray-300 resize-none text-sm font-mono outline-none placeholder-gray-700"
                   rows={6}
                   type="diagnostic"
                   repairData={{ device: repair?.device, issue: repair?.issue }}
                   disabled={locked}
                 />
-                <p className="text-xs text-gray-400 mt-1">🔒 Ce texte est INTERNE</p>
+                <p className="text-xs text-gray-700 mt-2">🔒 Ce texte est INTERNE</p>
               </div>
             </div>
 
-            {/* TRAVAUX EFFECTUÉS */}
-            <div className="bg-white rounded-lg shadow-sm border overflow-hidden">
-              <div className="bg-gray-50 px-4 py-2 border-b flex justify-between items-center">
-                <h2 className="font-semibold text-gray-700 text-sm">🔧 Travaux effectués</h2>
+            {/* TRAVAUX */}
+            <div className="bg-[#16161d] border border-white/8 rounded-2xl overflow-hidden">
+              <div className="px-4 py-3 border-b border-white/8 flex justify-between items-center">
+                <p className="text-[10px] font-bold text-gray-500 uppercase tracking-widest">🔧 Travaux effectués</p>
                 <button
                   onClick={() => setShowPartModal(true)}
-                  className="text-blue-600 text-xs hover:text-blue-700 flex items-center gap-1"
+                  className="text-orange-400 hover:text-orange-300 text-xs flex items-center gap-1 transition"
                 >
-                  <span className="text-lg">+</span> Pièce
+                  <span className="text-base font-bold">+</span> Pièce
                 </button>
               </div>
-              <div className="p-3">
+              <div className="p-4">
                 <SmartTextarea
                   value={repairDescription}
                   onChange={(e) => setRepairDescription(e.target.value)}
                   placeholder="✅ Détail des travaux effectués..."
-                  className="w-full border-0 focus:ring-0 text-gray-700 resize-none text-sm"
+                  className="w-full bg-transparent text-gray-300 resize-none text-sm outline-none placeholder-gray-700"
                   rows={5}
                   type="work"
                   disabled={locked}
                 />
                 {parts.length > 0 && (
-                  <div className="mt-3 bg-gray-50 rounded p-2">
-                    <h3 className="text-xs font-semibold text-gray-600 mb-1">
-                      🔩 Pièces utilisées
-                    </h3>
+                  <div className="mt-3 bg-black/30 border border-white/5 rounded-xl p-3">
+                    <p className="text-[10px] font-bold text-gray-500 uppercase tracking-widest mb-2">🔩 Pièces utilisées</p>
                     {parts.map((part) => (
-                      <div key={part.id} className="flex justify-between text-xs py-1">
-                        <span>
-                          {part.name} x{part.quantity}
+                      <div key={part.id} className="flex justify-between items-center text-sm py-1.5 border-b border-white/5 last:border-0">
+                        <span className="text-gray-300">
+                          {part.name} <span className="text-gray-600">x{part.quantity}</span>
                         </span>
-                        <span className="font-medium">{part.price * part.quantity}€</span>
-                        <button
-                          onClick={() => removePart(part.id)}
-                          className="text-red-500 hover:text-red-700"
-                        >
-                          ✕
-                        </button>
+                        <div className="flex items-center gap-3">
+                          <span className="text-orange-400 font-medium">{part.price * part.quantity}€</span>
+                          <button
+                            onClick={() => removePart(part.id)}
+                            className="text-red-500 hover:text-red-400 text-xs transition"
+                          >
+                            ✕
+                          </button>
+                        </div>
                       </div>
                     ))}
                   </div>
@@ -1388,12 +1418,12 @@ export default function RepairDetailPage() {
             </div>
 
             {/* RISQUES */}
-            <div className="bg-white rounded-lg shadow-sm border overflow-hidden">
-              <div className="bg-gray-50 px-4 py-2 border-b">
-                <h2 className="font-semibold text-gray-700 text-sm">⚠️ Risques & Préconisations</h2>
+            <div className="bg-[#16161d] border border-white/8 rounded-2xl overflow-hidden">
+              <div className="px-4 py-3 border-b border-white/8">
+                <p className="text-[10px] font-bold text-gray-500 uppercase tracking-widest">⚠️ Risques & Préconisations</p>
               </div>
-              <div className="p-3">
-                <div className="flex flex-wrap gap-1.5 mb-2">
+              <div className="p-4">
+                <div className="flex flex-wrap gap-1.5 mb-3">
                   {[
                     "⚠️ Risque qu'il ne se rallume plus",
                     "⚠️ Données non garanties",
@@ -1406,7 +1436,7 @@ export default function RepairDetailPage() {
                       key={chip}
                       type="button"
                       onClick={() => setRisks((prev) => prev ? prev + "\n" + chip : chip)}
-                      className="text-xs bg-orange-50 border border-orange-200 text-orange-700 px-2 py-1 rounded-full hover:bg-orange-100 transition"
+                      className="text-xs bg-orange-500/8 border border-orange-500/20 text-orange-400 px-2.5 py-1 rounded-full hover:bg-orange-500/15 transition"
                     >
                       {chip}
                     </button>
@@ -1416,7 +1446,7 @@ export default function RepairDetailPage() {
                   rows={3}
                   value={risks}
                   onChange={(e) => setRisks(e.target.value)}
-                  className="w-full border-0 focus:ring-0 text-gray-700 resize-none text-sm"
+                  className="w-full bg-transparent text-gray-300 resize-none text-sm outline-none placeholder-gray-700"
                   placeholder="Risques potentiels..."
                   disabled={locked}
                 />
@@ -1424,18 +1454,16 @@ export default function RepairDetailPage() {
             </div>
 
             {/* TESTS */}
-            <div className="bg-white rounded-lg shadow-sm border overflow-hidden">
-              <div className="bg-gray-50 px-4 py-2 border-b">
-                <h2 className="font-semibold text-gray-700 text-sm">
-                  ✅ Tests & contrôles qualité
-                </h2>
+            <div className="bg-[#16161d] border border-white/8 rounded-2xl overflow-hidden">
+              <div className="px-4 py-3 border-b border-white/8">
+                <p className="text-[10px] font-bold text-gray-500 uppercase tracking-widest">✅ Tests & contrôles qualité</p>
               </div>
-              <div className="p-3">
+              <div className="p-4">
                 <textarea
                   rows={3}
                   value={testsPassed}
                   onChange={(e) => setTestsPassed(e.target.value)}
-                  className="w-full border-0 focus:ring-0 text-gray-700 resize-none text-sm"
+                  className="w-full bg-transparent text-gray-300 resize-none text-sm outline-none placeholder-gray-700"
                   placeholder="Tests effectués..."
                   disabled={locked}
                 />
@@ -1443,40 +1471,40 @@ export default function RepairDetailPage() {
             </div>
           </div>
 
-          {/* COLONNE DROITE */}
-          <div className="space-y-5">
+          {/* RIGHT COLUMN */}
+          <div className="space-y-4">
             {/* PRIX */}
-            <div className="bg-white rounded-lg shadow-sm border overflow-hidden">
-              <div className="bg-gray-50 px-4 py-2 border-b">
-                <h2 className="font-semibold text-gray-700 text-sm">💰 À payer</h2>
+            <div className="bg-[#16161d] border border-white/8 rounded-2xl overflow-hidden">
+              <div className="px-4 py-3 border-b border-white/8">
+                <p className="text-[10px] font-bold text-gray-500 uppercase tracking-widest">💰 À payer</p>
               </div>
-              <div className="p-3">
+              <div className="p-4 space-y-4">
                 <div className="flex items-center justify-between">
-                  <span className="text-sm text-gray-600">Montant réparation :</span>
+                  <span className="text-sm text-gray-400">Montant réparation :</span>
                   <input
                     type="number"
                     value={finalPrice}
                     onChange={(e) => setFinalPrice(e.target.value)}
-                    className="w-36 text-right text-lg font-bold border rounded-lg p-2 text-center disabled:bg-gray-100 disabled:text-gray-400"
+                    className="w-36 bg-black/30 border border-white/10 rounded-xl px-3 py-2 text-white text-right text-lg font-bold outline-none focus:border-orange-500/40 disabled:opacity-40 text-center"
                     step="1"
                     disabled={locked}
                   />
                 </div>
                 {repair?.estimated_price && repair?.estimated_price > 0 && !repair?.final_price && (
-                  <p className="text-xs text-gray-400 mt-2 text-center">
-                    Prix estimé: {repair.estimated_price}€
+                  <p className="text-xs text-gray-600 text-center">
+                    Prix estimé : {repair.estimated_price}€
                   </p>
                 )}
-                <div className="flex items-center justify-between mt-3 pt-3 border-t">
+                <div className="flex items-center justify-between pt-3 border-t border-white/8">
                   <div>
-                    <span className="text-sm text-gray-600">Forfait diagnostic :</span>
-                    <p className="text-xs text-gray-400">Facturé si client refuse la réparation</p>
+                    <span className="text-sm text-gray-400">Forfait diagnostic :</span>
+                    <p className="text-xs text-gray-600">Facturé si client refuse la réparation</p>
                   </div>
                   <input
                     type="number"
                     value={diagnosticPrice}
                     onChange={(e) => setDiagnosticPrice(e.target.value)}
-                    className="w-28 text-right text-base font-semibold border rounded-lg p-2 text-center disabled:bg-gray-100 disabled:text-gray-400"
+                    className="w-28 bg-black/30 border border-white/10 rounded-xl px-3 py-2 text-white text-right text-base font-semibold outline-none focus:border-orange-500/40 disabled:opacity-40 text-center"
                     step="1"
                     placeholder="0"
                     disabled={locked}
@@ -1485,42 +1513,12 @@ export default function RepairDetailPage() {
               </div>
             </div>
 
-            {/* STATUT ACTUEL */}
-            <div className="bg-white rounded-lg shadow-sm border overflow-hidden">
-              <div className="bg-gray-50 px-4 py-2 border-b">
-                <h2 className="font-semibold text-gray-700 text-sm">📊 Statut actuel</h2>
-              </div>
-              <div className="p-3">
-                <div
-                  className={`px-4 py-3 rounded-lg text-white font-semibold text-center shadow-md ${
-                    repair?.status === "✅ Terminé"
-                      ? "bg-green-500"
-                      : repair?.status === "🔧 En réparation"
-                        ? "bg-orange-500"
-                        : repair?.status === "🔬 Diagnostic"
-                          ? "bg-blue-500"
-                          : repair?.status === "📦 Rendu"
-                            ? "bg-gray-600"
-                            : repair?.status === "📥 Réceptionné"
-                              ? "bg-amber-500"
-                              : repair?.status === "🚫 Refus client"
-                                ? "bg-pink-500"
-                                : repair?.status === "❌ KO"
-                                  ? "bg-red-600"
-                                  : "bg-gray-500"
-                  }`}
-                >
-                  {repair?.status || "📥 Réceptionné"}
-                </div>
-              </div>
-            </div>
-
             {/* PHOTOS */}
-            <div className="bg-white rounded-lg shadow-sm border overflow-hidden">
-              <div className="bg-gray-50 px-4 py-2 border-b flex justify-between items-center">
-                <h2 className="font-semibold text-gray-700 text-sm">📸 Photos</h2>
-                <label className="cursor-pointer text-blue-600 text-xs hover:text-blue-700 flex items-center gap-1">
-                  <span className="text-lg">+</span> Ajouter
+            <div className="bg-[#16161d] border border-white/8 rounded-2xl overflow-hidden">
+              <div className="px-4 py-3 border-b border-white/8 flex justify-between items-center">
+                <p className="text-[10px] font-bold text-gray-500 uppercase tracking-widest">📸 Photos</p>
+                <label className="cursor-pointer text-orange-400 hover:text-orange-300 text-xs flex items-center gap-1 transition">
+                  <span className="text-base font-bold">+</span> Ajouter
                   <input
                     type="file"
                     accept="image/*"
@@ -1530,9 +1528,9 @@ export default function RepairDetailPage() {
                   />
                 </label>
               </div>
-              <div className="p-3">
+              <div className="p-4">
                 {photos.length === 0 ? (
-                  <div className="text-center py-6 text-gray-400 border-2 border-dashed rounded-lg text-sm">
+                  <div className="text-center py-8 text-gray-700 border-2 border-dashed border-white/8 rounded-xl text-sm">
                     📭 Aucune photo
                   </div>
                 ) : (
@@ -1540,7 +1538,7 @@ export default function RepairDetailPage() {
                     {photos.map((photo, index) => (
                       <div
                         key={index}
-                        className="relative aspect-square bg-gray-100 rounded-lg overflow-hidden group"
+                        className="relative aspect-square bg-black/30 border border-white/5 rounded-xl overflow-hidden group"
                       >
                         <img
                           src={photo}
@@ -1553,7 +1551,7 @@ export default function RepairDetailPage() {
                         />
                         <button
                           onClick={() => deletePhoto(photo)}
-                          className="absolute top-1 right-1 bg-red-600 text-white rounded-full w-5 h-5 flex items-center justify-center text-xs opacity-0 group-hover:opacity-100 transition"
+                          className="absolute top-1 right-1 bg-red-600/80 text-white rounded-full w-5 h-5 flex items-center justify-center text-xs opacity-0 group-hover:opacity-100 transition"
                         >
                           ✕
                         </button>

@@ -3,7 +3,8 @@
 import { useEffect, useState, useMemo } from "react";
 import { supabase, getCurrentUser } from "../../lib/supabase";
 import { useRouter } from "next/navigation";
-import { Wrench, Search, SlidersHorizontal, RotateCcw, Plus, AlertTriangle, UserCheck, Pencil, Bell } from "lucide-react";
+import { Wrench, Search, SlidersHorizontal, RotateCcw, Plus, AlertTriangle, UserCheck, Pencil } from "lucide-react";
+import ClientResponsesBell from "../../components/ClientResponsesBell";
 import Layout from "../../components/Layout";
 import { addHistoriqueAction, getCurrentTechnician } from "../../lib/historique";
 
@@ -98,39 +99,12 @@ export default function RepairsPage() {
   const [changingRepair, setChangingRepair] = useState(null);
   const [selectedNewTech, setSelectedNewTech] = useState("");
   const [currentTechnician, setCurrentTechnician] = useState(null);
+  const [userId, setUserId] = useState<string | null>(null);
 
   // État pour le modal d'avertissement
   const [showWarningModal, setShowWarningModal] = useState(false);
   const [pendingRepair, setPendingRepair] = useState(null);
 
-  // Notifications : réponses clients
-  const [showNotifs, setShowNotifs] = useState(false);
-  const [seenResponses, setSeenResponses] = useState<Set<string>>(new Set());
-
-  useEffect(() => {
-    try {
-      const saved = localStorage.getItem("seen_client_responses");
-      if (saved) setSeenResponses(new Set(JSON.parse(saved)));
-    } catch {
-      /* ignore */
-    }
-  }, []);
-
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const respSig = (r: any) => `${r.id}:${r.client_response}`;
-  const responseRepairs = repairs.filter((r) => r.client_response && String(r.client_response).trim());
-  const unseenResponses = responseRepairs.filter((r) => !seenResponses.has(respSig(r)));
-
-  const markResponsesSeen = () => {
-    const next = new Set(seenResponses);
-    responseRepairs.forEach((r) => next.add(respSig(r)));
-    setSeenResponses(next);
-    try {
-      localStorage.setItem("seen_client_responses", JSON.stringify([...next]));
-    } catch {
-      /* ignore */
-    }
-  };
 
   useEffect(() => {
     loadCurrentTechnician();
@@ -176,6 +150,7 @@ export default function RepairsPage() {
   const loadData = async () => {
     const user = await getCurrentUser();
     if (!user) return router.push("/login");
+    setUserId(user.id);
 
     const { data: repairsData } = await supabase
       .from("repairs")
@@ -383,52 +358,7 @@ export default function RepairsPage() {
             </p>
           </div>
           <div className="flex items-center gap-2">
-            {/* Cloche réponses clients */}
-            <div className="relative">
-              <button
-                onClick={() => { setShowNotifs((o) => !o); if (!showNotifs) markResponsesSeen(); }}
-                className="relative w-10 h-10 flex items-center justify-center bg-[#16161d] border border-white/8 rounded-xl text-gray-300 hover:text-white hover:border-white/20 transition-all"
-                title="Réponses clients"
-              >
-                <Bell size={18} />
-                {unseenResponses.length > 0 && (
-                  <span className="absolute -top-1 -right-1 min-w-5 h-5 px-1 bg-red-500 text-white text-[10px] font-bold rounded-full flex items-center justify-center border-2 border-[#0f0f13]">
-                    {unseenResponses.length}
-                  </span>
-                )}
-              </button>
-              {showNotifs && (
-                <>
-                  <div className="fixed inset-0 z-40" onClick={() => setShowNotifs(false)} />
-                  <div className="absolute right-0 mt-2 w-80 max-h-96 overflow-y-auto bg-[#16161d] border border-white/10 rounded-2xl shadow-2xl z-50">
-                    <div className="px-4 py-3 border-b border-white/5 flex items-center justify-between">
-                      <span className="text-sm font-bold text-white">🔔 Réponses clients</span>
-                      <span className="text-xs text-gray-500">{responseRepairs.length}</span>
-                    </div>
-                    {responseRepairs.length === 0 ? (
-                      <div className="px-4 py-8 text-center text-sm text-gray-600">Aucune réponse client</div>
-                    ) : (
-                      <div className="divide-y divide-white/5">
-                        {responseRepairs.map((r) => (
-                          <button
-                            key={r.id}
-                            onClick={() => { setShowNotifs(false); router.push(`/repairs/${r.id}`); }}
-                            className="w-full text-left px-4 py-3 hover:bg-white/5 transition-colors"
-                          >
-                            <div className="flex items-center justify-between gap-2">
-                              <span className="text-sm font-semibold text-white truncate">{r.clients?.name || r.client?.name || "Client"}</span>
-                              <span className="font-mono text-[10px] text-indigo-400 shrink-0">MBX-{r.id}</span>
-                            </div>
-                            <div className="text-xs text-gray-500 truncate">{r.device}</div>
-                            <div className="text-xs text-amber-300 mt-1 line-clamp-2">💬 {r.client_response}</div>
-                          </button>
-                        ))}
-                      </div>
-                    )}
-                  </div>
-                </>
-              )}
-            </div>
+            {userId && <ClientResponsesBell userId={userId} />}
             <button
               onClick={() => router.push("/repairs/new")}
               className="flex items-center gap-2 px-4 py-2.5 bg-orange-500 hover:bg-orange-400 text-white rounded-xl text-sm font-bold transition-all active:scale-95"

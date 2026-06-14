@@ -55,7 +55,7 @@ export default function CartValidationModal({
   const [repairCodeInput, setRepairCodeInput] = useState("");
   const [payments, setPayments] = useState<{ method: string; amount: string }[]>([{ method: "Carte", amount: "" }]);
   const [paymentError, setPaymentError] = useState("");
-  const [tvaRate, setTvaRate] = useState(0);
+  const [tvaRate, setTvaRate] = useState(20);
   const [isProcessingSale, setIsProcessingSale] = useState(false);
   const [showEmailPrompt, setShowEmailPrompt] = useState(false);
   const [emailInput, setEmailInput] = useState("");
@@ -143,6 +143,10 @@ export default function CartValidationModal({
       </div>
       <div class="bottom-wrap">
         <div class="totals">
+          ${tva > 0 ? `
+          <div class="t-row"><span>Total HT</span><span>${(grandTotalLocal / (1 + tva / 100)).toFixed(2)} €</span></div>
+          <div class="t-row"><span>TVA ${tva}%</span><span>${(grandTotalLocal - grandTotalLocal / (1 + tva / 100)).toFixed(2)} €</span></div>
+          ` : ""}
           <div class="t-row ttc"><span>Total TTC</span><span>${grandTotalLocal.toFixed(2)} €</span></div>
           <div class="t-row paid"><span>✓ Réglé · ${payLabel[payMethod] || payMethod}</span><span>${grandTotalLocal.toFixed(2)} €</span></div>
         </div>
@@ -159,6 +163,12 @@ export default function CartValidationModal({
     if (!recipient) { setShowEmailPrompt(true); return; }
     setShowEmailPrompt(false);
     setEmailInput("");
+
+    // Sauvegarder l'email saisi sur la fiche client
+    if (emailOverride) {
+      const clientId = selectedClient?.id || linkedRepair?.clients?.id;
+      if (clientId) await supabase.from("clients").update({ email: emailOverride }).eq("id", clientId);
+    }
 
     if (cartItems.length === 0 && !linkedRepair) { alert("Panier vide"); return; }
     const clientRequired = selectedClient || linkedRepair?.clients;
@@ -213,12 +223,20 @@ export default function CartValidationModal({
       const invoiceRef = result.invoiceId || `FACT-${Date.now().toString().slice(-6)}`;
 
       const repairsForEmail = repairSnapshot ? [{ id: repairSnapshot.id, device: repairSnapshot.device, issue: repairSnapshot.issue || "", priceHt: repairHt, tvaRate: currentTva, totalTtc: repairTtc }] : [];
-      const productRows = cartSnapshot.map((i) => ({ id: i.product.id, device: i.product.name, issue: `× ${i.quantity}`, priceHt: Number(i.product.sale_price) * i.quantity, tvaRate: 0, totalTtc: Number(i.product.sale_price) * i.quantity }));
+      const productRows = cartSnapshot.map((i) => {
+        const ttc = Number(i.product.sale_price) * i.quantity;
+        const ht = currentTva > 0 ? ttc / (1 + currentTva / 100) : ttc;
+        return { id: i.product.id, device: i.product.name, issue: `× ${i.quantity}`, priceHt: ht, tvaRate: currentTva, totalTtc: ttc };
+      });
+      const productsHt = cartSnapshot.reduce((s, i) => {
+        const ttc = Number(i.product.sale_price) * i.quantity;
+        return s + (currentTva > 0 ? ttc / (1 + currentTva / 100) : ttc);
+      }, 0);
 
       await fetch("/api/send-invoice-email", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ to: recipient, clientName: clientForInvoice.name, repairs: [...repairsForEmail, ...productRows], totalHt: invoiceTotal, totalTva: repairTtc - repairHt, totalTtc: invoiceTotal, totalRemaining: 0, invoiceRef, companyName: cp.name, companyAddress: cp.address, companyPhone: cp.phone, companyEmail: cp.email, trackingCode: linkedRepair?.clients?.client_code || "" }),
+        body: JSON.stringify({ to: recipient, clientName: clientForInvoice.name, repairs: [...repairsForEmail, ...productRows], totalHt: productsHt + repairHt, totalTva: invoiceTotal - (productsHt + repairHt), totalTtc: invoiceTotal, totalRemaining: 0, invoiceRef, companyName: cp.name, companyAddress: cp.address, companyPhone: cp.phone, companyEmail: cp.email, trackingCode: linkedRepair?.clients?.client_code || "" }),
       });
 
       alert(`✅ Facture envoyée à ${recipient}`);
@@ -310,6 +328,22 @@ export default function CartValidationModal({
         }).eq("id", repairSnapshot.id);
       }
 
+      // Mettre à jour les réparations extras (MBX-xxx dans le panier)
+      for (const item of cartSnapshot) {
+        const match = String(item.product.barcode || "").match(/^MBX-(\d+)$/i);
+        if (match) {
+          const repairId = Number(match[1]);
+          const priceHt = Number(item.product.sale_price);
+          await supabase.from("repairs").update({
+            paid_amount: priceHt * (1 + currentTva / 100),
+            payment_status: "payé",
+            payment_method: currentPayMethod,
+            payment_date: new Date().toISOString(),
+            status: "📦 Rendu",
+          }).eq("id", repairId);
+        }
+      }
+
       printCombinedInvoice(result.invoiceId || "", clientForInvoice, cartSnapshot, repairSnapshot, currentTva, currentPayMethod);
       onSuccess?.();
       onClose();
@@ -321,7 +355,8 @@ export default function CartValidationModal({
     }
   };
 
-  const clientEmail = selectedClient?.email || linkedRepair?.clients?.email || "";
+  const rawEmail = selectedClient?.email || linkedRepair?.clients?.email || "";
+  const clientEmail = rawEmail && rawEmail !== "NC" && rawEmail.includes("@") ? rawEmail : "";
 
   return (
     <>
@@ -509,19 +544,17 @@ export default function CartValidationModal({
 
             {/* Récap total + TVA */}
             <div className="bg-white/5 border border-white/8 rounded-xl p-4 space-y-2">
-              {linkedRepair && (
-                <div className="flex items-center justify-between gap-3 pb-2 border-b border-white/8">
+              <div className="flex items-center justify-between gap-3 pb-2 border-b border-white/8">
                   <div className="flex items-center gap-2 flex-wrap min-w-0">
-                    <span className="text-sm text-gray-400 shrink-0">Réparations ({extraRepairItems.length + 1})</span>
+                    <span className="text-sm text-gray-400 shrink-0">{linkedRepair ? `Réparations (${extraRepairItems.length + 1})` : "TVA"}</span>
                     <span className="text-xs text-gray-500 shrink-0">TVA :</span>
                     <div className="flex rounded-lg overflow-hidden border border-white/10 shrink-0">
                       <button onClick={() => setTvaRate(0)} className={`px-2.5 py-1 text-xs font-semibold transition-all ${tvaRate === 0 ? "bg-indigo-600 text-white" : "bg-[#1a1d2e] text-gray-500 hover:text-gray-300"}`}>0%</button>
                       <button onClick={() => setTvaRate(20)} className={`px-2.5 py-1 text-xs font-semibold transition-all ${tvaRate === 20 ? "bg-indigo-600 text-white" : "bg-[#1a1d2e] text-gray-500 hover:text-gray-300"}`}>20%</button>
                     </div>
                   </div>
-                  <span className="text-sm font-bold text-indigo-300 shrink-0">{(repairTtc + extraRepairsTtc).toFixed(2)} €</span>
+                  {linkedRepair && <span className="text-sm font-bold text-indigo-300 shrink-0">{(repairTtc + extraRepairsTtc).toFixed(2)} €</span>}
                 </div>
-              )}
               {visibleCartItems.length > 0 && (
                 <div className="flex justify-between text-sm text-gray-400">
                   <span>Produits ({visibleCartItems.reduce((s, i) => s + i.quantity, 0)} art.)</span>

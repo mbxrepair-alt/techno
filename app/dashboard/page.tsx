@@ -11,6 +11,7 @@ import ReturnModal from "../../components/ReturnModal";
 import PatternLock from "../../components/PatternLock";
 import QrScanner from "../../components/QrScanner";
 import CartValidationModal from "../../components/CartValidationModal";
+import ClientResponsesBell from "../../components/ClientResponsesBell";
 import type { ExtractedFormData } from "../../lib/ai";
 import { ScanLine, ShoppingCart, X, Check } from "lucide-react";
 
@@ -1456,16 +1457,19 @@ export default function Dashboard() {
 
       {/* ========== HEADER AVEC SCANNER QR ET RECHERCHE ========== */}
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-8">
-        <button
-          onClick={() => setShowScanner(true)}
+        <div className="flex items-center gap-2">
+          <button
+            onClick={() => setShowScanner(true)}
           className="flex items-center gap-2 px-4 py-3 bg-orange-500/10 border border-orange-500/40 text-orange-300 rounded-xl text-sm font-semibold hover:bg-orange-500/20 hover:text-white transition-all duration-200 active:scale-95"
         >
           <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.8} d="M4 7V5a1 1 0 011-1h2M4 17v2a1 1 0 001 1h2m10-16h2a1 1 0 011 1v2m-3 13h2a1 1 0 001-1v-2M7 12h10" />
           </svg>
           Scanner QR Ticket
-        </button>
-        
+          </button>
+          {userId && <ClientResponsesBell userId={userId} />}
+        </div>
+
         <div ref={searchContainerRef} className="relative w-full sm:w-96">
           <div className="flex items-center gap-3 bg-[#16161d] border border-white/10 rounded-xl px-4 py-3 focus-within:border-blue-500/50 focus-within:ring-2 focus-within:ring-blue-500/10 transition-all duration-200">
             <input autoComplete="new-password" 

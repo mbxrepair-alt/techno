@@ -1052,23 +1052,32 @@ export default function FacturesPage() {
             (s.client_name || "").toLowerCase().includes(searchTerm.toLowerCase()) ||
             s.product_name?.toLowerCase().includes(searchTerm.toLowerCase())
           );
+          // Grouper les ventes boutique par client (comme les réparations)
           // eslint-disable-next-line @typescript-eslint/no-explicit-any
-          const boutiqueGroupsMap = new Map<string, any>();
+          const boutiqueByClient = new Map<string, any>();
           filteredStandalone.forEach((s: any) => {
-            const key = s.invoice_id || `solo-${s.id}`;
-            if (!boutiqueGroupsMap.has(key)) boutiqueGroupsMap.set(key, { key, clientName: s.client_name || "", items: [], total: 0, sold_at: s.sold_at });
-            const bg = boutiqueGroupsMap.get(key);
-            bg.items.push(s);
-            bg.total += Number(s.total) || 0;
+            const clientKey = s.client_name?.trim() || "Vente directe";
+            if (!boutiqueByClient.has(clientKey)) boutiqueByClient.set(clientKey, { clientName: clientKey, invoicesMap: new Map(), total: 0 });
+            const cc = boutiqueByClient.get(clientKey);
+            const invKey = s.invoice_id ? String(s.invoice_id) : `solo-${s.id}`;
+            if (!cc.invoicesMap.has(invKey)) cc.invoicesMap.set(invKey, { key: invKey, items: [], total: 0, sold_at: s.sold_at });
+            const inv = cc.invoicesMap.get(invKey);
+            inv.items.push(s);
+            inv.total += Number(s.total) || 0;
+            cc.total += Number(s.total) || 0;
           });
           // eslint-disable-next-line @typescript-eslint/no-explicit-any
-          const boutiqueInvoices = Array.from(boutiqueGroupsMap.values()).sort((a: any, b: any) => new Date(b.sold_at).getTime() - new Date(a.sold_at).getTime());
-          if (clientCards.length === 0 && boutiqueInvoices.length === 0) return null;
+          const boutiqueClientCards = Array.from(boutiqueByClient.values()).map((cc: any) => ({
+            ...cc,
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+            invoices: Array.from(cc.invoicesMap.values()).sort((a: any, b: any) => new Date(b.sold_at).getTime() - new Date(a.sold_at).getTime()),
+          }));
+          if (clientCards.length === 0 && boutiqueClientCards.length === 0) return null;
           return (
             <div>
               <div className="flex items-center gap-2 mb-3">
                 <span className="w-1.5 h-1.5 rounded-full bg-green-400"></span>
-                <h2 className="text-xs font-bold text-gray-400 uppercase tracking-widest">Soldées · {clientCards.length + boutiqueInvoices.length} facture(s)</h2>
+                <h2 className="text-xs font-bold text-gray-400 uppercase tracking-widest">Soldées · {clientCards.length + boutiqueClientCards.length} client(s)</h2>
               </div>
               <div className="space-y-2">
                 {clientCards.map((cc) => {
@@ -1156,37 +1165,58 @@ export default function FacturesPage() {
                     </div>
                   );
                 })}
-                {/* Ventes boutique standalone */}
-                {boutiqueInvoices.map((bg: any) => (
-                  <div key={bg.key} className="bg-[#16161d] border border-green-500/15 rounded-2xl overflow-hidden">
-                    <div className="px-5 py-4 flex items-center gap-3">
-                      <div className="w-9 h-9 rounded-xl bg-fuchsia-500/10 flex items-center justify-center shrink-0">
-                        <ShoppingBag size={18} className="text-fuchsia-400" />
-                      </div>
-                      <div className="flex-1 min-w-0">
-                        <div className="font-semibold text-white text-sm">{bg.clientName || "Vente directe"}</div>
-                        <div className="text-xs text-gray-500 mt-0.5">{bg.items.length} article(s) · {new Date(bg.sold_at).toLocaleDateString("fr-FR")}</div>
-                      </div>
-                      <div className="text-right shrink-0">
-                        <div className="text-xl font-black text-green-400">{bg.total.toFixed(2)} €</div>
-                        <div className="text-[10px] text-fuchsia-400 font-semibold">Boutique · Soldé</div>
-                      </div>
-                    </div>
-                    <div className="border-t border-white/5 divide-y divide-white/5">
-                      {bg.items.map((s: any) => (
-                        <div key={s.id} className="px-5 py-2 flex items-center gap-2 text-xs">
-                          <span className="flex-1 text-gray-300 truncate">{s.product_name}{s.quantity > 1 ? ` × ${s.quantity}` : ""}</span>
-                          <span className="text-gray-500">{Number(s.total).toFixed(2)} €</span>
+                {/* Ventes boutique — groupées par client */}
+                {boutiqueClientCards.map((bc: any) => {
+                  const bcid = "boutique-" + bc.clientName;
+                  const isOpen = expandedClients.has(bcid);
+                  return (
+                    <div key={bcid} className="bg-[#16161d] border border-green-500/15 rounded-2xl overflow-hidden">
+                      <div
+                        className="px-5 py-4 flex items-center gap-3 cursor-pointer hover:bg-white/3 transition-colors"
+                        onClick={() => setExpandedClients(prev => { const next = new Set(prev); isOpen ? next.delete(bcid) : next.add(bcid); return next; })}
+                      >
+                        <div className="w-9 h-9 rounded-xl bg-fuchsia-500/10 flex items-center justify-center shrink-0">
+                          <ShoppingBag size={18} className="text-fuchsia-400" />
                         </div>
-                      ))}
+                        <div className="flex-1 min-w-0">
+                          <div className="font-semibold text-white text-sm">{bc.clientName}</div>
+                          <div className="text-xs text-gray-500 mt-0.5">{bc.invoices.length} vente(s)</div>
+                        </div>
+                        <div className="text-right shrink-0">
+                          <div className="text-xl font-black text-green-400">{bc.total.toFixed(2)} €</div>
+                          <div className="text-[10px] text-fuchsia-400 font-semibold">Boutique</div>
+                        </div>
+                        <div className={`text-gray-600 ml-1 transition-transform duration-200 ${isOpen ? "rotate-180" : ""}`}>
+                          <svg width="14" height="14" viewBox="0 0 14 14" fill="none"><path d="M2 5L7 10L12 5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/></svg>
+                        </div>
+                      </div>
+                      {isOpen && (
+                        <div className="border-t border-white/5 divide-y divide-white/8">
+                          {bc.invoices.map((inv: any) => (
+                            <div key={inv.key} className="px-5 py-3">
+                              <div className="flex items-center justify-between gap-2 mb-2">
+                                <span className="text-[10px] font-bold uppercase tracking-wider text-fuchsia-400 bg-fuchsia-500/10 px-2 py-0.5 rounded-md">🛍️ Vente</span>
+                                <span className="text-xs text-gray-500">{new Date(inv.sold_at).toLocaleDateString("fr-FR")}</span>
+                                <span className="text-sm font-bold text-green-400 ml-auto">{inv.total.toFixed(2)} €</span>
+                              </div>
+                              <div className="space-y-1 mb-2.5">
+                                {inv.items.map((s: any) => (
+                                  <div key={s.id} className="flex items-center gap-2 text-xs">
+                                    <span className="flex-1 text-gray-300 truncate">{s.product_name}{s.quantity > 1 ? ` × ${s.quantity}` : ""}</span>
+                                    <span className="text-gray-500 shrink-0">{Number(s.total).toFixed(2)} €</span>
+                                  </div>
+                                ))}
+                              </div>
+                              <button onClick={() => printBoutiqueInvoice(inv)} className="px-3 py-1 bg-indigo-500/15 hover:bg-indigo-500/25 text-indigo-300 rounded-lg text-xs font-semibold transition-all border border-indigo-500/20">
+                                🧾 Facture PDF
+                              </button>
+                            </div>
+                          ))}
+                        </div>
+                      )}
                     </div>
-                    <div className="px-5 py-3 bg-black/20 border-t border-white/5 flex gap-2">
-                      <button onClick={() => printBoutiqueInvoice(bg)} className="px-3 py-1 bg-indigo-500/15 hover:bg-indigo-500/25 text-indigo-300 rounded-lg text-xs font-semibold transition-all border border-indigo-500/20">
-                        🧾 Facture PDF
-                      </button>
-                    </div>
-                  </div>
-                ))}
+                  );
+                })}
               </div>
             </div>
           );

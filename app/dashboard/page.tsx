@@ -435,14 +435,16 @@ export default function Dashboard() {
     const clientMap = new Map();
     allClients.forEach((c) => clientMap.set(c.id, c));
 
+    const isPhone = /^[\d\s\+\-\.]{6,}$/.test(searchQuery.trim());
     const filtered = allRepairs.filter((repair) => {
       const ticketMatch = repair.id.toString().includes(term) || `mbx-${repair.id}`.includes(term);
       const client = clientMap.get(repair.client_id);
       const clientName = client?.name?.toLowerCase() || "";
       const clientMatch = clientName.includes(term);
-      const deviceMatch = repair.device?.toLowerCase().includes(term) || false;
-      const issueMatch = repair.issue?.toLowerCase().includes(term) || false;
-      return ticketMatch || clientMatch || deviceMatch || issueMatch;
+      const clientPhone = (client?.phone || "").replace(/\s/g, "");
+      const searchPhone = searchQuery.trim().replace(/\s/g, "");
+      const phoneMatch = isPhone && clientPhone === searchPhone;
+      return ticketMatch || clientMatch || phoneMatch;
     });
     const results = filtered.map((repair) => ({
       ...repair,

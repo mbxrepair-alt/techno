@@ -1,6 +1,7 @@
 ﻿"use client";
 
 import { useState, useEffect } from "react";
+import { Users } from "lucide-react";
 import { supabase, getCurrentUser } from "../../lib/supabase";
 import { useRouter } from "next/navigation";
 import Layout from "../../components/Layout";
@@ -500,7 +501,7 @@ export default function ClientsPage() {
         {/* HEADER */}
         <div className="flex items-center justify-between mb-5">
           <div>
-            <h1 className="text-xl font-bold text-white tracking-tight">Clients</h1>
+            <h1 className="text-xl font-bold text-white tracking-tight flex items-center gap-2"><Users size={18} className="text-sky-400" /> Clients</h1>
             <p className="text-xs text-gray-500 mt-0.5">Gérez vos clients et codes d'accès</p>
           </div>
           <button

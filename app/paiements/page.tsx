@@ -1,6 +1,7 @@
 ﻿"use client";
 
 import { useEffect, useState } from "react";
+import { Wallet } from "lucide-react";
 import { supabase, getCurrentUser } from "../../lib/supabase";
 import { useRouter } from "next/navigation";
 import Layout from "../../components/Layout";
@@ -155,7 +156,7 @@ export default function PaiementsPage() {
         {/* HEADER */}
         <div className="flex items-center justify-between mb-5">
           <div>
-            <h1 className="text-xl font-bold text-white tracking-tight">Encaissements</h1>
+            <h1 className="text-xl font-bold text-white tracking-tight flex items-center gap-2"><Wallet size={18} className="text-yellow-400" /> Encaissements</h1>
             <p className="text-xs text-gray-500 mt-0.5">Suivi complet des paiements reçus</p>
           </div>
         </div>
@@ -189,7 +190,7 @@ export default function PaiementsPage() {
         <div className="bg-[#16161d] border border-white/5 rounded-2xl p-5 mb-5">
           <h3 className="text-xs font-bold text-gray-400 uppercase tracking-widest mb-3">🔍 Filtres</h3>
           <div className="grid gap-3 md:grid-cols-2 lg:grid-cols-5">
-            <input
+            <input autoComplete="new-password"
               type="text"
               placeholder="Rechercher (client, ticket...)"
               value={searchTerm}
@@ -212,10 +213,10 @@ export default function PaiementsPage() {
               <option value="non payé">❌ Non payé</option>
             </select>
             <div className="flex gap-2">
-              <input type="date" value={dateRange.from}
+              <input autoComplete="new-password" type="date" value={dateRange.from}
                 onChange={(e) => setDateRange((prev) => ({ ...prev, from: e.target.value }))}
                 className="flex-1 bg-[#1a1d2e] border border-white/10 rounded-xl px-3 py-2.5 text-white text-sm outline-none focus:border-pink-500/60 transition-all" />
-              <input type="date" value={dateRange.to}
+              <input autoComplete="new-password" type="date" value={dateRange.to}
                 onChange={(e) => setDateRange((prev) => ({ ...prev, to: e.target.value }))}
                 className="flex-1 bg-[#1a1d2e] border border-white/10 rounded-xl px-3 py-2.5 text-white text-sm outline-none focus:border-pink-500/60 transition-all" />
             </div>

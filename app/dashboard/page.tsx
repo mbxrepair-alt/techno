@@ -10,6 +10,7 @@ import QRCode from "qrcode";
 import ReturnModal from "../../components/ReturnModal";
 import PatternLock from "../../components/PatternLock";
 import QrScanner from "../../components/QrScanner";
+import CartValidationModal from "../../components/CartValidationModal";
 import type { ExtractedFormData } from "../../lib/ai";
 import { ScanLine, ShoppingCart, X, Check } from "lucide-react";
 
@@ -97,9 +98,19 @@ export default function Dashboard() {
   // ========== VENTE PAR CODE-BARRES ==========
   const [showBarcodeModal, setShowBarcodeModal] = useState(false);
   const [barcodeInput, setBarcodeInput] = useState("");
-  const [scannedProduct, setScannedProduct] = useState<Product | null>(null);
-  const [saleQuantity, setSaleQuantity] = useState(1);
   const [isScanning, setIsScanning] = useState(false);
+  const [dashCartItems, setDashCartItems] = useState<{ product: Product; quantity: number }[]>(() => {
+    try {
+      const saved = typeof window !== "undefined" ? localStorage.getItem("dash_cart") : null;
+      return saved ? JSON.parse(saved) : [];
+    } catch { return []; }
+  });
+  const [showCartModal, setShowCartModal] = useState(false);
+  const [outOfStockProduct, setOutOfStockProduct] = useState<Product | null>(null);
+  const [dashLinkedRepair, setDashLinkedRepair] = useState<any>(() => {
+    try { const s = typeof window !== "undefined" ? localStorage.getItem("dash_linked_repair") : null; return s ? JSON.parse(s) : null; } catch { return null; }
+  });
+  const [dashProducts, setDashProducts] = useState<Product[]>([]);
   const [userId, setUserId] = useState<string>("");
 
   // Chargement depuis Supabase (via /api/catalog)
@@ -122,6 +133,15 @@ export default function Dashboard() {
     const savedCodes = localStorage.getItem("mbx_custom_codes");
     if (savedCodes) setCustomCodesList(JSON.parse(savedCodes));
   }, []);
+
+  useEffect(() => {
+    localStorage.setItem("dash_cart", JSON.stringify(dashCartItems));
+  }, [dashCartItems]);
+
+  useEffect(() => {
+    if (dashLinkedRepair) localStorage.setItem("dash_linked_repair", JSON.stringify(dashLinkedRepair));
+    else localStorage.removeItem("dash_linked_repair");
+  }, [dashLinkedRepair]);
 
   const saveCustomDevices = async (newList) => {
     setCustomDevices(newList);
@@ -284,6 +304,9 @@ export default function Dashboard() {
 
     if (repairsData) setAllRepairs(repairsData);
     if (clientsData) setAllClients(clientsData);
+
+    const { data: productsData } = await supabase.from("products").select("*").eq("user_id", user.id).order("name");
+    if (productsData) setDashProducts(productsData as Product[]);
   };
 
   useEffect(() => {
@@ -1298,23 +1321,50 @@ export default function Dashboard() {
   // FONCTIONS VENTE PAR CODE-BARRES
   const searchProductByBarcode = async (barcode: string) => {
     if (!barcode.trim() || !userId) return;
-    
+
+    // QR multi-réparations : MBX-84,MBX-54
+    if (/^(MBX-\d+,?)+$/i.test(barcode.trim())) {
+      const ids = barcode.trim().split(",").map((s) => Number(s.replace(/^MBX-/i, "").trim())).filter(Boolean);
+      if (ids.length > 1) {
+        const { data } = await supabase.from("repairs").select("*,clients(id,name,phone,email)").in("id", ids).eq("user_id", userId);
+        if (data && data.length > 0) {
+          const sorted = ids.map((id) => data.find((r) => r.id === id)).filter(Boolean);
+          const extras = sorted.slice(1).map((r) => ({ product: { id: r.id, name: `MBX-${r.id} — ${r.device}`, sale_price: r.final_price ?? r.estimated_price ?? 0, stock: 1, barcode: `MBX-${r.id}` } as any, quantity: 1 }));
+          setDashCartItems((prev) => [...prev, ...extras]);
+          setDashLinkedRepair(sorted[0]);
+          setShowCartModal(true);
+        } else showMessage("Réparations introuvables", "error");
+        setBarcodeInput("");
+        return;
+      }
+      // Code réparation unique MBX-xxx
+      const repairId = ids[0];
+      const { data } = await supabase.from("repairs").select("*,clients(id,name,phone,email)").eq("id", repairId).eq("user_id", userId).maybeSingle();
+      if (data) { setDashLinkedRepair(data); setShowCartModal(true); }
+      else showMessage(`Réparation MBX-${repairId} introuvable`, "error");
+      setBarcodeInput("");
+      return;
+    }
+
     setIsScanning(true);
     try {
-      const { data, error } = await supabase
-        .from("products")
-        .select("*")
-        .eq("user_id", userId)
-        .eq("barcode", barcode.trim())
-        .single();
-
-      if (error || !data) {
+      const { data: results } = await supabase.from("products").select("*").eq("user_id", userId).eq("barcode", barcode.trim()).order("stock", { ascending: false });
+      const data = results?.[0] ?? null;
+      if (!data) {
         showMessage(`Produit non trouvé: ${barcode}`, "error");
-        setScannedProduct(null);
+      } else if (data.stock <= 0) {
+        setOutOfStockProduct(data as Product);
       } else {
-        setScannedProduct(data as Product);
-        setSaleQuantity(1);
-        if (barcodeInputRef.current) barcodeInputRef.current.value = "";
+        setDashCartItems((prev) => {
+          const idx = prev.findIndex((c) => c.product.id === data.id);
+          if (idx >= 0) {
+            const updated = [...prev];
+            updated[idx] = { ...updated[idx], quantity: updated[idx].quantity + 1 };
+            return updated;
+          }
+          return [...prev, { product: data as any, quantity: 1 }];
+        });
+        showMessage(`${data.name} ajouté au panier`, "success");
       }
     } catch (err) {
       console.error("Erreur recherche:", err);
@@ -1325,44 +1375,43 @@ export default function Dashboard() {
     }
   };
 
+
   const confirmSale = async () => {
-    if (!scannedProduct || !userId) return;
+    const items = dashCartItems.length > 0 ? dashCartItems : [];
+    if (!items.length || !userId) return;
 
     const tech = getCurrentTechnician();
     const techName = tech?.name || "Boutique";
 
-    const qty = Math.max(1, saleQuantity);
-    if (qty > scannedProduct.stock) {
-      showMessage(`Stock insuffisant (${scannedProduct.stock} disponible)`, "error");
-      return;
+    for (const item of items) {
+      const qty = item.quantity;
+      if (qty > item.product.stock) {
+        showMessage(`Stock insuffisant pour ${item.product.name} (${item.product.stock} dispo)`, "error");
+        return;
+      }
+      const unit = Number(item.product.sale_price) || 0;
+      const cost = Number(item.product.purchase_price) || 0;
+      const { error: saleError } = await supabase.from("product_sales").insert({
+        user_id: userId,
+        product_id: item.product.id,
+        product_name: item.product.name,
+        quantity: qty,
+        unit_price: unit,
+        unit_cost: cost,
+        total: unit * qty,
+        sold_by: techName,
+      });
+      if (saleError) {
+        console.error("Erreur vente:", saleError);
+        showMessage("Erreur lors de la vente", "error");
+        return;
+      }
+      await supabase.from("products").update({ stock: item.product.stock - qty }).eq("id", item.product.id);
     }
 
-    const unit = Number(scannedProduct.sale_price) || 0;
-    const cost = Number(scannedProduct.purchase_price) || 0;
-
-    const { error: saleError } = await supabase.from("product_sales").insert({
-      user_id: userId,
-      product_id: scannedProduct.id,
-      product_name: scannedProduct.name,
-      quantity: qty,
-      unit_price: unit,
-      unit_cost: cost,
-      total: unit * qty,
-      sold_by: techName,
-    });
-
-    if (saleError) {
-      console.error("Erreur vente:", saleError);
-      showMessage("Erreur lors de la vente", "error");
-      return;
-    }
-
-    await supabase
-      .from("products")
-      .update({ stock: scannedProduct.stock - qty })
-      .eq("id", scannedProduct.id);
-
-    showMessage(`✅ Vendu: ${qty} x ${scannedProduct.name}`, "success");
+    const total = items.reduce((s, c) => s + Number(c.product.sale_price) * c.quantity, 0);
+    showMessage(`✅ ${items.length} produit(s) vendu(s) — ${total.toFixed(2)} €`, "success");
+    setDashCartItems([]);
     setScannedProduct(null);
     setSaleQuantity(1);
   };
@@ -1419,7 +1468,7 @@ export default function Dashboard() {
         
         <div ref={searchContainerRef} className="relative w-full sm:w-96">
           <div className="flex items-center gap-3 bg-[#16161d] border border-white/10 rounded-xl px-4 py-3 focus-within:border-blue-500/50 focus-within:ring-2 focus-within:ring-blue-500/10 transition-all duration-200">
-            <input 
+            <input autoComplete="new-password" 
               ref={searchInputRef} 
               className="flex-1 bg-transparent text-white placeholder-gray-600 text-sm outline-none"
               placeholder="Rechercher client, appareil, ticket..." 
@@ -1457,92 +1506,131 @@ export default function Dashboard() {
         </div>
       </div>
 
-      {/* ========== BANDEAU VENTE RAPIDE ========== */}
-      <div className="mb-8 bg-gradient-to-r from-green-600/20 to-emerald-600/20 border border-green-500/30 rounded-2xl p-4">
-        <div className="flex items-center justify-between flex-wrap gap-4">
-          <div className="flex items-center gap-3">
-            <div className="p-2 bg-green-500/20 rounded-xl">
-              <ShoppingCart className="w-5 h-5 text-green-400" />
+      {/* ========== CAISSE ========== */}
+      <div className="mb-8">
+        <div className="bg-[#16161d] border border-white/8 rounded-2xl overflow-hidden shadow-xl">
+          {/* Header Caisse */}
+          <div className="flex items-center justify-between px-5 py-4 border-b border-white/6">
+            <div className="flex items-center gap-2.5">
+              <div className="w-8 h-8 rounded-xl bg-green-500/15 flex items-center justify-center">
+                <ShoppingCart size={15} className="text-green-400" />
+              </div>
+              <span className="font-bold text-white text-sm">Caisse</span>
+              {(dashCartItems.length > 0 || dashLinkedRepair) && (
+                <span className="text-[10px] font-black bg-green-500 text-white px-2 py-0.5 rounded-full">
+                  {dashCartItems.length + (dashLinkedRepair ? 1 : 0)}
+                </span>
+              )}
             </div>
-            <div>
-              <h2 className="text-sm font-bold text-white">Vente rapide</h2>
-              <p className="text-xs text-gray-400">Scanner un code-barres pour vendre</p>
-            </div>
-          </div>
-          
-          <div className="flex gap-2 flex-1 max-w-md">
-            <div className="relative flex-1">
-              <input
-                ref={barcodeInputRef}
-                type="text"
-                placeholder="Code-barres..."
-                value={barcodeInput}
-                onChange={(e) => setBarcodeInput(e.target.value)}
-                onKeyDown={(e) => e.key === "Enter" && searchProductByBarcode(barcodeInput)}
-                className="w-full bg-[#1a1d2e] border border-white/10 rounded-xl px-4 py-2.5 text-white text-sm outline-none focus:border-green-500/50"
-              />
-            </div>
-            <button
-              onClick={() => setShowBarcodeModal(true)}
-              className="px-4 py-2.5 bg-green-600 hover:bg-green-500 text-white rounded-xl text-sm font-semibold transition flex items-center gap-2"
-              disabled={isScanning}
-            >
-              <ScanLine size={16} />
-              Scanner
+            <button onClick={() => setShowCartModal(true)} className="text-xs text-green-400 hover:text-green-300 font-semibold transition">
+              Ouvrir →
             </button>
           </div>
-        </div>
 
-        {/* Produit scanné */}
-        {scannedProduct && (
-          <div className="mt-4 p-4 bg-[#1a1d2e] rounded-xl border border-green-500/30 animate-count-in">
-            <div className="flex items-center justify-between flex-wrap gap-4">
-              <div className="flex-1">
-                <div className="flex items-center gap-2">
-                  <Check className="w-4 h-4 text-green-400" />
-                  <span className="font-bold text-white">{scannedProduct.name}</span>
-                </div>
-                <div className="text-xs text-gray-400 mt-1">
-                  Prix: {Number(scannedProduct.sale_price).toFixed(2)} € | 
-                  Stock: {scannedProduct.stock}
-                </div>
+          {/* Barre code-barres */}
+          <div className="px-5 py-3 border-b border-white/6">
+            <div className="flex items-center gap-2">
+              <div className="flex items-center gap-2 flex-1 bg-black/30 border border-white/8 rounded-xl px-3 py-2 focus-within:border-green-500/40 transition-all">
+                <ScanLine size={14} className="text-gray-500 shrink-0" />
+                <input autoComplete="new-password"
+                  ref={barcodeInputRef}
+                  type="text"
+                  placeholder="Code-barres ou MBX-42..."
+                  value={barcodeInput}
+                  onChange={(e) => setBarcodeInput(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter" && barcodeInput.trim()) {
+                      searchProductByBarcode(barcodeInput);
+                      setBarcodeInput("");
+                    }
+                  }}
+                  className="flex-1 bg-transparent text-white text-sm outline-none placeholder-gray-600"
+                />
               </div>
-              <div className="flex items-center gap-3">
-                <div className="flex items-center gap-2">
-                  <label className="text-xs text-gray-400">Quantité:</label>
-                  <input
-                    type="number"
-                    min={1}
-                    max={scannedProduct.stock}
-                    value={saleQuantity}
-                    onChange={(e) => setSaleQuantity(Math.min(scannedProduct.stock, Math.max(1, Number(e.target.value) || 1)))}
-                    className="w-16 bg-black/30 border border-white/10 rounded-lg px-2 py-1.5 text-white text-center text-sm outline-none focus:border-green-500/50"
-                  />
-                </div>
-                <div className="text-right">
-                  <div className="text-sm text-gray-400">Total</div>
-                  <div className="text-lg font-bold text-green-400">
-                    {(Number(scannedProduct.sale_price) * saleQuantity).toFixed(2)} €
-                  </div>
-                </div>
-                <button
-                  onClick={confirmSale}
-                  className="px-4 py-2 bg-green-600 hover:bg-green-500 text-white rounded-xl text-sm font-semibold transition flex items-center gap-2"
-                >
-                  <ShoppingCart size={14} />
-                  Vendre
-                </button>
-                <button
-                  onClick={() => setScannedProduct(null)}
-                  className="p-2 bg-white/5 hover:bg-white/10 rounded-xl transition"
-                >
-                  <X size={16} className="text-gray-400" />
-                </button>
-              </div>
+              <button
+                onClick={() => setShowBarcodeModal(true)}
+                className="p-2.5 bg-green-500/10 border border-green-500/20 text-green-400 rounded-xl hover:bg-green-500/20 transition"
+              >
+                <ScanLine size={15} />
+              </button>
             </div>
           </div>
-        )}
+
+          {/* Alerte rupture de stock */}
+          {outOfStockProduct && (
+            <div className="mx-5 my-3 p-3 bg-amber-500/8 border border-amber-500/25 rounded-xl">
+              <div className="flex items-center justify-between gap-3">
+                <div className="flex-1 min-w-0">
+                  <p className="text-amber-400 text-xs font-bold">⚠️ Rupture — {outOfStockProduct.name}</p>
+                </div>
+                <div className="flex gap-1.5 shrink-0">
+                  <button onClick={() => { window.location.href = "/boutique"; }} className="px-2.5 py-1 bg-blue-500/15 text-blue-300 rounded-lg text-xs font-semibold border border-blue-500/20 transition hover:bg-blue-500/25">+ Stock</button>
+                  <button onClick={() => { setDashCartItems((prev) => { const idx = prev.findIndex(c => c.product.id === outOfStockProduct!.id); if (idx >= 0) { const u = [...prev]; u[idx] = {...u[idx], quantity: u[idx].quantity + 1}; return u; } return [...prev, { product: outOfStockProduct as any, quantity: 1 }]; }); setOutOfStockProduct(null); }} className="px-2.5 py-1 bg-green-500/15 text-green-300 rounded-lg text-xs font-semibold border border-green-500/20 transition hover:bg-green-500/25">Ajouter</button>
+                  <button onClick={() => setOutOfStockProduct(null)} className="p-1 hover:bg-white/10 rounded-lg transition"><X size={12} className="text-gray-500" /></button>
+                </div>
+              </div>
+            </div>
+          )}
+
+
+          {/* Items panier */}
+          {(dashCartItems.length > 0 || dashLinkedRepair) && (
+            <div className="px-5 py-3 space-y-1.5">
+              {dashLinkedRepair && (
+                <div className="flex items-center gap-2 py-1.5">
+                  <span className="font-mono text-[11px] text-indigo-400 shrink-0 bg-indigo-500/10 px-2 py-0.5 rounded-md">MBX-{dashLinkedRepair.id}</span>
+                  <span className="text-gray-200 text-sm flex-1 truncate">{dashLinkedRepair.device}</span>
+                  <span className="text-indigo-300 text-sm font-bold shrink-0">{Number(dashLinkedRepair.final_price ?? dashLinkedRepair.estimated_price ?? 0).toFixed(2)} €</span>
+                  <button onClick={() => setDashLinkedRepair(null)} className="p-1 hover:bg-white/10 rounded-md transition"><X size={12} className="text-gray-500" /></button>
+                </div>
+              )}
+              {dashCartItems.map((item, i) => (
+                <div key={i} className="flex items-center gap-2 py-1.5">
+                  <span className="text-gray-200 text-sm flex-1 truncate">{item.product.name}</span>
+                  <span className="text-gray-500 text-xs shrink-0">× {item.quantity}</span>
+                  <span className="text-green-400 text-sm font-bold shrink-0 w-16 text-right">{(Number(item.product.sale_price) * item.quantity).toFixed(2)} €</span>
+                  <button onClick={() => setDashCartItems((prev) => prev.filter((_, j) => j !== i))} className="p-1 hover:bg-white/10 rounded-md transition"><X size={12} className="text-gray-500" /></button>
+                </div>
+              ))}
+            </div>
+          )}
+
+          {/* Footer total + actions */}
+          <div className="px-5 py-4 bg-black/20 flex items-center justify-between gap-3">
+            {(dashCartItems.length > 0 || dashLinkedRepair) ? (
+              <>
+                <div className="flex items-center gap-2">
+                  <span className="text-white font-black text-lg">
+                    {(Number(dashLinkedRepair?.final_price ?? dashLinkedRepair?.estimated_price ?? 0) + dashCartItems.reduce((s, c) => s + Number(c.product.sale_price) * c.quantity, 0)).toFixed(2)} €
+                  </span>
+                  <button onClick={() => { setDashCartItems([]); setDashLinkedRepair(null); }} className="p-1 hover:bg-red-500/15 rounded-lg transition" title="Vider">
+                    <X size={13} className="text-red-400/60 hover:text-red-400" />
+                  </button>
+                </div>
+                <button onClick={() => setShowCartModal(true)} className="flex items-center gap-2 px-5 py-2.5 bg-green-600 hover:bg-green-500 text-white rounded-xl text-sm font-bold transition-all active:scale-95 shadow-lg shadow-green-900/30">
+                  <Check size={15} /> Valider · Imprimer
+                </button>
+              </>
+            ) : (
+              <p className="text-gray-600 text-xs">Scanner un code-barres ou MBX-xxx pour commencer</p>
+            )}
+          </div>
+        </div>
       </div>
+
+      {showCartModal && (
+        <CartValidationModal
+          cartItems={dashCartItems as any}
+          setCartItems={setDashCartItems as any}
+          linkedRepair={dashLinkedRepair}
+          setLinkedRepair={setDashLinkedRepair}
+          products={dashProducts as any}
+          userId={userId}
+          soldBy={(() => { const t = getCurrentTechnician(); return t?.name || "Dashboard"; })()}
+          onClose={() => { setShowCartModal(false); }}
+          onSuccess={() => { setDashCartItems([]); setDashLinkedRepair(null); }}
+        />
+      )}
 
       {/* ========== SECTION NOUVELLE RÉPARATION ========== */}
       <div className="flex items-center gap-2 mb-4">
@@ -1564,9 +1652,9 @@ export default function Dashboard() {
             <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
               <div className="relative">
                 <label className="block text-xs font-semibold text-gray-400 uppercase tracking-widest mb-1.5">Nom *</label>
-                <input ref={clientInputRef} className={inputCls} placeholder="Nom du client"
+                <input autoComplete="new-password" ref={clientInputRef} className={inputCls} placeholder="Nom du client"
                   value={intakeClient} onChange={(e) => handleClientSearch(e.target.value)}
-                  onKeyDown={handleClientKeyDown} autoComplete="off" />
+                  onKeyDown={handleClientKeyDown} />
                 {showClientSuggestions && clientSuggestions.length > 0 && (
                   <div className="absolute z-20 top-full left-0 right-0 mt-1 bg-[#2d3159] border border-white/10 rounded-xl shadow-2xl max-h-48 overflow-auto">
                     <div className="divide-y divide-white/5 p-1">
@@ -1585,9 +1673,9 @@ export default function Dashboard() {
 
               <div className="relative">
                 <label className="block text-xs font-semibold text-gray-400 uppercase tracking-widest mb-1.5">Téléphone</label>
-                <input ref={phoneInputRef} className={inputCls} placeholder="06 12 34 56 78"
+                <input autoComplete="new-password" ref={phoneInputRef} className={inputCls} placeholder="06 12 34 56 78"
                   value={intakePhone} onChange={(e) => handlePhoneSearch(e.target.value)}
-                  onKeyDown={handlePhoneKeyDown} autoComplete="off" />
+                  onKeyDown={handlePhoneKeyDown} />
                 {showPhoneSuggestions && phoneSuggestions.length > 0 && (
                   <div className="absolute z-20 top-full left-0 right-0 mt-1 bg-[#2d3159] border border-white/10 rounded-xl shadow-2xl max-h-48 overflow-auto">
                     <div className="divide-y divide-white/5 p-1">
@@ -1606,7 +1694,7 @@ export default function Dashboard() {
 
               <div>
                 <label className="block text-xs font-semibold text-gray-400 uppercase tracking-widest mb-1.5">Email</label>
-                <input ref={emailInputRef} className={inputCls} placeholder="client@email.com"
+                <input autoComplete="new-password" ref={emailInputRef} className={inputCls} placeholder="client@email.com"
                   value={intakeEmail} onChange={(e) => setIntakeEmail(e.target.value)} onKeyDown={handleEmailKeyDown} />
               </div>
             </div>
@@ -1618,7 +1706,7 @@ export default function Dashboard() {
             <div className="flex flex-wrap items-center gap-3">
               <div className="flex items-center gap-2 bg-black/20 border border-white/10 rounded-xl px-4 py-2.5">
                 <span className="text-xs font-semibold text-gray-400 uppercase tracking-widest">Nombre :</span>
-                <input type="number" min={1} max={20} value={desiredRepairCount}
+                <input autoComplete="new-password" type="number" min={1} max={20} value={desiredRepairCount}
                   onChange={(e) => setDesiredRepairCount(Number(e.target.value))}
                   className="w-12 bg-transparent text-white text-sm text-center outline-none font-bold"
                   onKeyDown={handleNumberKeyDown} />
@@ -1655,7 +1743,7 @@ export default function Dashboard() {
                           className="w-4 h-4 rounded-full bg-white/10 hover:bg-blue-500/30 hover:text-blue-400 text-gray-500 flex items-center justify-center text-[10px] font-black transition-colors leading-none">+</button>
                       </label>
                       <div className="relative">
-                        <input className={inputCls} placeholder="iPhone 15 Pro Max..." value={repair.device}
+                        <input autoComplete="new-password" className={inputCls} placeholder="iPhone 15 Pro Max..." value={repair.device}
                           onChange={(e) => handleDeviceSearch(repair.id, e.target.value)} />
                         {showDeviceSuggestionsMap[repair.id] && deviceSuggestionsMap[repair.id]?.length > 0 && (
                           <div className="absolute z-20 top-full left-0 right-0 mt-1 bg-[#2d3159] border border-white/10 rounded-xl shadow-2xl max-h-40 overflow-auto">
@@ -1681,7 +1769,7 @@ export default function Dashboard() {
                         )}
                       </label>
                       <div className="relative">
-                        <input
+                        <input autoComplete="new-password"
                           className={inputCls}
                           placeholder={repair.device ? "Tapez ou cliquez pour voir les pannes fréquentes…" : "Écran cassé, batterie…"}
                           value={repair.issue}
@@ -1731,18 +1819,18 @@ export default function Dashboard() {
                   <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
                     <div>
                       <label className="block text-xs font-semibold text-gray-400 uppercase tracking-widest mb-1.5">Prix (€)</label>
-                      <input className={inputCls} placeholder="0" type="number" value={repair.estimatedPrice}
+                      <input autoComplete="new-password" className={inputCls} placeholder="0" type="number" value={repair.estimatedPrice}
                         onChange={(e) => updateRepairField(repair.id, "estimatedPrice", e.target.value)} />
                     </div>
                     <div>
                       <label className="block text-xs font-semibold text-gray-400 uppercase tracking-widest mb-1.5">IMEI</label>
-                      <input className={inputCls} placeholder="15 chiffres" value={repair.imei}
+                      <input autoComplete="new-password" className={inputCls} placeholder="15 chiffres" value={repair.imei}
                         onChange={(e) => updateRepairField(repair.id, "imei", e.target.value)} maxLength={15} />
                     </div>
                     <div>
                       <label className="block text-xs font-semibold text-gray-400 uppercase tracking-widest mb-1.5">Code</label>
                       <div className="relative">
-                        <input className={inputCls} placeholder="PIN..." value={repair.code}
+                        <input autoComplete="new-password" className={inputCls} placeholder="PIN..." value={repair.code}
                           onChange={(e) => { updateRepairField(repair.id, "code", e.target.value); searchCodeSuggestions(e.target.value, repair.id); }} />
                         {showCodeSuggestionsMap[repair.id] && codeSuggestionsMap[repair.id]?.length > 0 && (
                           <div className="absolute z-20 top-full left-0 right-0 mt-1 bg-[#2d3159] border border-white/10 rounded-xl shadow-2xl max-h-40 overflow-auto">
@@ -1786,7 +1874,7 @@ export default function Dashboard() {
               <button onClick={() => setShowAddDevice(false)} className="w-7 h-7 bg-white/10 hover:bg-white/20 rounded-full flex items-center justify-center text-gray-400 transition text-xs">✕</button>
             </div>
             <div className="flex gap-2 mb-4">
-              <input type="text" className={`${inputCls} flex-1 !py-2.5`} placeholder="Ex: Samsung Galaxy S25"
+              <input autoComplete="new-password" type="text" className={`${inputCls} flex-1 !py-2.5`} placeholder="Ex: Samsung Galaxy S25"
                 value={newDeviceInput} onChange={(e) => setNewDeviceInput(e.target.value)}
                 onKeyDown={(e) => e.key === "Enter" && addCustomDevice()} autoFocus />
               <button onClick={addCustomDevice} className="px-4 bg-blue-600 hover:bg-blue-500 text-white rounded-xl text-sm font-bold transition-colors">+</button>
@@ -1839,7 +1927,7 @@ export default function Dashboard() {
               </div>
 
               <div className="flex gap-2 mb-4 shrink-0">
-                <input type="text" className={`${inputCls} flex-1 !py-2.5`} placeholder="Ajouter une panne…"
+                <input autoComplete="new-password" type="text" className={`${inputCls} flex-1 !py-2.5`} placeholder="Ajouter une panne…"
                   value={newIssueInput} onChange={(e) => setNewIssueInput(e.target.value)}
                   onKeyDown={(e) => e.key === "Enter" && addCustomIssue()} autoFocus />
                 <button onClick={addCustomIssue} className="px-4 bg-blue-600 hover:bg-blue-500 text-white rounded-xl text-sm font-bold transition-colors">+</button>
@@ -1893,7 +1981,7 @@ export default function Dashboard() {
               <button onClick={() => setShowAddCode(false)} className="w-7 h-7 bg-white/10 hover:bg-white/20 rounded-full flex items-center justify-center text-gray-400 transition text-xs">✕</button>
             </div>
             <label className="block text-xs font-semibold text-gray-400 uppercase tracking-widest mb-1.5">Code téléphone</label>
-            <input type="text" className={`${inputCls} mb-4`} placeholder="Ex: 2580"
+            <input autoComplete="new-password" type="text" className={`${inputCls} mb-4`} placeholder="Ex: 2580"
               value={newCodeInput} onChange={(e) => setNewCodeInput(e.target.value)}
               onKeyDown={(e) => e.key === "Enter" && addCustomCode()} />
             <div className="flex gap-2">

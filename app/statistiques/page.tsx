@@ -4,6 +4,7 @@ import { useState, useEffect } from "react";
 import { supabase, getCurrentUser } from "../../lib/supabase";
 import { useRouter } from "next/navigation";
 import Layout from "../../components/Layout";
+import { BarChart3 } from "lucide-react";
 import {
   AreaChart,
   Area,
@@ -227,7 +228,7 @@ export default function StatistiquesPage() {
           <div className="absolute inset-0 opacity-[0.06]" style={{ backgroundImage: "radial-gradient(circle, white 1px, transparent 1px)", backgroundSize: "18px 18px" }} />
           <div className="relative flex justify-between items-center">
             <div>
-              <h1 className="text-2xl font-black text-white tracking-tight">📊 Statistiques</h1>
+              <h1 className="text-2xl font-black text-white tracking-tight flex items-center gap-2"><BarChart3 size={22} className="text-purple-400" /> Statistiques</h1>
               <p className="text-xs text-white/60 uppercase tracking-widest mt-1">
                 {isGerant ? "Vision globale de l'atelier" : `Stats de ${currentTechnician?.name}`}
               </p>

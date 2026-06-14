@@ -5,7 +5,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { ShoppingBag } from "lucide-react";
+import { ShoppingBag, Receipt } from "lucide-react";
 import { supabase, getCurrentUser } from "../../lib/supabase";
 import { getCurrentTechnician, addHistoriqueAction } from "../../lib/historique";
 import { useRouter } from "next/navigation";
@@ -277,7 +277,10 @@ export default function FacturesPage() {
       // Enregistrer les produits boutique ajoutés à cette facture
       const { data: { user: currentUser } } = await supabase.auth.getUser();
       if (currentUser) {
+        const factInvoiceId = `FACT-${selectedGroup?.client?.id}-${paidAt.slice(0, 16)}`;
         for (const item of extraItems) {
+          // repair_id = première réparation du groupe (si une seule, cas courant)
+          const firstRepairId = selectedGroup?.repairs?.[0]?.id ?? null;
           await supabase.from("product_sales").insert({
             user_id: currentUser.id,
             product_id: item.id,
@@ -287,7 +290,8 @@ export default function FacturesPage() {
             unit_cost: item.purchase_price,
             total: item.sale_price * item.qty,
             sold_by: "Facture",
-            invoice_id: `FACT-${selectedGroup?.client?.id}-${paidAt.slice(0, 16)}`,
+            invoice_id: factInvoiceId,
+            repair_id: firstRepairId,
           });
           await supabase.from("products").update({ stock: item.stock - item.qty }).eq("id", item.id);
         }
@@ -316,7 +320,7 @@ export default function FacturesPage() {
     const cp = companyProfile;
     const shortName = cp.name || "MBX";
     const invoiceRef = `VENTE-${Date.now().toString().slice(-8)}`;
-    const date = new Date(bg.sold_at).toLocaleDateString("fr-FR");
+    const date = new Date(bg.sold_at).toLocaleString("fr-FR", { day: "2-digit", month: "2-digit", year: "numeric", hour: "2-digit", minute: "2-digit" });
     const logoHtml = logoBase64
       ? `<img src="${logoBase64}" style="height:48px;max-width:160px;object-fit:contain;display:block" alt="logo"/>`
       : `<span style="font-size:28px;font-weight:900;letter-spacing:-1px;color:#0f172a">${shortName}</span>`;
@@ -393,6 +397,46 @@ export default function FacturesPage() {
     <button class="print-btn no-print" onclick="window.print()">🖨️ Imprimer / PDF</button>
     </body></html>`);
     win.document.close();
+  };
+
+  // Filtre un tableau de product_sales pour un groupe donné
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const filterLinkedSales = (sales: any[], group: any) => {
+    const repairIds = new Set((group.repairs || []).map((r: any) => r.id));
+    const clientId = group.client?.id;
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const linked = sales.filter((s: any) => {
+      // Lien via repair_id (boutique + factures payment modal)
+      if (s.repair_id != null && repairIds.has(Number(s.repair_id))) return true;
+      return false;
+    });
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const map = new Map<string, any>();
+    linked.forEach((s: any) => {
+      const key = `${s.product_name}__${s.unit_price}`;
+      if (map.has(key)) { map.get(key).qty += Number(s.quantity) || 1; }
+      else { map.set(key, { name: s.product_name, sale_price: Number(s.unit_price) || 0, qty: Number(s.quantity) || 1 }); }
+    });
+    return Array.from(map.values());
+  };
+
+  const getLinkedExtras = (group: any) => filterLinkedSales(boutiqueSales, group);
+
+  // Fetch frais + impression pour garantir les données à jour
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const printInvoiceFresh = async (group: any) => {
+    const user = await getCurrentUser();
+    if (!user) return;
+    const { data: freshSales } = await supabase
+      .from("product_sales")
+      .select("*")
+      .eq("user_id", user.id)
+      .order("sold_at", { ascending: false })
+      .limit(500);
+    const sales = freshSales || boutiqueSales;
+    setBoutiqueSales(sales);
+    const extras = filterLinkedSales(sales, group);
+    printInvoice(group, extras);
   };
 
   /* -------------------------------------------------------------
@@ -771,7 +815,7 @@ export default function FacturesPage() {
         {/* HEADER */}
         <div className="flex items-center justify-between mb-6">
           <div>
-            <h1 className="text-xl font-bold text-white tracking-tight">Factures</h1>
+            <h1 className="text-xl font-bold text-white tracking-tight flex items-center gap-2"><Receipt size={18} className="text-emerald-400" /> Factures</h1>
             <p className="text-xs text-gray-500 mt-0.5">Gestion des paiements · réparations terminées &amp; rendues</p>
           </div>
           <button onClick={loadData} className="px-3 py-2 bg-white/5 hover:bg-white/10 text-gray-400 rounded-xl text-sm border border-white/10 transition-all">
@@ -804,7 +848,7 @@ export default function FacturesPage() {
 
         {/* RECHERCHE */}
         <div className="mb-6">
-          <input
+          <input autoComplete="new-password"
             type="text"
             placeholder="Rechercher un client..."
             value={searchTerm}
@@ -1005,12 +1049,24 @@ export default function FacturesPage() {
                         </div>
 
                         {/* Actions groupe */}
-                        <div className="px-5 py-3 bg-black/20 flex gap-2 justify-end border-t border-white/5">
+                        <div className="px-5 py-3 bg-black/20 flex gap-2 justify-end border-t border-white/5 flex-wrap">
                           <button
                             onClick={() => { setSelectedGroup(group); setPaymentAmount(group.totalRemaining.toString()); setShowPaymentModal(true); setExtraItems([]); setProductSearch(""); }}
                             className="px-4 py-2 bg-green-600 hover:bg-green-500 text-white rounded-xl text-xs font-bold transition-all"
                           >💰 Tout encaisser</button>
-                          <button onClick={() => printInvoice(group)} className="px-4 py-2 bg-white/8 hover:bg-white/12 text-gray-300 rounded-xl text-xs font-semibold transition-all border border-white/10">
+                          <button onClick={async () => {
+                            const QRCode = (await import("qrcode")).default;
+                            const win = window.open("", "_blank", "height=700,width=600");
+                            if (!win) return;
+                            const codes = group.repairs.map((r: any) => `MBX-${r.id}`).join(",");
+                            const label = group.repairs.map((r: any) => `MBX-${r.id} ${r.device}`).join(" · ");
+                            const url = await QRCode.toDataURL(codes, { width: 260, margin: 2 });
+                            win.document.write(`<!DOCTYPE html><html><head><meta charset="UTF-8"><title>QR Codes</title><style>*{box-sizing:border-box;margin:0;padding:0}body{font-family:system-ui;background:#fff;padding:32px;text-align:center}.card{display:inline-block;border:1px solid #e2e8f0;border-radius:16px;padding:24px}.codes{font-family:monospace;font-size:15px;font-weight:900;color:#6366f1;margin-top:12px}.devices{font-size:11px;color:#64748b;margin-top:6px;max-width:240px}@media print{.no-print{display:none}}</style></head><body><div class="card"><img src="${url}" width="220"/><div class="codes">${codes}</div><div class="devices">${label}</div></div><br/><br/><button class="no-print" onclick="window.print()" style="padding:10px 24px;background:#6366f1;color:#fff;border:none;border-radius:8px;font-size:13px;cursor:pointer">🖨️ Imprimer</button></body></html>`);
+                            win.document.close();
+                          }} className="px-4 py-2 bg-indigo-500/15 hover:bg-indigo-500/25 text-indigo-300 rounded-xl text-xs font-semibold transition-all border border-indigo-500/20">
+                            📱 QR Codes
+                          </button>
+                          <button onClick={() => printInvoiceFresh(group)} className="px-4 py-2 bg-white/8 hover:bg-white/12 text-gray-300 rounded-xl text-xs font-semibold transition-all border border-white/10">
                             🖨️ Imprimer
                           </button>
                           <button
@@ -1045,7 +1101,7 @@ export default function FacturesPage() {
           const clientCards = Array.from(byClient.values());
           // Ventes boutique sans réparation (invoice_id = VENTE-xxx ou null)
           // eslint-disable-next-line @typescript-eslint/no-explicit-any
-          const standaloneSales = boutiqueSales.filter((s: any) => !s.invoice_id || String(s.invoice_id).startsWith("VENTE-"));
+          const standaloneSales = boutiqueSales.filter((s: any) => (!s.invoice_id || String(s.invoice_id).startsWith("VENTE-")) && !s.repair_id);
           // eslint-disable-next-line @typescript-eslint/no-explicit-any
           const filteredStandalone = standaloneSales.filter((s: any) =>
             !searchTerm ||
@@ -1115,7 +1171,7 @@ export default function FacturesPage() {
                         <div className="border-t border-white/5 divide-y divide-white/8">
                           {/* eslint-disable-next-line @typescript-eslint/no-explicit-any */}
                           {cc.payments.map((group: any) => {
-                            const dateStr = group.payment_date ? new Date(group.payment_date).toLocaleDateString("fr-FR") : "";
+                            const dateStr = group.payment_date ? new Date(group.payment_date).toLocaleString("fr-FR", { day: "2-digit", month: "2-digit", year: "numeric", hour: "2-digit", minute: "2-digit" }) : "";
                             return (
                               <div key={group.key} className="px-5 py-3">
                                 <div className="flex items-center justify-between gap-3 mb-2">
@@ -1135,9 +1191,16 @@ export default function FacturesPage() {
                                       <span className="text-gray-500 shrink-0">{r.totalTtc.toFixed(2)} €</span>
                                     </div>
                                   ))}
+                                  {getLinkedExtras(group).map((e, i) => (
+                                    <div key={i} className="flex items-center gap-2 text-xs pl-1">
+                                      <span className="text-[10px] text-purple-400 shrink-0">🛍️</span>
+                                      <span className="flex-1 text-gray-400 truncate">{e.name}{e.qty > 1 ? ` × ${e.qty}` : ""}</span>
+                                      <span className="text-gray-500 shrink-0">{(e.sale_price * e.qty).toFixed(2)} €</span>
+                                    </div>
+                                  ))}
                                 </div>
                                 <div className="flex flex-wrap gap-2">
-                                  <button onClick={() => printInvoice(group)} className="px-3 py-1 bg-indigo-500/15 hover:bg-indigo-500/25 text-indigo-300 rounded-lg text-xs font-semibold transition-all border border-indigo-500/20">
+                                  <button onClick={() => printInvoiceFresh(group)} className="px-3 py-1 bg-indigo-500/15 hover:bg-indigo-500/25 text-indigo-300 rounded-lg text-xs font-semibold transition-all border border-indigo-500/20">
                                     🧾 Facture PDF
                                   </button>
                                   <button onClick={() => { setSelectedGroupForEmail(group); setEmailTo(group.client?.email || ""); setShowEmailModal(true); }} className="px-3 py-1 bg-sky-500/15 hover:bg-sky-500/25 text-sky-300 rounded-lg text-xs font-semibold transition-all border border-sky-500/20">
@@ -1165,7 +1228,7 @@ export default function FacturesPage() {
                     </div>
                   );
                 })}
-                {/* Ventes boutique — groupées par client */}
+                {/* Ventes boutique — même style que les factures réparations */}
                 {boutiqueClientCards.map((bc: any) => {
                   const bcid = "boutique-" + bc.clientName;
                   const isOpen = expandedClients.has(bcid);
@@ -1175,16 +1238,16 @@ export default function FacturesPage() {
                         className="px-5 py-4 flex items-center gap-3 cursor-pointer hover:bg-white/3 transition-colors"
                         onClick={() => setExpandedClients(prev => { const next = new Set(prev); isOpen ? next.delete(bcid) : next.add(bcid); return next; })}
                       >
-                        <div className="w-9 h-9 rounded-xl bg-fuchsia-500/10 flex items-center justify-center shrink-0">
-                          <ShoppingBag size={18} className="text-fuchsia-400" />
+                        <div className="w-9 h-9 rounded-xl bg-green-500/10 flex items-center justify-center text-green-400 font-black text-sm shrink-0">
+                          {bc.clientName?.charAt(0).toUpperCase() || "V"}
                         </div>
                         <div className="flex-1 min-w-0">
                           <div className="font-semibold text-white text-sm">{bc.clientName}</div>
-                          <div className="text-xs text-gray-500 mt-0.5">{bc.invoices.length} vente(s)</div>
+                          <div className="text-xs text-gray-500 mt-0.5">{bc.invoices.length} facture(s)</div>
                         </div>
                         <div className="text-right shrink-0">
                           <div className="text-xl font-black text-green-400">{bc.total.toFixed(2)} €</div>
-                          <div className="text-[10px] text-fuchsia-400 font-semibold">Boutique</div>
+                          <div className="text-[10px] text-gray-600">payé</div>
                         </div>
                         <div className={`text-gray-600 ml-1 transition-transform duration-200 ${isOpen ? "rotate-180" : ""}`}>
                           <svg width="14" height="14" viewBox="0 0 14 14" fill="none"><path d="M2 5L7 10L12 5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/></svg>
@@ -1194,14 +1257,17 @@ export default function FacturesPage() {
                         <div className="border-t border-white/5 divide-y divide-white/8">
                           {bc.invoices.map((inv: any) => (
                             <div key={inv.key} className="px-5 py-3">
-                              <div className="flex items-center justify-between gap-2 mb-2">
-                                <span className="text-[10px] font-bold uppercase tracking-wider text-fuchsia-400 bg-fuchsia-500/10 px-2 py-0.5 rounded-md">🛍️ Vente</span>
-                                <span className="text-xs text-gray-500">{new Date(inv.sold_at).toLocaleDateString("fr-FR")}</span>
-                                <span className="text-sm font-bold text-green-400 ml-auto">{inv.total.toFixed(2)} €</span>
+                              <div className="flex items-center justify-between gap-3 mb-2">
+                                <div className="flex items-center gap-2 text-xs text-gray-400 min-w-0">
+                                  <span className="text-[10px] font-bold uppercase tracking-wider text-green-400 bg-green-500/10 px-2 py-0.5 rounded-md shrink-0">🧾 Facture</span>
+                                  <span className="truncate">{new Date(inv.sold_at).toLocaleString("fr-FR", { day: "2-digit", month: "2-digit", year: "numeric", hour: "2-digit", minute: "2-digit" })}</span>
+                                </div>
+                                <div className="text-sm font-bold text-green-400 shrink-0">{inv.total.toFixed(2)} €</div>
                               </div>
                               <div className="space-y-1 mb-2.5">
                                 {inv.items.map((s: any) => (
                                   <div key={s.id} className="flex items-center gap-2 text-xs">
+                                    <span className="text-[10px] text-purple-400 shrink-0">🛍️</span>
                                     <span className="flex-1 text-gray-300 truncate">{s.product_name}{s.quantity > 1 ? ` × ${s.quantity}` : ""}</span>
                                     <span className="text-gray-500 shrink-0">{Number(s.total).toFixed(2)} €</span>
                                   </div>
@@ -1266,7 +1332,7 @@ export default function FacturesPage() {
 
               {/* Recherche produit */}
               <div className="mb-3">
-                <input
+                <input autoComplete="new-password"
                   type="text"
                   placeholder="Ajouter un produit boutique..."
                   value={productSearch}
@@ -1310,7 +1376,7 @@ export default function FacturesPage() {
                 </div>
               </div>
 
-              <input
+              <input autoComplete="new-password"
                 type="number"
                 value={paymentAmount}
                 onChange={(e) => setPaymentAmount(e.target.value)}
@@ -1328,7 +1394,7 @@ export default function FacturesPage() {
                 <option>Chèque</option>
               </select>
               <label className="flex items-center gap-2 my-3 cursor-pointer select-none">
-                <input type="checkbox" checked={markRenduOnPay} onChange={(e) => setMarkRenduOnPay(e.target.checked)} className="w-4 h-4 accent-emerald-500" />
+                <input autoComplete="new-password" type="checkbox" checked={markRenduOnPay} onChange={(e) => setMarkRenduOnPay(e.target.checked)} className="w-4 h-4 accent-emerald-500" />
                 <span className="text-sm text-gray-300">📦 Marquer l&apos;appareil comme <span className="text-emerald-400 font-semibold">rendu</span> après paiement</span>
               </label>
               <div className="flex gap-2">
@@ -1363,7 +1429,7 @@ export default function FacturesPage() {
                 <div key={row.id} className={`flex items-center gap-2 bg-[#1a1d2e] border border-white/10 rounded-xl px-3 py-2 ${row.removed ? "opacity-40" : ""}`}>
                   <span className="font-mono text-[10px] text-indigo-400 shrink-0">MBX-{row.id}</span>
                   <span className="flex-1 text-xs text-white truncate">{row.device}</span>
-                  <input
+                  <input autoComplete="new-password"
                     type="number"
                     step="0.01"
                     value={row.priceHt}
@@ -1461,7 +1527,7 @@ export default function FacturesPage() {
             {/* Destinataire */}
             <div className="px-6 py-4">
               <label className="block text-[10px] font-semibold text-gray-500 uppercase tracking-widest mb-1.5">Destinataire</label>
-              <input
+              <input autoComplete="new-password"
                 type="email"
                 value={emailTo}
                 onChange={(e) => setEmailTo(e.target.value)}

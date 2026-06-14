@@ -444,7 +444,7 @@ export default function RepairsPage() {
           {/* Recherche */}
           <div className="flex items-center gap-2 flex-1 min-w-48 bg-[#16161d] border border-white/8 rounded-xl px-3 py-2">
             <Search size={14} className="text-gray-500 shrink-0" />
-            <input
+            <input autoComplete="new-password"
               type="text"
               placeholder="Ticket, nom, modèle, panne..."
               className="flex-1 bg-transparent text-white placeholder-gray-600 text-sm outline-none"

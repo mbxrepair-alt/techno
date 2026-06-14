@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState, useCallback, useMemo } from "react";
+import { History } from "lucide-react";
 import { supabase, getCurrentUser } from "../../lib/supabase";
 import { useRouter } from "next/navigation";
 import Layout from "../../components/Layout";
@@ -523,7 +524,7 @@ export default function HistoriquePage() {
         {/* HEADER */}
         <div className="flex items-center justify-between mb-5">
           <div>
-            <h1 className="text-xl font-bold text-white tracking-tight">Historique</h1>
+            <h1 className="text-xl font-bold text-white tracking-tight flex items-center gap-2"><History size={18} className="text-blue-400" /> Historique</h1>
             <p className="text-xs text-gray-500 mt-0.5">Suivi complet des réparations</p>
           </div>
         </div>

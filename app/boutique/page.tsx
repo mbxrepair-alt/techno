@@ -5,9 +5,10 @@ import { supabase } from "../../lib/supabase";
 import { useRouter } from "next/navigation";
 import Layout from "../../components/Layout";
 import { getCurrentTechnician } from "../../lib/historique";
-import { Store, Plus, Trash2, ShoppingCart, ScanLine, X, Check } from "lucide-react";
+import { Package, Plus, Trash2, ShoppingCart, ScanLine, X, Check } from "lucide-react";
 import QrScanner from "../../components/QrScanner";
 import { createInvoice, type InvoiceItem } from "../../lib/invoices";
+import CartValidationModal from "../../components/CartValidationModal";
 
 const CATEGORIES = [
   "Téléphone",
@@ -64,6 +65,7 @@ interface ClientSearchResult {
 export default function BoutiquePage() {
   const router = useRouter();
   const [tab, setTab] = useState<"stock" | "ventes">("stock");
+  const [productSearch, setProductSearch] = useState("");
   const [products, setProducts] = useState<Product[]>([]);
   const [sales, setSales] = useState<Sale[]>([]);
   const [loading, setLoading] = useState(true);
@@ -87,6 +89,7 @@ export default function BoutiquePage() {
   const [showManualInput, setShowManualInput] = useState(false);
 
   const [scannedProduct, setScannedProduct] = useState<Product | null>(null);
+  const [outOfStockProduct, setOutOfStockProduct] = useState<Product | null>(null);
   const [saleQuantity, setSaleQuantity] = useState("1");
   const [cartItems, setCartItems] = useState<CartItem[]>([]);
   const [showClientModal, setShowClientModal] = useState(false);
@@ -102,6 +105,15 @@ export default function BoutiquePage() {
   const [repairCodeInput, setRepairCodeInput] = useState("");
   const [showRepairScanner, setShowRepairScanner] = useState(false);
   const [salePaymentMethod, setSalePaymentMethod] = useState("Espèces");
+  const [modalProductSearch, setModalProductSearch] = useState("");
+  const [showModalProductScanner, setShowModalProductScanner] = useState(false);
+  const [showNewClientForm, setShowNewClientForm] = useState(false);
+  const [newClientForm, setNewClientForm] = useState({ name: "", phone: "", email: "" });
+  const [techniciens, setTechniciens] = useState<{ id: number; name: string }[]>([]);
+  const [selectedTech, setSelectedTech] = useState<string>("");
+  const [payments, setPayments] = useState<{ method: string; amount: string }[]>([{ method: "Carte", amount: "" }]);
+  const [paymentError, setPaymentError] = useState<string>("");
+  const [barcodeConflict, setBarcodeConflict] = useState<{ id: number; name: string } | null>(null);
 
   const load = async () => {
     setLoading(true);
@@ -131,6 +143,9 @@ export default function BoutiquePage() {
       const t = getCurrentTechnician();
       setIsGerant(t?.is_gerant === true);
       setTechName(t?.name || "");
+      setSelectedTech("");
+      const { data: techs } = await supabase.from("technicians").select("id, name").eq("user_id", user.id);
+      if (techs) setTechniciens(techs);
       await load();
     };
     init();
@@ -141,6 +156,11 @@ export default function BoutiquePage() {
     if (!form.name.trim()) { alert("Le nom du produit est requis."); return; }
     const { data: { user }, error: userError } = await supabase.auth.getUser();
     if (userError || !user) { alert("Vous devez être connecté pour ajouter un produit."); return; }
+    // Vérifier doublon code-barres
+    if (form.barcode.trim()) {
+      const { data: existing } = await supabase.from("products").select("id, name").eq("user_id", user.id).eq("barcode", form.barcode.trim()).maybeSingle();
+      if (existing) { setBarcodeConflict(existing); return; }
+    }
     const { error } = await supabase.from("products").insert({
       user_id: user.id,
       name: form.name.trim(),
@@ -191,11 +211,10 @@ export default function BoutiquePage() {
     const win = window.open("", "_blank", "height=900,width=1000");
     if (!win) return;
     const date = new Date().toLocaleDateString("fr-FR");
-    const productsHt = cart.reduce((s, i) => s + Number(i.product.sale_price) * i.quantity, 0);
-    const productsTtc = productsHt * (1 + tva / 100);
+    // Produits : sale_price déjà TTC, TVA toggle s'applique uniquement à la réparation
+    const productsTtc = cart.reduce((s, i) => s + Number(i.product.sale_price) * i.quantity, 0);
     const repairHt = repair ? (repair.final_price ?? repair.estimated_price ?? 0) : 0;
-    const repairTtaRate = repair ? (repair.tva_rate ?? 0) : 0;
-    const repairTtc = repairHt * (1 + repairTtaRate / 100);
+    const repairTtc = repairHt * (1 + tva / 100);
     const grandTotal = productsTtc + repairTtc;
     const payLabel: Record<string, string> = { "Espèces": "💵 Espèces", "Carte Bancaire": "💳 Carte Bancaire", "Virement": "🏦 Virement", "Chèque": "📄 Chèque" };
     win.document.write(`<!DOCTYPE html><html><head><meta charset="UTF-8"><title>Facture ${invoiceId}</title>
@@ -221,7 +240,7 @@ export default function BoutiquePage() {
           <thead><tr><th>Description</th><th class="r" style="width:70px">Qté</th><th class="r" style="width:90px">P.U. HT</th><th class="r" style="width:90px">Total TTC</th></tr></thead>
           <tbody>
             ${repair ? `<tr><td><span style="font-family:monospace;font-size:11px;color:#6366f1;background:#eef2ff;padding:3px 8px;border-radius:4px">MBX-${repair.id}</span>&nbsp;&nbsp;<strong>${repair.device}</strong><div style="font-size:11.5px;color:#94a3b8">${repair.issue || ""}</div></td><td class="r">1</td><td class="r">${repairHt.toFixed(2)} €</td><td class="r" style="font-weight:600">${repairTtc.toFixed(2)} €</td></tr>` : ""}
-            ${cart.map(i => `<tr><td><span style="font-family:monospace;font-size:11px;color:#a855f7;background:#faf5ff;padding:3px 8px;border-radius:4px">🛍️</span>&nbsp;&nbsp;<strong>${i.product.name}</strong></td><td class="r">${i.quantity}</td><td class="r">${Number(i.product.sale_price).toFixed(2)} €</td><td class="r" style="font-weight:600">${(Number(i.product.sale_price) * i.quantity * (1 + tva / 100)).toFixed(2)} €</td></tr>`).join("")}
+            ${cart.map(i => { const ttc = Number(i.product.sale_price) * i.quantity; const puHt = tva > 0 ? Number(i.product.sale_price) / (1 + tva / 100) : Number(i.product.sale_price); return `<tr><td><span style="font-family:monospace;font-size:11px;color:#a855f7;background:#faf5ff;padding:3px 8px;border-radius:4px">🛍️</span>&nbsp;&nbsp;<strong>${i.product.name}</strong></td><td class="r">${i.quantity}</td><td class="r">${puHt.toFixed(2)} €</td><td class="r" style="font-weight:600">${ttc.toFixed(2)} €</td></tr>`; }).join("")}
           </tbody>
         </table>
       </div>
@@ -240,12 +259,39 @@ export default function BoutiquePage() {
 
   const validateSaleWithInvoice = async () => {
     if (cartItems.length === 0 && !linkedRepair) { alert("Ajoutez des produits ou liez une réparation"); return; }
+    const clientRequired = selectedClient || linkedRepair?.clients;
+    if (!clientRequired) { setPaymentError("Client obligatoire"); setIsProcessingSale(false); return; }
     setIsProcessingSale(true);
     const cartSnapshot = [...cartItems];
     const repairSnapshot = linkedRepair;
-    const clientForInvoice = selectedClient || { name: "Vente directe" };
+    const clientForInvoice = selectedClient || (linkedRepair?.clients ? { id: linkedRepair.clients.id, name: linkedRepair.clients.name, phone: linkedRepair.clients.phone } : { name: clientSearch || "Client" });
     const currentTva = tvaRate;
-    const currentPayMethod = salePaymentMethod;
+    // Calcul grand total ici pour valider les paiements
+    const productsTotal = cartSnapshot.reduce((s, i) => s + Number(i.product.sale_price) * i.quantity, 0);
+    const repairTotal = repairSnapshot ? (repairSnapshot.final_price ?? repairSnapshot.estimated_price ?? 0) * (1 + currentTva / 100) : 0;
+    const invoiceTotal = productsTotal + repairTotal;
+    // Distribuer le reste sur les lignes sans montant
+    const totalSaisi = payments.reduce((s, p) => s + (parseFloat(p.amount) || 0), 0);
+    const reste = Math.max(0, invoiceTotal - totalSaisi);
+    const resolvedPayments = payments.map((p, i) => {
+      if (!p.amount) {
+        // Première ligne vide = tout le reste (ou reste après les autres)
+        const autresSaisis = payments.reduce((s, x, j) => j !== i ? s + (parseFloat(x.amount) || 0) : s, 0);
+        const montant = Math.max(0, invoiceTotal - autresSaisis);
+        return { ...p, amount: montant.toFixed(2) };
+      }
+      return p;
+    });
+    const totalResolu = resolvedPayments.reduce((s, p) => s + (parseFloat(p.amount) || 0), 0);
+    if (Math.abs(totalResolu - invoiceTotal) > 0.01) {
+      const diff = invoiceTotal - totalResolu;
+      setPaymentError(diff > 0 ? `Manque ${diff.toFixed(2)} €` : `Surplus de ${Math.abs(diff).toFixed(2)} €`);
+      setIsProcessingSale(false);
+      return;
+    }
+    setPaymentError("");
+    const currentPayMethod = resolvedPayments.map(p => resolvedPayments.length > 1 || p.amount !== invoiceTotal.toFixed(2) ? `${p.method} ${parseFloat(p.amount).toFixed(2)}€` : p.method).join(" + ") || "Espèces";
+    void reste;
     try {
       const items: InvoiceItem[] = cartSnapshot.map((item) => ({
         product_id: item.product.id,
@@ -255,24 +301,34 @@ export default function BoutiquePage() {
         total: Number(item.product.sale_price) * item.quantity,
       }));
 
-      const result = await createInvoice(userId, clientForInvoice, items, currentTva, currentPayMethod);
+      // Récupère le vrai user_id Supabase Auth (ne pas se fier au state qui peut être vide)
+      const { data: { user: authUser } } = await supabase.auth.getUser();
+      const realUserId = authUser?.id || userId;
+      if (!realUserId) { alert("Session expirée, reconnectez-vous."); return; }
+
+      const result = await createInvoice(realUserId, clientForInvoice, items, currentTva, currentPayMethod);
       if (!result.success) { alert("Erreur création facture: " + result.error); return; }
+
+      // invoice_id est integer dans Supabase — ne pas y mettre de string
+      const boutiqueInvoiceId = null;
 
       for (const item of cartSnapshot) {
         const unitPrice = Number(item.product.sale_price);
         const unitCost = Number(item.product.purchase_price);
-        await supabase.from("product_sales").insert({
-          user_id: userId,
+        const { error: saleErr } = await supabase.from("product_sales").insert({
+          user_id: realUserId,
           product_id: item.product.id,
           product_name: item.product.name,
           quantity: item.quantity,
           unit_price: unitPrice,
           unit_cost: unitCost,
           total: unitPrice * item.quantity,
-          sold_by: techName || "Boutique",
-          invoice_id: result.invoiceId,
+          sold_by: selectedTech || techName || "Boutique",
+          invoice_id: boutiqueInvoiceId,
           client_name: clientForInvoice.name,
+          repair_id: repairSnapshot ? repairSnapshot.id : null,
         });
+        if (saleErr) console.error("Erreur product_sales insert:", saleErr);
         await supabase.from("products").update({ stock: item.product.stock - item.quantity }).eq("id", item.product.id);
       }
 
@@ -280,7 +336,8 @@ export default function BoutiquePage() {
       if (repairSnapshot) {
         const paidAt = new Date().toISOString();
         const priceHt = repairSnapshot.final_price ?? repairSnapshot.estimated_price ?? 0;
-        const repairTtc = priceHt * (1 + (repairSnapshot.tva_rate ?? 0) / 100);
+        // TVA du toggle appliquée à la réparation uniquement
+        const repairTtc = priceHt * (1 + currentTva / 100);
         await supabase.from("repairs").update({
           paid_amount: repairTtc,
           payment_status: "payé",
@@ -293,6 +350,7 @@ export default function BoutiquePage() {
       printCombinedBoutiqueInvoice(result.invoiceId || "", clientForInvoice, cartSnapshot, repairSnapshot, currentTva, currentPayMethod);
 
       setCartItems([]);
+      setPayments([{ method: "Carte", amount: "" }]);
       setSelectedClient(null);
       setClientSearch("");
       setClientSearchResults([]);
@@ -308,6 +366,14 @@ export default function BoutiquePage() {
     }
   };
 
+  const handleManualBarcodeSubmit = (e: React.KeyboardEvent) => {
+    if (e.key === "Enter" && manualBarcode.trim()) {
+      searchProductByBarcode(manualBarcode);
+      setManualBarcode("");
+      setShowManualInput(false);
+    }
+  };
+
   const searchProductByBarcode = async (barcode: string) => {
     if (!barcode.trim() || !userId) return;
     // Si le code scanné est un code réparation MBX-xxx → lier la réparation
@@ -316,15 +382,18 @@ export default function BoutiquePage() {
       setShowClientModal(true);
       return;
     }
-    const { data, error } = await supabase
+    const { data: results } = await supabase
       .from("products")
       .select("*")
       .eq("user_id", userId)
       .eq("barcode", barcode.trim())
-      .single();
-    if (error || !data) {
+      .order("stock", { ascending: false });
+    const data = results?.[0] ?? null;
+    if (!data) {
       alert(`Produit introuvable : ${barcode}`);
       setScannedProduct(null);
+    } else if (data.stock <= 0) {
+      setOutOfStockProduct(data as Product);
     } else {
       setScannedProduct(data as Product);
       setSaleQuantity("1");
@@ -349,13 +418,6 @@ export default function BoutiquePage() {
     setManualBarcode("");
   };
 
-  const handleManualBarcodeSubmit = (e: React.KeyboardEvent) => {
-    if (e.key === "Enter" && manualBarcode.trim()) {
-      searchProductByBarcode(manualBarcode);
-      setManualBarcode("");
-      setShowManualInput(false);
-    }
-  };
 
   const updateField = (id: number, field: keyof Product, value: number) => {
     setProducts((prev) => prev.map((p) => (p.id === id ? { ...p, [field]: value } : p)));
@@ -382,8 +444,8 @@ export default function BoutiquePage() {
         {/* Header */}
         <div className="flex items-center justify-between mb-4">
           <h1 className="text-xl font-bold text-white tracking-tight flex items-center gap-2">
-            <Store size={18} className="text-pink-400" />
-            Boutique
+            <Package size={18} className="text-fuchsia-400" />
+            Stock
           </h1>
           {tab === "stock" && (
             <div className="flex items-center gap-2">
@@ -392,6 +454,12 @@ export default function BoutiquePage() {
                 className="flex items-center gap-2 px-4 py-2 bg-[#16161d] border border-white/10 text-gray-200 hover:border-pink-500/40 rounded-xl text-sm font-bold transition active:scale-95"
               >
                 <ScanLine size={16} /> Code-barres
+              </button>
+              <button
+                onClick={() => setShowBarcodeScanner(true)}
+                className="flex items-center gap-2 px-4 py-2 bg-violet-600 hover:bg-violet-500 text-white rounded-xl text-sm font-bold transition active:scale-95"
+              >
+                <ScanLine size={16} /> Scanner
               </button>
               {isGerant && (
                 <button
@@ -409,7 +477,7 @@ export default function BoutiquePage() {
         {showManualInput && tab === "stock" && (
           <div className="mb-4 p-3 bg-[#16161d] border border-white/10 rounded-xl">
             <div className="flex items-center gap-2">
-              <input
+              <input autoComplete="new-password"
                 type="text"
                 placeholder="Saisir un code-barres..."
                 value={manualBarcode}
@@ -435,87 +503,100 @@ export default function BoutiquePage() {
           </div>
         )}
 
-        {/* Bandeau Vente Rapide */}
-        <div className="mb-4 bg-gradient-to-r from-green-600/20 to-emerald-600/20 border border-green-500/30 rounded-2xl p-4">
-          <div className="flex items-center justify-between flex-wrap gap-4">
-            <div className="flex items-center gap-3">
-              <div className="p-2 bg-green-500/20 rounded-xl">
-                <ShoppingCart className="w-5 h-5 text-green-400" />
+        {/* Rupture de stock */}
+        {outOfStockProduct && (
+          <div className="mb-4 p-4 bg-amber-500/10 border border-amber-500/30 rounded-xl">
+            <div className="flex items-center justify-between flex-wrap gap-3">
+              <div className="flex-1 min-w-0">
+                <span className="text-amber-400 font-semibold text-sm">⚠️ Rupture de stock</span>
+                <p className="text-white text-sm mt-0.5 truncate">{outOfStockProduct.name}</p>
               </div>
-              <div>
-                <h2 className="text-sm font-bold text-white">Vente rapide</h2>
-                <p className="text-xs text-gray-400">Scanner un code-barres pour vendre</p>
-              </div>
-            </div>
-            <div className="flex gap-2">
-              <button
-                onClick={() => setShowBarcodeScanner(true)}
-                className="px-4 py-2 bg-green-600 hover:bg-green-500 text-white rounded-xl text-sm font-semibold transition flex items-center gap-2"
-              >
-                <ScanLine size={16} /> Scanner
-              </button>
-              {cartItems.length > 0 && (
+              <div className="flex gap-2 shrink-0">
                 <button
-                  onClick={() => { setShowClientModal(true); searchExistingClients(""); }}
-                  className="px-4 py-2 bg-pink-600 hover:bg-pink-500 text-white rounded-xl text-sm font-semibold transition flex items-center gap-2"
+                  onClick={() => {
+                    const el = document.getElementById(`product-${outOfStockProduct.id}`);
+                    el?.scrollIntoView({ behavior: "smooth", block: "center" });
+                    setOutOfStockProduct(null);
+                  }}
+                  className="px-3 py-1.5 bg-blue-500/20 hover:bg-blue-500/30 text-blue-300 rounded-lg text-xs font-semibold border border-blue-500/30 transition"
                 >
-                  <ShoppingCart size={16} />
-                  Panier ({cartItems.reduce((s, i) => s + i.quantity, 0)})
+                  + Ajouter stock
                 </button>
-              )}
+                <button
+                  onClick={() => {
+                    setCartItems(prev => {
+                      const ex = prev.find(i => i.product.id === outOfStockProduct.id);
+                      return ex ? prev.map(i => i.product.id === outOfStockProduct.id ? { ...i, quantity: i.quantity + 1 } : i) : [...prev, { product: outOfStockProduct, quantity: 1 }];
+                    });
+                    setOutOfStockProduct(null);
+                  }}
+                  className="px-3 py-1.5 bg-green-500/20 hover:bg-green-500/30 text-green-300 rounded-lg text-xs font-semibold border border-green-500/30 transition"
+                >
+                  Ajouter
+                </button>
+                <button onClick={() => setOutOfStockProduct(null)} className="p-1.5 bg-white/5 hover:bg-white/10 rounded-lg transition">
+                  <X size={14} className="text-gray-400" />
+                </button>
+              </div>
             </div>
           </div>
+        )}
 
-          {/* Produit scanné */}
-          {scannedProduct && (
-            <div className="mt-4 p-4 bg-[#1a1d2e] rounded-xl border border-green-500/30">
-              <div className="flex items-center justify-between flex-wrap gap-4">
-                <div className="flex-1">
-                  <div className="flex items-center gap-2">
-                    <Check className="w-4 h-4 text-green-400" />
-                    <span className="font-bold text-white">{scannedProduct.name}</span>
-                  </div>
-                  <div className="text-xs text-gray-400 mt-1">
-                    Prix : {Number(scannedProduct.sale_price).toFixed(2)} € · Stock : {scannedProduct.stock}
-                  </div>
-                </div>
-                <div className="flex items-center gap-3">
-                  <div className="flex items-center gap-2">
-                    <label className="text-xs text-gray-400">Qté :</label>
-                    <input
-                      type="number"
-                      min={1}
-                      max={scannedProduct.stock}
-                      value={saleQuantity}
-                      onChange={(e) => setSaleQuantity(e.target.value)}
-                      className="w-16 bg-black/30 border border-white/10 rounded-lg px-2 py-1.5 text-white text-center text-sm outline-none focus:border-green-500/50"
-                    />
-                  </div>
-                  <div className="text-right">
-                    <div className="text-xs text-gray-400">Total</div>
-                    <div className="text-sm font-bold text-green-400">
-                      {(Number(scannedProduct.sale_price) * (Number(saleQuantity) || 1)).toFixed(2)} €
+        {/* Produit scanné + bouton panier */}
+        {(scannedProduct || cartItems.length > 0) && (
+          <div className="mb-4 space-y-2">
+            {scannedProduct && (
+              <div className="p-4 bg-[#16161d] border border-green-500/30 rounded-2xl">
+                <div className="flex items-center justify-between flex-wrap gap-4">
+                  <div className="flex-1">
+                    <div className="flex items-center gap-2">
+                      <Check className="w-4 h-4 text-green-400" />
+                      <span className="font-bold text-white">{scannedProduct.name}</span>
+                    </div>
+                    <div className="text-xs text-gray-400 mt-1">
+                      Prix : {Number(scannedProduct.sale_price).toFixed(2)} € · Stock : {scannedProduct.stock}
                     </div>
                   </div>
-                  <button
-                    onClick={addToCart}
-                    className="px-4 py-2 bg-green-600 hover:bg-green-500 text-white rounded-xl text-sm font-semibold transition flex items-center gap-2"
-                  >
-                    <ShoppingCart size={14} /> Ajouter
-                  </button>
-                  <button onClick={() => setScannedProduct(null)} className="p-2 bg-white/5 hover:bg-white/10 rounded-xl transition">
-                    <X size={16} className="text-gray-400" />
-                  </button>
+                  <div className="flex items-center gap-3">
+                    <div className="flex items-center gap-2">
+                      <label className="text-xs text-gray-400">Qté :</label>
+                      <input autoComplete="new-password" type="number" min={1} max={scannedProduct.stock} value={saleQuantity} onChange={(e) => setSaleQuantity(e.target.value)} className="w-16 bg-black/30 border border-white/10 rounded-lg px-2 py-1.5 text-white text-center text-sm outline-none focus:border-green-500/50" />
+                    </div>
+                    <div className="text-right">
+                      <div className="text-xs text-gray-400">Total</div>
+                      <div className="text-sm font-bold text-green-400">{(Number(scannedProduct.sale_price) * (Number(saleQuantity) || 1)).toFixed(2)} €</div>
+                    </div>
+                    <button onClick={addToCart} className="px-4 py-2 bg-green-600 hover:bg-green-500 text-white rounded-xl text-sm font-semibold transition flex items-center gap-2">
+                      <ShoppingCart size={14} /> Ajouter
+                    </button>
+                    <button onClick={() => setScannedProduct(null)} className="p-2 bg-white/5 hover:bg-white/10 rounded-xl transition">
+                      <X size={16} className="text-gray-400" />
+                    </button>
+                  </div>
                 </div>
               </div>
-            </div>
-          )}
-        </div>
+            )}
+            {cartItems.length > 0 && (
+              <button onClick={() => { setShowClientModal(true); searchExistingClients(""); }} className="w-full px-4 py-2.5 bg-pink-600 hover:bg-pink-500 text-white rounded-xl text-sm font-semibold transition flex items-center justify-center gap-2">
+                <ShoppingCart size={16} /> Panier ({cartItems.reduce((s, i) => s + i.quantity, 0)}) · {cartItems.reduce((s, i) => s + Number(i.product.sale_price) * i.quantity, 0).toFixed(2)} €
+              </button>
+            )}
+          </div>
+        )}
 
-        {/* Onglets */}
+        {/* Onglets + recherche */}
         <div className="flex gap-2 mb-4">
-          <button onClick={() => setTab("stock")} className={`px-4 py-2 rounded-xl text-sm font-semibold transition ${tab === "stock" ? "bg-pink-500/15 text-pink-300 border border-pink-500/30" : "bg-[#16161d] text-gray-400 border border-white/8"}`}>📦 Stock</button>
-          <button onClick={() => setTab("ventes")} className={`px-4 py-2 rounded-xl text-sm font-semibold transition ${tab === "ventes" ? "bg-pink-500/15 text-pink-300 border border-pink-500/30" : "bg-[#16161d] text-gray-400 border border-white/8"}`}>🧾 Ventes</button>
+          <button onClick={() => setTab("stock")} className={`px-4 py-2 rounded-xl text-sm font-semibold transition shrink-0 ${tab === "stock" ? "bg-pink-500/15 text-pink-300 border border-pink-500/30" : "bg-[#16161d] text-gray-400 border border-white/8"}`}>📦 Stock</button>
+          <button onClick={() => setTab("ventes")} className={`px-4 py-2 rounded-xl text-sm font-semibold transition shrink-0 ${tab === "ventes" ? "bg-pink-500/15 text-pink-300 border border-pink-500/30" : "bg-[#16161d] text-gray-400 border border-white/8"}`}>🧾 Ventes</button>
+          {tab === "stock" && (
+            <input autoComplete="new-password"
+              type="text"
+              placeholder="Rechercher par nom ou code-barres..."
+              value={productSearch}
+              onChange={e => setProductSearch(e.target.value)}
+              className="flex-1 bg-[#16161d] border border-white/10 rounded-xl px-4 py-2 text-white text-sm outline-none focus:border-pink-500/50 placeholder-gray-600"
+            />
+          )}
         </div>
 
         {loading ? (
@@ -525,10 +606,10 @@ export default function BoutiquePage() {
             <div className="text-center text-gray-600 py-16 bg-[#16161d] border border-white/5 rounded-2xl text-sm">Aucun produit. Ajoutez-en avec le bouton « Produit ».</div>
           ) : (
             <div className="space-y-2">
-              {products.map((p) => {
+              {products.filter(p => !productSearch.trim() || p.name.toLowerCase().includes(productSearch.toLowerCase()) || (p.barcode && p.barcode.includes(productSearch.trim()))).map((p) => {
                 const margin = (Number(p.sale_price) || 0) - (Number(p.purchase_price) || 0);
                 return (
-                  <div key={p.id} className="bg-[#16161d] border border-white/8 rounded-2xl p-4">
+                  <div key={p.id} id={`product-${p.id}`} className="bg-[#16161d] border border-white/8 rounded-2xl p-4">
                     <div className="flex items-start justify-between gap-3">
                       <div className="min-w-0">
                         <div className="font-semibold text-white text-sm">{p.name}</div>
@@ -544,13 +625,13 @@ export default function BoutiquePage() {
                     {isGerant && (
                       <div className="flex flex-wrap items-center gap-3 mt-3 pt-3 border-t border-white/5 text-xs text-gray-400">
                         <label className="flex items-center gap-1.5">Stock
-                          <input type="number" value={p.stock} onChange={(e) => updateField(p.id, "stock", Number(e.target.value))} onBlur={(e) => saveField(p.id, "stock", Number(e.target.value))} className="w-16 bg-black/30 border border-white/10 rounded-lg px-2 py-1 text-white text-right outline-none focus:border-pink-500/50" />
+                          <input autoComplete="new-password" type="number" value={p.stock} onChange={(e) => updateField(p.id, "stock", Number(e.target.value))} onBlur={(e) => saveField(p.id, "stock", Number(e.target.value))} className="w-16 bg-black/30 border border-white/10 rounded-lg px-2 py-1 text-white text-right outline-none focus:border-pink-500/50" />
                         </label>
                         <label className="flex items-center gap-1.5">Achat €
-                          <input type="number" value={p.purchase_price} onChange={(e) => updateField(p.id, "purchase_price", Number(e.target.value))} onBlur={(e) => saveField(p.id, "purchase_price", Number(e.target.value))} className="w-20 bg-black/30 border border-white/10 rounded-lg px-2 py-1 text-white text-right outline-none focus:border-pink-500/50" />
+                          <input autoComplete="new-password" type="number" value={p.purchase_price} onChange={(e) => updateField(p.id, "purchase_price", Number(e.target.value))} onBlur={(e) => saveField(p.id, "purchase_price", Number(e.target.value))} className="w-20 bg-black/30 border border-white/10 rounded-lg px-2 py-1 text-white text-right outline-none focus:border-pink-500/50" />
                         </label>
                         <label className="flex items-center gap-1.5">Vente €
-                          <input type="number" value={p.sale_price} onChange={(e) => updateField(p.id, "sale_price", Number(e.target.value))} onBlur={(e) => saveField(p.id, "sale_price", Number(e.target.value))} className="w-20 bg-black/30 border border-white/10 rounded-lg px-2 py-1 text-white text-right outline-none focus:border-pink-500/50" />
+                          <input autoComplete="new-password" type="number" value={p.sale_price} onChange={(e) => updateField(p.id, "sale_price", Number(e.target.value))} onBlur={(e) => saveField(p.id, "sale_price", Number(e.target.value))} className="w-20 bg-black/30 border border-white/10 rounded-lg px-2 py-1 text-white text-right outline-none focus:border-pink-500/50" />
                         </label>
                         <span className={`font-semibold ${margin >= 0 ? "text-green-400" : "text-red-400"}`}>Marge {margin.toFixed(2)} €</span>
                         <button onClick={() => deleteProduct(p.id)} className="ml-auto text-red-400 hover:text-red-300"><Trash2 size={15} /></button>
@@ -610,180 +691,69 @@ export default function BoutiquePage() {
           <div className="bg-[#16161d] border border-white/10 rounded-2xl w-full max-w-md p-5" onClick={(e) => e.stopPropagation()}>
             <h2 className="text-lg font-bold text-white mb-4">➕ Nouveau produit</h2>
             <div className="space-y-3">
-              <input placeholder="Nom du produit" value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} className="w-full bg-[#1a1d2e] border border-white/10 rounded-xl px-4 py-2.5 text-white text-sm outline-none focus:border-pink-500/50" />
+              <input autoComplete="new-password" placeholder="Nom du produit" value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} className="w-full bg-[#1a1d2e] border border-white/10 rounded-xl px-4 py-2.5 text-white text-sm outline-none focus:border-pink-500/50" />
               <select value={form.category} onChange={(e) => setForm({ ...form, category: e.target.value })} className="w-full bg-[#1a1d2e] border border-white/10 rounded-xl px-4 py-2.5 text-white text-sm outline-none focus:border-pink-500/50">
                 <option value="">— Catégorie —</option>
                 {CATEGORIES.map((c) => <option key={c} value={c}>{c}</option>)}
               </select>
               <div className="flex gap-2">
-                <input placeholder="Code-barres" value={form.barcode} onChange={(e) => setForm({ ...form, barcode: e.target.value })} className="flex-1 bg-[#1a1d2e] border border-white/10 rounded-xl px-4 py-2.5 text-white text-sm outline-none focus:border-pink-500/50" />
+                <input autoComplete="new-password" placeholder="Code-barres" value={form.barcode} onChange={(e) => setForm({ ...form, barcode: e.target.value })} className="flex-1 bg-[#1a1d2e] border border-white/10 rounded-xl px-4 py-2.5 text-white text-sm outline-none focus:border-pink-500/50" />
                 <button type="button" onClick={() => setScanMode("form")} className="px-3 bg-pink-500/15 border border-pink-500/30 text-pink-300 rounded-xl hover:bg-pink-500/25 transition flex items-center gap-1.5 text-sm">
                   <ScanLine size={16} /> Scan
                 </button>
               </div>
               {form.category === "Téléphone" && (
-                <input placeholder="IMEI (téléphone)" value={form.imei} onChange={(e) => setForm({ ...form, imei: e.target.value })} className="w-full bg-[#1a1d2e] border border-white/10 rounded-xl px-4 py-2.5 text-white text-sm outline-none focus:border-pink-500/50" />
+                <input autoComplete="new-password" placeholder="IMEI (téléphone)" value={form.imei} onChange={(e) => setForm({ ...form, imei: e.target.value })} className="w-full bg-[#1a1d2e] border border-white/10 rounded-xl px-4 py-2.5 text-white text-sm outline-none focus:border-pink-500/50" />
               )}
               <div className="grid grid-cols-3 gap-2">
-                <input type="number" placeholder="Stock" value={form.stock} onChange={(e) => setForm({ ...form, stock: e.target.value })} className="bg-[#1a1d2e] border border-white/10 rounded-xl px-3 py-2.5 text-white text-sm outline-none focus:border-pink-500/50" />
-                <input type="number" placeholder="Achat €" value={form.purchase_price} onChange={(e) => setForm({ ...form, purchase_price: e.target.value })} className="bg-[#1a1d2e] border border-white/10 rounded-xl px-3 py-2.5 text-white text-sm outline-none focus:border-pink-500/50" />
-                <input type="number" placeholder="Vente €" value={form.sale_price} onChange={(e) => setForm({ ...form, sale_price: e.target.value })} className="bg-[#1a1d2e] border border-white/10 rounded-xl px-3 py-2.5 text-white text-sm outline-none focus:border-pink-500/50" />
+                <input autoComplete="new-password" type="number" placeholder="Stock" value={form.stock} onChange={(e) => setForm({ ...form, stock: e.target.value })} className="bg-[#1a1d2e] border border-white/10 rounded-xl px-3 py-2.5 text-white text-sm outline-none focus:border-pink-500/50" />
+                <input autoComplete="new-password" type="number" placeholder="Achat €" value={form.purchase_price} onChange={(e) => setForm({ ...form, purchase_price: e.target.value })} className="bg-[#1a1d2e] border border-white/10 rounded-xl px-3 py-2.5 text-white text-sm outline-none focus:border-pink-500/50" />
+                <input autoComplete="new-password" type="number" placeholder="Vente €" value={form.sale_price} onChange={(e) => setForm({ ...form, sale_price: e.target.value })} className="bg-[#1a1d2e] border border-white/10 rounded-xl px-3 py-2.5 text-white text-sm outline-none focus:border-pink-500/50" />
               </div>
             </div>
-            <button onClick={addProduct} className="w-full mt-4 bg-pink-500 hover:bg-pink-400 text-white py-2.5 rounded-xl font-semibold text-sm transition">Ajouter</button>
-            <button onClick={() => setShowAdd(false)} className="w-full mt-2 bg-white/5 hover:bg-white/10 text-gray-300 py-2.5 rounded-xl text-sm border border-white/10 transition">Annuler</button>
+            {barcodeConflict ? (
+              <div className="mt-4 p-3 bg-amber-500/10 border border-amber-500/30 rounded-xl space-y-2">
+                <p className="text-sm text-amber-300 font-semibold">⚠️ Code-barres déjà utilisé par <span className="text-white">« {barcodeConflict.name} »</span></p>
+                <div className="flex gap-2">
+                  <button
+                    onClick={() => {
+                      const conflictId = barcodeConflict.id;
+                      setBarcodeConflict(null);
+                      setShowAdd(false);
+                      setTimeout(() => {
+                        const el = document.getElementById(`product-${conflictId}`);
+                        if (el) el.scrollIntoView({ behavior: "smooth", block: "center" });
+                      }, 150);
+                    }}
+                    className="flex-1 bg-amber-500/20 hover:bg-amber-500/30 text-amber-300 py-2 rounded-xl text-sm font-semibold border border-amber-500/30"
+                  >Voir le produit existant</button>
+                  <button onClick={() => setBarcodeConflict(null)} className="flex-1 bg-white/5 hover:bg-white/10 text-gray-300 py-2 rounded-xl text-sm border border-white/10">Annuler</button>
+                </div>
+              </div>
+            ) : (
+              <>
+                <button onClick={addProduct} className="w-full mt-4 bg-pink-500 hover:bg-pink-400 text-white py-2.5 rounded-xl font-semibold text-sm transition">Ajouter</button>
+                <button onClick={() => setShowAdd(false)} className="w-full mt-2 bg-white/5 hover:bg-white/10 text-gray-300 py-2.5 rounded-xl text-sm border border-white/10 transition">Annuler</button>
+              </>
+            )}
           </div>
         </div>
       )}
 
       {/* MODAL PANIER + CLIENT */}
-      {showClientModal && (() => {
-        const productsHt = cartItems.reduce((s, i) => s + Number(i.product.sale_price) * i.quantity, 0);
-        const productsTtc = productsHt * (1 + tvaRate / 100);
-        const repairHt = linkedRepair ? (linkedRepair.final_price ?? linkedRepair.estimated_price ?? 0) : 0;
-        const repairTtc = repairHt * (1 + (linkedRepair?.tva_rate ?? 0) / 100);
-        const grandTotal = productsTtc + repairTtc;
-        return (
-          <div className="fixed inset-0 bg-black/70 backdrop-blur-sm flex items-center justify-center p-4 z-50">
-            <div className="bg-[#16161d] border border-white/10 rounded-2xl w-full max-w-2xl max-h-[90vh] overflow-auto">
-              <div className="sticky top-0 bg-[#16161d] border-b border-white/10 px-5 py-4 flex items-center justify-between">
-                <h2 className="text-lg font-bold text-white tracking-tight">🛒 Validation de la vente</h2>
-                <button onClick={() => setShowClientModal(false)} className="w-8 h-8 bg-white/10 hover:bg-white/20 rounded-full flex items-center justify-center text-gray-400">✕</button>
-              </div>
-              <div className="p-5 space-y-4">
-
-                {/* Lier à une réparation */}
-                <div>
-                  <label className="block text-xs font-semibold text-gray-400 uppercase tracking-widest mb-1.5">🔗 Réparation à inclure (optionnel)</label>
-                  {linkedRepair ? (
-                    <div className="bg-indigo-500/10 border border-indigo-500/30 rounded-xl p-3 flex items-center justify-between">
-                      <div>
-                        <div className="text-sm font-semibold text-white">MBX-{linkedRepair.id} · {linkedRepair.device}</div>
-                        <div className="text-xs text-gray-400">{linkedRepair.issue} · {repairTtc.toFixed(2)} €</div>
-                        {linkedRepair.clients && <div className="text-xs text-indigo-300 mt-0.5">Client : {linkedRepair.clients.name}</div>}
-                      </div>
-                      <button onClick={() => setLinkedRepair(null)} className="text-red-400 hover:text-red-300 text-xs ml-3">✕ Retirer</button>
-                    </div>
-                  ) : (
-                    <div className="flex gap-2">
-                      <input
-                        type="text"
-                        placeholder="MBX-42 ou scanner..."
-                        value={repairCodeInput}
-                        onChange={(e) => setRepairCodeInput(e.target.value)}
-                        onKeyDown={(e) => e.key === "Enter" && fetchRepairByCode(repairCodeInput)}
-                        className="flex-1 bg-[#1a1d2e] border border-white/10 rounded-xl px-4 py-2.5 text-white text-sm outline-none focus:border-indigo-500/50"
-                      />
-                      <button onClick={() => fetchRepairByCode(repairCodeInput)} className="px-3 py-2 bg-indigo-500/15 hover:bg-indigo-500/25 text-indigo-300 rounded-xl text-sm border border-indigo-500/20 transition">OK</button>
-                      <button onClick={() => setShowRepairScanner(true)} className="px-3 py-2 bg-indigo-500/15 hover:bg-indigo-500/25 text-indigo-300 rounded-xl text-sm border border-indigo-500/20 transition">📷</button>
-                    </div>
-                  )}
-                </div>
-
-                {/* Client */}
-                <div>
-                  <label className="block text-xs font-semibold text-gray-400 uppercase tracking-widest mb-1.5">Client <span className="text-gray-600 normal-case font-normal">(optionnel — sans sélection = Vente directe)</span></label>
-                  <input
-                    type="text"
-                    placeholder="Rechercher un client existant..."
-                    value={clientSearch}
-                    onChange={(e) => { setClientSearch(e.target.value); searchExistingClients(e.target.value); }}
-                    className="w-full bg-[#1a1d2e] border border-white/10 rounded-xl px-4 py-2.5 text-white text-sm outline-none focus:border-pink-500/50"
-                  />
-                  {clientSearchResults.length > 0 && (
-                    <div className="mt-2 space-y-1">
-                      {clientSearchResults.map((client) => (
-                        <div key={client.id} onClick={() => { setSelectedClient(client); setClientSearch(client.name); setClientSearchResults([]); }} className="p-2 bg-white/5 rounded-lg cursor-pointer hover:bg-white/10 transition-colors">
-                          <div className="font-medium text-white text-sm">{client.name}</div>
-                          <div className="text-xs text-gray-500">{client.phone} {client.email}</div>
-                        </div>
-                      ))}
-                    </div>
-                  )}
-                  <button
-                    onClick={() => {
-                      const name = prompt("Nom du nouveau client :");
-                      if (name) { const phone = prompt("Téléphone :") || ""; const email = prompt("Email :") || ""; setSelectedClient({ name, phone, email }); setClientSearch(name); }
-                    }}
-                    className="mt-2 text-xs text-pink-400 hover:text-pink-300"
-                  >+ Nouveau client</button>
-                  {selectedClient && (
-                    <div className="mt-2 bg-green-500/10 border border-green-500/30 rounded-xl p-3 flex items-center justify-between">
-                      <div>
-                        <div className="font-medium text-white text-sm">{selectedClient.name}</div>
-                        {(selectedClient.phone || selectedClient.email) && <div className="text-xs text-gray-400">{selectedClient.phone} {selectedClient.email}</div>}
-                      </div>
-                      <button onClick={() => { setSelectedClient(null); setClientSearch(""); }} className="text-xs text-red-400 hover:text-red-300">Modifier</button>
-                    </div>
-                  )}
-                </div>
-
-                {/* Mode de paiement */}
-                <div className="flex gap-3">
-                  <div className="flex-1">
-                    <label className="block text-xs font-semibold text-gray-400 uppercase tracking-widest mb-1.5">Mode de paiement</label>
-                    <select value={salePaymentMethod} onChange={(e) => setSalePaymentMethod(e.target.value)} className="w-full bg-[#1a1d2e] border border-white/10 rounded-xl px-4 py-2.5 text-white text-sm outline-none focus:border-pink-500/50">
-                      <option>Espèces</option>
-                      <option>Carte Bancaire</option>
-                      <option>Virement</option>
-                      <option>Chèque</option>
-                    </select>
-                  </div>
-                  <div className="flex-1">
-                    <label className="block text-xs font-semibold text-gray-400 uppercase tracking-widest mb-1.5">TVA</label>
-                    <select value={tvaRate} onChange={(e) => setTvaRate(Number(e.target.value))} className="w-full bg-[#1a1d2e] border border-white/10 rounded-xl px-4 py-2.5 text-white text-sm outline-none focus:border-pink-500/50">
-                      <option value={0}>0%</option>
-                      <option value={20}>20%</option>
-                    </select>
-                  </div>
-                </div>
-
-                {/* Panier */}
-                {cartItems.length > 0 && (
-                  <div>
-                    <h3 className="text-xs font-semibold text-gray-400 uppercase tracking-widest mb-2">🛍️ Produits</h3>
-                    <div className="space-y-2">
-                      {cartItems.map((item, idx) => (
-                        <div key={idx} className="flex items-center justify-between p-3 bg-[#1a1d2e] rounded-xl">
-                          <div className="flex-1">
-                            <div className="text-sm font-medium text-white">{item.product.name}</div>
-                            <div className="text-xs text-gray-500">{item.quantity} × {Number(item.product.sale_price).toFixed(2)} €</div>
-                          </div>
-                          <div className="text-right">
-                            <div className="text-sm font-bold text-green-400">{(Number(item.product.sale_price) * item.quantity).toFixed(2)} €</div>
-                            <button onClick={() => setCartItems(cartItems.filter((_, i) => i !== idx))} className="text-xs text-red-400 hover:text-red-300">✕</button>
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                )}
-
-                {/* Total */}
-                <div className="bg-white/5 rounded-xl px-4 py-3">
-                  {linkedRepair && <div className="flex justify-between text-sm text-gray-400 mb-1"><span>🔧 Réparation MBX-{linkedRepair.id}</span><span>{repairTtc.toFixed(2)} €</span></div>}
-                  {cartItems.length > 0 && <div className="flex justify-between text-sm text-gray-400 mb-1"><span>🛍️ Produits ({cartItems.length})</span><span>{productsTtc.toFixed(2)} €</span></div>}
-                  <div className="flex justify-between font-bold border-t border-white/10 pt-2 mt-1">
-                    <span className="text-white">Total à encaisser</span>
-                    <span className="text-pink-400 text-lg">{grandTotal.toFixed(2)} €</span>
-                  </div>
-                </div>
-
-                <div className="flex gap-3 pt-2">
-                  <button
-                    onClick={validateSaleWithInvoice}
-                    disabled={(cartItems.length === 0 && !linkedRepair) || isProcessingSale}
-                    className="flex-1 bg-green-600 hover:bg-green-500 text-white py-3 rounded-xl font-semibold transition-all disabled:opacity-50"
-                  >
-                    {isProcessingSale ? "⏳ Traitement..." : "✅ Valider · 🖨️ Imprimer"}
-                  </button>
-                  <button onClick={() => setShowClientModal(false)} className="px-5 bg-white/5 hover:bg-white/10 text-gray-300 py-3 rounded-xl transition-all">Annuler</button>
-                </div>
-              </div>
-            </div>
-          </div>
-        );
-      })()}
+      {showClientModal && (
+        <CartValidationModal
+          cartItems={cartItems as any}
+          setCartItems={setCartItems as any}
+          linkedRepair={linkedRepair}
+          setLinkedRepair={setLinkedRepair}
+          products={products as any}
+          userId={userId}
+          soldBy={selectedTech || techName || "Boutique"}
+          onClose={() => setShowClientModal(false)}
+          onSuccess={() => { setCartItems(() => []); load(); }}
+        />
+      )}
 
       {/* SCANNER formulaire ajout produit */}
       {scanMode && (
@@ -803,14 +773,9 @@ export default function BoutiquePage() {
         />
       )}
 
-      {/* SCANNER réparation (depuis modal panier) */}
-      {showRepairScanner && (
-        <QrScanner
-          onScan={(code) => { setShowRepairScanner(false); if (code) fetchRepairByCode(code); }}
-          onClose={() => setShowRepairScanner(false)}
-          label="Scanner le QR code de la réparation"
-        />
-      )}
+
+
+
     </Layout>
   );
 }

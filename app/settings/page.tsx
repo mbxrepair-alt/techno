@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import { Settings } from "lucide-react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { supabase, getCurrentUser } from "../../lib/supabase";
@@ -276,7 +277,7 @@ export default function SettingsPage() {
         <div className="relative overflow-hidden bg-gradient-to-r from-gray-500 to-slate-600 rounded-2xl px-6 py-5 mb-6">
           <div className="absolute inset-0 opacity-[0.06]" style={{ backgroundImage: "radial-gradient(circle, white 1px, transparent 1px)", backgroundSize: "18px 18px" }} />
           <div className="relative">
-            <h1 className="text-2xl font-black text-white tracking-tight">⚙️ Paramètres</h1>
+            <h1 className="text-2xl font-black text-white tracking-tight flex items-center gap-2"><Settings size={22} className="text-gray-400" /> Paramètres</h1>
             <p className="text-xs text-white/60 uppercase tracking-widest mt-1">Configuration de l'atelier</p>
           </div>
         </div>

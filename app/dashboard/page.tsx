@@ -289,17 +289,19 @@ export default function Dashboard() {
 
   // Charger toutes les données pour la recherche
   const loadAllData = async () => {
-    const user = await getCurrentUser();
-    if (!user) return;
+    const companyId = typeof window !== "undefined" ? localStorage.getItem("company_id") : null;
+    if (!companyId) return;
 
     const { data: repairsData } = await supabase
       .from("repairs")
       .select("*")
+      .eq("user_id", companyId)
       .order("id", { ascending: false });
 
     const { data: clientsData } = await supabase
       .from("clients")
-      .select("id, name, phone, email, client_code");
+      .select("id, name, phone, email, client_code")
+      .eq("user_id", companyId);
 
     if (repairsData) setAllRepairs(repairsData);
     if (clientsData) setAllClients(clientsData);

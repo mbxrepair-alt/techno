@@ -215,17 +215,17 @@ export default function RepairDetailPage() {
 
   const loadAllDataForSearch = async () => {
     try {
-      const user = await getCurrentUser();
-      if (!user) return;
+      const companyId = typeof window !== "undefined" ? localStorage.getItem("company_id") : null;
+      if (!companyId) return;
       const { data: repairsData } = await supabase
         .from("repairs")
         .select("*")
-        .eq("user_id", user.id)
+        .eq("user_id", companyId)
         .order("id", { ascending: false });
       const { data: clientsData } = await supabase
         .from("clients")
         .select("id, name")
-        .eq("user_id", user.id);
+        .eq("user_id", companyId);
       setAllRepairs(repairsData || []);
       setAllClients(clientsData || []);
     } catch (error) {

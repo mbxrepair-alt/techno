@@ -306,7 +306,7 @@ export default function Dashboard() {
     if (repairsData) setAllRepairs(repairsData);
     if (clientsData) setAllClients(clientsData);
 
-    const { data: productsData } = await supabase.from("products").select("*").eq("user_id", user.id).order("name");
+    const { data: productsData } = await supabase.from("products").select("*").eq("user_id", companyId).order("name");
     if (productsData) setDashProducts(productsData as Product[]);
   };
 

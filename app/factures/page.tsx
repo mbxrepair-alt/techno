@@ -46,6 +46,11 @@ export default function FacturesPage() {
   const [editRows, setEditRows] = useState<any[]>([]);
   const [editTva, setEditTva] = useState(0);
   const [savingEdit, setSavingEdit] = useState(false);
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const [availableProducts, setAvailableProducts] = useState<any[]>([]);
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const [extraItems, setExtraItems] = useState<any[]>([]); // produits boutique ajoutés à la facture courante
+  const [productSearch, setProductSearch] = useState("");
 
   useEffect(() => {
     const t = getCurrentTechnician();
@@ -68,16 +73,17 @@ export default function FacturesPage() {
       }
 
       // Charger le profil entreprise + TVA + réparations en parallèle
-      const [profileResult, tvaResult, repairsResult, clientsResult] = await Promise.all([
+      const [profileResult, tvaResult, repairsResult, clientsResult, productsResult] = await Promise.all([
         supabase.from("profiles").select("*").eq("id", user.id).single(),
         supabase.from("clients").select("id, default_tva_rate").eq("user_id", user.id),
         supabase.from("repairs").select("*, clients(*)").eq("user_id", user.id).in("status", ["✅ Terminé", "📦 Rendu", "🚫 Refus client"]).order("created_at", { ascending: false }),
         supabase.from("clients").select("*").eq("user_id", user.id),
+        supabase.from("products").select("*").eq("user_id", user.id).gt("stock", 0).order("name"),
       ]);
+      setAvailableProducts(productsResult.data || []);
       if (profileResult.error) console.error("Profil erreur:", profileResult.error);
       if (profileResult.data) {
         const p = profileResult.data;
-        console.log("Profil chargé:", p);
         const profile = { name: (p.company_name || "MBX").replace(/\s*réparations?\s*/i, "").trim() || "MBX", address: p.contact_address || p.address || "", phone: p.contact_phone || p.phone || "", email: p.email || "", siret: p.siret || "", logo_url: p.logo_url || "" };
         setCompanyProfile(profile);
         // Convertir logo en base64 via canvas pour éviter CORS dans la popup d'impression
@@ -260,10 +266,31 @@ export default function FacturesPage() {
         remaining -= apply;
       }
 
+      // Enregistrer les produits boutique ajoutés à cette facture
+      const { data: { user: currentUser } } = await supabase.auth.getUser();
+      if (currentUser) {
+        for (const item of extraItems) {
+          await supabase.from("product_sales").insert({
+            user_id: currentUser.id,
+            product_id: item.id,
+            product_name: item.name,
+            quantity: item.qty,
+            unit_price: item.sale_price,
+            unit_cost: item.purchase_price,
+            total: item.sale_price * item.qty,
+            sold_by: "Facture",
+            invoice_id: `FACT-${selectedGroup?.client?.id}-${paidAt.slice(0, 16)}`,
+          });
+          await supabase.from("products").update({ stock: item.stock - item.qty }).eq("id", item.id);
+        }
+      }
+
       await loadData();
       setShowPaymentModal(false);
       setPaymentAmount("");
       setSelectedGroup(null);
+      setExtraItems([]);
+      setProductSearch("");
     } catch (e) {
       console.error("registerPayment error:", e);
     } finally {
@@ -274,15 +301,19 @@ export default function FacturesPage() {
   /* -------------------------------------------------------------
      6️⃣ Impression PDF
      ------------------------------------------------------------- */
-  const printInvoice = (group) => {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const printInvoice = (group, extras: any[] = []) => {
     const win = window.open("", "_blank", "height=900,width=1000");
     if (!win) { alert("Autorisez les pop-ups pour imprimer."); return; }
 
     const cp = companyProfile;
     const shortName = cp.name || "MBX";
     const invoiceRef = `FACT-${String(group.client?.id || "").padStart(4, "0")}-${Date.now().toString().slice(-5)}`;
-    const totalHt = group.repairs.reduce((s, r) => s + r.priceHt, 0);
-    const totalTva = group.totalTtc - totalHt;
+    const extrasHt = extras.reduce((s, e) => s + e.sale_price * e.qty, 0);
+    const totalHt = group.repairs.reduce((s, r) => s + r.priceHt, 0) + extrasHt;
+    const extrasTtc = extrasHt * (1 + (group.tvaRate || 0) / 100);
+    const totalTtcFinal = group.totalTtc + extrasTtc;
+    const totalTva = totalTtcFinal - totalHt;
     const date = new Date().toLocaleDateString("fr-FR");
     const isSolde = group.totalRemaining <= 0;
     // Mode de paiement : on prend celui de la 1re réparation payée du groupe
@@ -434,6 +465,14 @@ export default function FacturesPage() {
                 <td class="r">${r.tvaRate > 0 ? r.tvaRate + "%" : `<span style="color:#cbd5e1">—</span>`}</td>
                 <td class="r amount">${r.totalTtc.toFixed(2)} €</td>
               </tr>`).join("")}
+            ${extras.map((e) => `
+              <tr>
+                <td><span style="font-family:monospace;font-size:11px;color:#8b5cf6;background:#f5f3ff;padding:3px 8px;border-radius:4px">🛍️</span></td>
+                <td><div class="dev">${e.name}${e.qty > 1 ? ` × ${e.qty}` : ""}</div><div class="iss">Produit boutique</div></td>
+                <td class="r">${(e.sale_price * e.qty).toFixed(2)} €</td>
+                <td class="r">${group.tvaRate > 0 ? group.tvaRate + "%" : `<span style="color:#cbd5e1">—</span>`}</td>
+                <td class="r amount">${(e.sale_price * e.qty * (1 + (group.tvaRate || 0) / 100)).toFixed(2)} €</td>
+              </tr>`).join("")}
           </tbody>
         </table>
       </div>
@@ -445,9 +484,9 @@ export default function FacturesPage() {
           ${totalTva > 0.01
             ? `<div class="t-row tva-row"><span>TVA</span><span>${totalTva.toFixed(2)} €</span></div>`
             : `<div class="t-row tva-row"><span>TVA</span><span style="color:#cbd5e1">—</span></div>`}
-          <div class="t-row ttc"><span>Total TTC</span><span>${group.totalTtc.toFixed(2)} €</span></div>
+          <div class="t-row ttc"><span>Total TTC</span><span>${totalTtcFinal.toFixed(2)} €</span></div>
           ${group.totalPaid > 0 ? `<div class="t-row paid"><span>Déjà réglé</span><span>− ${group.totalPaid.toFixed(2)} €</span></div>` : ""}
-          <div class="t-row due"><span>${isSolde ? "✓ Soldée" : "Reste à payer"}</span><span>${group.totalRemaining.toFixed(2)} €</span></div>
+          <div class="t-row due"><span>${isSolde && extras.length === 0 ? "✓ Soldée" : "Reste à payer"}</span><span>${(group.totalRemaining + extrasTtc).toFixed(2)} €</span></div>
           ${isSolde && payMethodDisplay ? `<div class="t-row method"><span>Règlement</span><span>${payMethodDisplay}</span></div>` : ""}
         </div>
       </div>
@@ -694,7 +733,7 @@ export default function FacturesPage() {
                     const sel = repairs.filter(r => selectedRepairIds.has(r.id));
                     const total = sel.reduce((s, r) => s + r.remainingTtc, 0);
                     const g = { client: sel[0]?.client, repairs: sel, totalRemaining: total, totalTtc: sel.reduce((s,r)=>s+r.totalTtc,0), totalPaid: sel.reduce((s,r)=>s+r.paidTtc,0), tvaRate: sel[0]?.tvaRate ?? 0 };
-                    setSelectedGroup(g); setPaymentAmount(total.toFixed(2)); setShowPaymentModal(true);
+                    setSelectedGroup(g); setPaymentAmount(total.toFixed(2)); setShowPaymentModal(true); setExtraItems([]); setProductSearch("");
                   }}
                   className="px-3 py-1.5 bg-green-600 hover:bg-green-500 text-white rounded-lg text-xs font-bold transition-all"
                 >💰 Encaisser sélection</button>
@@ -843,7 +882,7 @@ export default function FacturesPage() {
                                 </div>
 
                                 <button
-                                  onClick={(e) => { e.stopPropagation(); setSelectedGroup({ ...group, repairs: [r], totalRemaining: r.remainingTtc }); setPaymentAmount(r.remainingTtc.toString()); setShowPaymentModal(true); }}
+                                  onClick={(e) => { e.stopPropagation(); setSelectedGroup({ ...group, repairs: [r], totalRemaining: r.remainingTtc }); setPaymentAmount(r.remainingTtc.toString()); setShowPaymentModal(true); setExtraItems([]); setProductSearch(""); }}
                                   className="shrink-0 px-3 py-1.5 bg-green-600/20 hover:bg-green-600/40 text-green-400 rounded-lg text-xs font-semibold transition-all border border-green-500/20"
                                 >
                                   Encaisser
@@ -856,7 +895,7 @@ export default function FacturesPage() {
                         {/* Actions groupe */}
                         <div className="px-5 py-3 bg-black/20 flex gap-2 justify-end border-t border-white/5">
                           <button
-                            onClick={() => { setSelectedGroup(group); setPaymentAmount(group.totalRemaining.toString()); setShowPaymentModal(true); }}
+                            onClick={() => { setSelectedGroup(group); setPaymentAmount(group.totalRemaining.toString()); setShowPaymentModal(true); setExtraItems([]); setProductSearch(""); }}
                             className="px-4 py-2 bg-green-600 hover:bg-green-500 text-white rounded-xl text-xs font-bold transition-all"
                           >💰 Tout encaisser</button>
                           <button onClick={() => printInvoice(group)} className="px-4 py-2 bg-white/8 hover:bg-white/12 text-gray-300 rounded-xl text-xs font-semibold transition-all border border-white/10">
@@ -992,47 +1031,131 @@ export default function FacturesPage() {
       </div>
 
       {/* MODAL PAIEMENT */}
-      {showPaymentModal && selectedGroup && (
-        <div className="fixed inset-0 bg-black/70 backdrop-blur-sm flex items-center justify-center p-4 z-50">
-          <div className="bg-[#16161d] border border-white/10 border-t-2 border-t-purple-500 rounded-2xl max-w-md w-full p-6 shadow-2xl">
-            <h2 className="text-lg font-bold text-white mb-4">💰 Encaissement</h2>
-            <p className="text-gray-400 text-sm"><span className="text-gray-500">Client:</span> <span className="text-white font-medium">{selectedGroup.client?.name}</span></p>
-            <p className="text-red-400 font-bold my-3 text-lg">Reste: {selectedGroup.totalRemaining.toFixed(2)} €</p>
-            <input
-              type="number"
-              value={paymentAmount}
-              onChange={(e) => setPaymentAmount(e.target.value)}
-              className="w-full bg-[#1a1d2e] border border-white/10 rounded-xl px-4 py-2.5 text-white text-sm outline-none focus:border-purple-500/60 focus:ring-2 focus:ring-purple-500/15 transition-all my-2"
-              step="0.01"
-            />
-            <select
-              value={paymentMethod}
-              onChange={(e) => setPaymentMethod(e.target.value)}
-              className="w-full bg-[#1a1d2e] border border-white/10 rounded-xl px-4 py-2.5 text-white text-sm outline-none focus:border-purple-500/60 focus:ring-2 focus:ring-purple-500/15 transition-all my-2"
-            >
-              <option>Espèces</option>
-              <option>Carte Bancaire</option>
-              <option>Virement</option>
-              <option>Chèque</option>
-            </select>
-            <label className="flex items-center gap-2 my-3 cursor-pointer select-none">
+      {showPaymentModal && selectedGroup && (() => {
+        const extrasTtc = extraItems.reduce((s, e) => s + e.sale_price * e.qty * (1 + (selectedGroup.tvaRate || 0) / 100), 0);
+        const totalDu = selectedGroup.totalRemaining + extrasTtc;
+        const filteredProducts = availableProducts.filter(p =>
+          p.name.toLowerCase().includes(productSearch.toLowerCase()) &&
+          !extraItems.find(e => e.id === p.id)
+        );
+        return (
+          <div className="fixed inset-0 bg-black/70 backdrop-blur-sm flex items-center justify-center p-4 z-50">
+            <div className="bg-[#16161d] border border-white/10 border-t-2 border-t-purple-500 rounded-2xl max-w-lg w-full p-6 shadow-2xl max-h-[90vh] overflow-y-auto">
+              <h2 className="text-lg font-bold text-white mb-1">💰 Encaissement</h2>
+              <p className="text-gray-400 text-sm mb-4"><span className="text-gray-500">Client :</span> <span className="text-white font-medium">{selectedGroup.client?.name}</span></p>
+
+              {/* Réparations */}
+              <div className="text-xs text-gray-500 uppercase tracking-wider mb-1">🔧 Réparations</div>
+              <div className="space-y-1 mb-3">
+                {selectedGroup.repairs.map((r) => (
+                  <div key={r.id} className="flex justify-between text-sm bg-black/20 rounded-lg px-3 py-1.5">
+                    <span className="text-gray-300 truncate">{r.device}</span>
+                    <span className="text-white font-semibold shrink-0 ml-2">{r.totalTtc.toFixed(2)} €</span>
+                  </div>
+                ))}
+              </div>
+
+              {/* Produits boutique */}
+              <div className="text-xs text-gray-500 uppercase tracking-wider mb-1">🛍️ Produits boutique</div>
+              {extraItems.length > 0 && (
+                <div className="space-y-1 mb-2">
+                  {extraItems.map((e, i) => (
+                    <div key={i} className="flex items-center justify-between bg-fuchsia-500/10 border border-fuchsia-500/20 rounded-lg px-3 py-1.5">
+                      <span className="text-sm text-gray-200 truncate">{e.name} × {e.qty}</span>
+                      <div className="flex items-center gap-2 shrink-0 ml-2">
+                        <span className="text-sm font-semibold text-fuchsia-300">{(e.sale_price * e.qty).toFixed(2)} €</span>
+                        <button onClick={() => setExtraItems(prev => prev.filter((_, j) => j !== i))} className="text-red-400 hover:text-red-300 text-xs">✕</button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+
+              {/* Recherche produit */}
+              <div className="mb-3">
+                <input
+                  type="text"
+                  placeholder="Ajouter un produit boutique..."
+                  value={productSearch}
+                  onChange={(e) => setProductSearch(e.target.value)}
+                  className="w-full bg-[#1a1d2e] border border-white/10 rounded-xl px-3 py-2 text-white text-sm outline-none focus:border-fuchsia-500/50"
+                />
+                {productSearch && filteredProducts.length > 0 && (
+                  <div className="mt-1 space-y-1 max-h-36 overflow-y-auto">
+                    {filteredProducts.map((p) => (
+                      <div
+                        key={p.id}
+                        onClick={() => {
+                          setExtraItems(prev => [...prev, { ...p, qty: 1 }]);
+                          setProductSearch("");
+                        }}
+                        className="flex justify-between items-center px-3 py-2 bg-white/5 hover:bg-fuchsia-500/10 rounded-lg cursor-pointer transition-colors"
+                      >
+                        <span className="text-sm text-white truncate">{p.name}</span>
+                        <span className="text-xs text-fuchsia-300 shrink-0 ml-2">{Number(p.sale_price).toFixed(2)} € · stock {p.stock}</span>
+                      </div>
+                    ))}
+                  </div>
+                )}
+                {productSearch && filteredProducts.length === 0 && (
+                  <p className="text-xs text-gray-600 mt-1 px-1">Aucun produit trouvé</p>
+                )}
+              </div>
+
+              {/* Total */}
+              <div className="bg-white/5 rounded-xl px-4 py-3 mb-4">
+                <div className="flex justify-between text-sm text-gray-400 mb-1">
+                  <span>Réparations</span><span>{selectedGroup.totalRemaining.toFixed(2)} €</span>
+                </div>
+                {extrasTtc > 0 && (
+                  <div className="flex justify-between text-sm text-gray-400 mb-1">
+                    <span>Produits boutique</span><span>{extrasTtc.toFixed(2)} €</span>
+                  </div>
+                )}
+                <div className="flex justify-between font-bold text-white border-t border-white/10 pt-2 mt-1">
+                  <span>Total à encaisser</span><span className="text-lg text-purple-300">{totalDu.toFixed(2)} €</span>
+                </div>
+              </div>
+
               <input
-                type="checkbox"
-                checked={markRenduOnPay}
-                onChange={(e) => setMarkRenduOnPay(e.target.checked)}
-                className="w-4 h-4 accent-emerald-500"
+                type="number"
+                value={paymentAmount}
+                onChange={(e) => setPaymentAmount(e.target.value)}
+                className="w-full bg-[#1a1d2e] border border-white/10 rounded-xl px-4 py-2.5 text-white text-sm outline-none focus:border-purple-500/60 transition-all my-2"
+                step="0.01"
               />
-              <span className="text-sm text-gray-300">📦 Marquer l&apos;appareil comme <span className="text-emerald-400 font-semibold">rendu</span> après paiement</span>
-            </label>
-            <button onClick={registerPayment} disabled={isSending} className="w-full bg-green-600 hover:bg-green-500 text-white py-2.5 rounded-xl font-semibold text-sm transition-all mt-2 disabled:opacity-50">
-              ✅ Encaisser
-            </button>
-            <button onClick={() => setShowPaymentModal(false)} className="w-full bg-white/5 hover:bg-white/10 text-gray-300 py-2.5 rounded-xl text-sm border border-white/10 transition-all mt-2">
-              Annuler
-            </button>
+              <select
+                value={paymentMethod}
+                onChange={(e) => setPaymentMethod(e.target.value)}
+                className="w-full bg-[#1a1d2e] border border-white/10 rounded-xl px-4 py-2.5 text-white text-sm outline-none focus:border-purple-500/60 transition-all my-2"
+              >
+                <option>Espèces</option>
+                <option>Carte Bancaire</option>
+                <option>Virement</option>
+                <option>Chèque</option>
+              </select>
+              <label className="flex items-center gap-2 my-3 cursor-pointer select-none">
+                <input type="checkbox" checked={markRenduOnPay} onChange={(e) => setMarkRenduOnPay(e.target.checked)} className="w-4 h-4 accent-emerald-500" />
+                <span className="text-sm text-gray-300">📦 Marquer l&apos;appareil comme <span className="text-emerald-400 font-semibold">rendu</span> après paiement</span>
+              </label>
+              <div className="flex gap-2">
+                <button
+                  onClick={() => printInvoice(selectedGroup, extraItems)}
+                  className="flex-1 bg-white/8 hover:bg-white/12 text-gray-300 py-2.5 rounded-xl text-sm border border-white/10 transition-all"
+                >
+                  🖨️ Imprimer
+                </button>
+                <button onClick={registerPayment} disabled={isSending} className="flex-1 bg-green-600 hover:bg-green-500 text-white py-2.5 rounded-xl font-semibold text-sm transition-all disabled:opacity-50">
+                  ✅ Encaisser
+                </button>
+              </div>
+              <button onClick={() => { setShowPaymentModal(false); setExtraItems([]); setProductSearch(""); }} className="w-full bg-white/5 hover:bg-white/10 text-gray-300 py-2.5 rounded-xl text-sm border border-white/10 transition-all mt-2">
+                Annuler
+              </button>
+            </div>
           </div>
-        </div>
-      )}
+        );
+      })()}
 
       {/* MODAL MODIFIER FACTURE (gérant) */}
       {showEditModal && editGroup && (

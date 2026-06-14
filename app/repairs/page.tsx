@@ -116,7 +116,8 @@ export default function RepairsPage() {
     }
   }, []);
 
-  const respSig = (r) => `${r.id}:${r.client_response}`;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const respSig = (r: any) => `${r.id}:${r.client_response}`;
   const responseRepairs = repairs.filter((r) => r.client_response && String(r.client_response).trim());
   const unseenResponses = responseRepairs.filter((r) => !seenResponses.has(respSig(r)));
 

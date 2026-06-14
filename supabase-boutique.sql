@@ -17,6 +17,7 @@ CREATE TABLE IF NOT EXISTS products (
 -- Si la table products existe déjà, ajouter les colonnes :
 ALTER TABLE products ADD COLUMN IF NOT EXISTS barcode text DEFAULT '';
 ALTER TABLE products ADD COLUMN IF NOT EXISTS imei text DEFAULT '';
+ALTER TABLE product_sales ADD COLUMN IF NOT EXISTS invoice_id text DEFAULT NULL;
 
 CREATE TABLE IF NOT EXISTS product_sales (
   id bigserial PRIMARY KEY,

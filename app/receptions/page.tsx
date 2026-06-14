@@ -100,7 +100,7 @@ export default function ReceptionsPage() {
               to,
               clientName: r.clients?.name || "",
               device: r.device || "",
-              status: "🔐 Mot de passe incorrect", // gabarit générique "action requise"
+              status: "🚫 Refus client",
               trackingLink: r.clients?.client_code
                 ? `${BASE_URL}/suivi-client?code=${r.clients.client_code}&name=${encodeURIComponent(r.clients?.name || "")}`
                 : "",

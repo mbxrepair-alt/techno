@@ -25,7 +25,7 @@ export default function PaiePage() {
         return;
       }
       const [techRes, repRes] = await Promise.all([
-        supabase.from("technicians").select("*").eq("company_id", user.id).order("name", { ascending: true }),
+        supabase.from("technicians").select("*").eq("user_id", user.id).order("name", { ascending: true }),
         supabase
           .from("repairs")
           .select("technician, final_price, status, created_at")

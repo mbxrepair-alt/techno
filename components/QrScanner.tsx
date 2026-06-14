@@ -5,11 +5,12 @@ import { useEffect, useRef, useState } from "react";
 interface QrScannerProps {
   onScan: (text: string) => void;
   onClose: () => void;
+  label?: string;
 }
 
 const READER_ID = "mbx-qr-reader";
 
-export default function QrScanner({ onScan, onClose }: QrScannerProps) {
+export default function QrScanner({ onScan, onClose, label }: QrScannerProps) {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const scannerRef = useRef<any>(null);
   const [error, setError] = useState("");
@@ -74,7 +75,7 @@ export default function QrScanner({ onScan, onClose }: QrScannerProps) {
         <div className="flex items-center justify-between px-4 py-3 border-b border-white/10">
           <div className="flex items-center gap-2">
             <span className="text-orange-400 text-lg">📷</span>
-            <span className="text-white font-bold text-sm">Scanner un QR code</span>
+            <span className="text-white font-bold text-sm">{label ?? "Scanner un QR code"}</span>
           </div>
           <button
             onClick={onClose}
@@ -90,7 +91,7 @@ export default function QrScanner({ onScan, onClose }: QrScannerProps) {
           <div id={READER_ID} className="w-full" />
           {!error && (
             <p className="text-center text-gray-400 text-xs py-3 px-4">
-              Visez le QR code <span className="text-orange-400">technicien</span> du ticket
+              {label ? "Visez le code-barres du produit" : <>Visez le QR code <span className="text-orange-400">technicien</span> du ticket</>}
             </p>
           )}
           {error && (

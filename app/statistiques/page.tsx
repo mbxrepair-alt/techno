@@ -83,7 +83,7 @@ export default function StatistiquesPage() {
         .eq("is_active", true);
 
       const { data: sales } = await supabase
-        .from("product_sales").select("total, created_at, quantity").eq("user_id", companyId);
+        .from("product_sales").select("total, sold_at, quantity").eq("user_id", companyId);
 
       const totalRepairs = repairs?.length || 0;
       const completedRepairs = repairs?.filter((r) => r.status === "✅ Terminé" || r.status === "📦 Rendu").length || 0;

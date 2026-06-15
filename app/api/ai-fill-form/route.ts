@@ -93,6 +93,16 @@ PANNES — AUTRES:
 - 'sauvegarde' 'backup' = Sauvegarde de données
 - 'recup' 'recuperation' 'data' = Récupération de données
 
+NOTES / DESCRIPTION:
+- 'note <texte>' 'notes <texte>' 'note: <texte>' 'obs <texte>' 'remarque <texte>' → description (texte libre après le mot-clé)
+- Tout texte libre qui ne correspond à aucune abréviation connue peut être mis en description
+
+APPAREILS MULTIPLES:
+- Chaque ligne ou bloc séparé par une virgule décrivant un appareil différent = repair séparé dans le tableau
+- Si le texte décrit 2 appareils distincts, retourner 2 entrées dans repairs[]
+- Les infos client (nom, tel, email, code) s'appliquent à tous les appareils
+- 'mdp' suivi directement d'un chiffre sans espace = code (ex: 'mdp1234' → code: '1234')
+
 CODES ET IDENTIFIANTS:
 - 'code' 'mdp' 'mot de passe' 'pin' 'code tel' 'code telephone' = code de verrouillage personnel du téléphone (PAS un code réseau)
 - IMEI: suite de 15 chiffres
@@ -147,7 +157,11 @@ EXEMPLES:
 - 'c/martin marie 07.23.45.67.89 sam s23 ecr 120€' → clientName:'Marie Martin', clientPhone:'0723456789', device:'Samsung Galaxy S23', issue:'Écran cassé', estimatedPrice:120
 - 'dupont@gmail.com Jean Dupont ip15 bat cdc' → clientName:'Jean Dupont', clientEmail:'dupont@gmail.com', device:'iPhone 15', issue:'Batterie défectueuse + Connecteur de charge'
 - 'pro société ABC 0145678901 macbook nsp 200€' → clientName:'Société ABC', clientPhone:'0145678901', clientType:'pro', device:'MacBook', issue:'Ne s allume pas', estimatedPrice:200
-- 'clt dupont 06 12 34 56 78 moto g54 cc eau 90€ mdp 1234' → clientName:'Dupont', clientPhone:'0612345678', device:'Motorola G54', issue:'Court-circuit + Dégât des eaux', estimatedPrice:90, code:'1234'`;
+- 'clt dupont 06 12 34 56 78 moto g54 cc eau 90€ mdp 1234' → clientName:'Dupont', clientPhone:'0612345678', device:'Motorola G54', issue:'Court-circuit + Dégât des eaux', estimatedPrice:90, code:'1234'
+- 'ip14 ecran + batterie client Jean 0612345678 code 1234' → clientName:'Jean', clientPhone:'0612345678', device:'iPhone 14', issue:'Écran cassé + Batterie défectueuse', code:'1234'
+- 'ip14 ecran + batterie mdp1234 note arriere cassé' → device:'iPhone 14', issue:'Écran cassé + Batterie défectueuse', code:'1234', description:'Arrière cassé'
+- 'ip14 ecran 150€ note vitre arriere fendue mdp 5678' → device:'iPhone 14', issue:'Écran cassé', estimatedPrice:150, description:'Vitre arrière fendue', code:'5678'
+- 'ip13 bat note client dit batterie gonflee mdp1111' → device:'iPhone 13', issue:'Batterie défectueuse', description:'Client dit batterie gonflée', code:'1111'`;
 
 export async function POST(request: NextRequest) {
   try {

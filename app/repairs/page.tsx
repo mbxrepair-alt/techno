@@ -6,6 +6,7 @@ import { useRouter } from "next/navigation";
 import { Wrench, Search, SlidersHorizontal, RotateCcw, Plus, AlertTriangle, UserCheck, Pencil } from "lucide-react";
 import ClientResponsesBell from "../../components/ClientResponsesBell";
 import Layout from "../../components/Layout";
+import QrScanner from "../../components/QrScanner";
 import { addHistoriqueAction, getCurrentTechnician } from "../../lib/historique";
 
 // ========== NORMALISATION DES STATUTS ==========
@@ -95,6 +96,7 @@ export default function RepairsPage() {
   const [filterStatus, setFilterStatus] = useState("all");
   const [filterPeriod, setFilterPeriod] = useState("all");
   const [technicians, setTechnicians] = useState([]);
+  const [showScanner, setShowScanner] = useState(false);
   const [showChangeTechModal, setShowChangeTechModal] = useState(false);
   const [changingRepair, setChangingRepair] = useState(null);
   const [selectedNewTech, setSelectedNewTech] = useState("");
@@ -196,6 +198,18 @@ export default function RepairsPage() {
     setChangingRepair(repair);
     setSelectedNewTech(repair.technician || "");
     setShowChangeTechModal(true);
+  };
+
+  const handleQrScan = (text: string) => {
+    setShowScanner(false);
+    if (!text) return;
+    const value = text.trim();
+    let repairId: string | null = null;
+    const match = value.match(/\/repairs\/([^/?#]+)/);
+    if (match) { repairId = match[1]; }
+    else if (/^\d+$/.test(value)) { repairId = value; }
+    if (repairId) router.push(`/repairs/${repairId}`);
+    else alert("QR code non reconnu : " + value);
   };
 
   // Auto-assignation avec historique
@@ -359,12 +373,13 @@ export default function RepairsPage() {
           <div className="flex items-center gap-2">
             {userId && <ClientResponsesBell userId={userId} />}
             <button
-              onClick={() => router.push("/repairs/new")}
+              onClick={() => setShowScanner(true)}
               className="flex items-center gap-2 px-4 py-2.5 bg-orange-500 hover:bg-orange-400 text-white rounded-xl text-sm font-bold transition-all active:scale-95"
             >
-              <Plus size={16} />
-              <span className="hidden sm:inline">Nouvelle</span>
+              <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><path d="M14 14h3v3h-3z"/><path d="M17 17h4"/><path d="M17 21v-4"/></svg>
+              <span className="hidden sm:inline">Scanner QR Ticket</span>
             </button>
+            {showScanner && <QrScanner onScan={handleQrScan} onClose={() => setShowScanner(false)} />}
           </div>
         </div>
 

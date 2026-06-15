@@ -156,26 +156,6 @@ export default function SoumettreAppareilDirectPage() {
         "\n⚠️ CODE ET SCHÉMA DÉVERROUILLAGE NON FOURNIS - Test impossible, pas pris en garantie";
     }
 
-    const technicienDiagnosis = `📋 INFORMATIONS CLIENT :
-📱 Modèle: ${formData.device}
-🔧 Panne déclarée: ${formData.issue}
-🔢 IMEI: ${formData.imei || "NON FOURNI"}
-🎨 Schéma: ${formData.unlock_pattern ? "FOURNI" : "NON FOURNI"}
-🔑 Code: ${formData.unlock_code || "NON FOURNI"}
-
-⚠️ ÉTAT CONSTATÉ PAR LE CLIENT :
-${formData.screen_broken ? "- Écran cassé/fissuré\n" : ""}${formData.back_broken ? "- Dos cassé\n" : ""}${formData.oxidation ? "- Oxydation signalée\n" : ""}${formData.missing_parts ? `- Pièces manquantes: ${formData.missing_parts}\n` : ""}
-
-📝 DESCRIPTION CLIENT :
-${formData.description || "Aucune description"}
-
----
-🔧 À vérifier par le technicien :
-- [ ] Vérifier l'état réel de l'écran
-- [ ] Vérifier la présence d'oxydation
-- [ ] Tester la charge
-- [ ] Diagnostic complet à réaliser
-`;
 
     try {
       const { data: newTicket, error: insertError } = await supabase
@@ -189,7 +169,6 @@ ${formData.description || "Aucune description"}
           unlock_pattern: formData.unlock_pattern || "",
           description: observations,
           diagnosis: diagnosis,
-          diagnostic_technicien: technicienDiagnosis,
           status: "📤 Envoyé à l'atelier",
           user_id: targetUserId,
           is_client_submitted: true,

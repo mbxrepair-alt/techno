@@ -100,6 +100,7 @@ export default function ClientRepairsPage({ params }: { params: Promise<{ id: st
       .update({
         client_response: clientResponse,
         client_response_type: "accepte",
+        client_response_date: new Date().toISOString(),
       })
       .eq("id", ticket.id);
 
@@ -132,6 +133,7 @@ export default function ClientRepairsPage({ params }: { params: Promise<{ id: st
       .update({
         client_response: clientResponse,
         client_response_type: "refuse",
+        client_response_date: new Date().toISOString(),
       })
       .eq("id", ticket.id);
 

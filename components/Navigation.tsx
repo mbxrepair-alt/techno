@@ -59,6 +59,7 @@ export default function Navigation({ user, permissions }: NavigationProps) {
   const [technicianName, setTechnicianName] = useState("");
   const [companyName, setCompanyName] = useState("MBX");
   const [logoUrl, setLogoUrl] = useState("");
+  const [receptionsCount, setReceptionsCount] = useState(0);
 
   useEffect(() => {
     setIsGerant(permissions?.is_gerant === true);
@@ -66,7 +67,21 @@ export default function Navigation({ user, permissions }: NavigationProps) {
     if (techName) setTechnicianName(techName);
     else if (user?.email) setTechnicianName(user.email.split("@")[0]);
     loadCompanyInfo();
+    loadReceptionsCount();
   }, [permissions, user]);
+
+  const loadReceptionsCount = async () => {
+    try {
+      const companyId = typeof window !== "undefined" ? localStorage.getItem("company_id") : null;
+      if (!companyId) return;
+      const { count } = await supabase
+        .from("repairs")
+        .select("id", { count: "exact", head: true })
+        .eq("user_id", companyId)
+        .eq("status", "📤 Envoyé à l'atelier");
+      setReceptionsCount(count || 0);
+    } catch {}
+  };
 
   const loadCompanyInfo = async () => {
     try {
@@ -243,9 +258,13 @@ export default function Navigation({ user, permissions }: NavigationProps) {
                 <span className={`text-sm font-medium truncate ${isActive ? "text-white" : ""}`}>
                   {item.label}
                 </span>
-                {isActive && (
+                {item.href === "/receptions" && receptionsCount > 0 ? (
+                  <span className="ml-auto bg-red-500 text-white text-[10px] font-black rounded-full min-w-[18px] h-[18px] flex items-center justify-center px-1">
+                    {receptionsCount}
+                  </span>
+                ) : isActive ? (
                   <div className={`ml-auto w-1.5 h-1.5 rounded-full ${item.color.replace("text-", "bg-")}`} />
-                )}
+                ) : null}
               </Link>
             );
           })}
@@ -313,8 +332,13 @@ export default function Navigation({ user, permissions }: NavigationProps) {
                 href={item.href}
                 className="flex-1 flex flex-col items-center justify-center gap-1 transition-all active:scale-95"
               >
-                <div className={`p-1.5 rounded-xl transition-all ${isActive ? item.activeBg + " border" : ""}`}>
+                <div className={`relative p-1.5 rounded-xl transition-all ${isActive ? item.activeBg + " border" : ""}`}>
                   <Icon size={20} className={isActive ? item.color : "text-gray-600"} />
+                  {item.href === "/receptions" && receptionsCount > 0 && (
+                    <span className="absolute -top-1 -right-1 bg-red-500 text-white text-[9px] font-black rounded-full min-w-[15px] h-[15px] flex items-center justify-center px-0.5">
+                      {receptionsCount}
+                    </span>
+                  )}
                 </div>
                 <span className={`text-[10px] font-medium leading-none ${isActive ? "text-white" : "text-gray-600"}`}>
                   {item.label.split(" ")[0]}

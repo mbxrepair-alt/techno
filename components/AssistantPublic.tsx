@@ -15,10 +15,10 @@ const WELCOME: Omit<Message, "timestamp"> = {
 };
 
 const SUGGESTIONS = [
-  "Mon écran est cassé",
-  "Ma batterie ne tient plus",
+  "Problème de charge",
+  "Problème d'affichage",
+  "Problème réseau",
   "Mon téléphone est tombé dans l'eau",
-  "Combien coûte une réparation ?",
 ];
 
 function formatTime(date: Date): string {
@@ -293,7 +293,7 @@ export default function AssistantPublic() {
               </button>
             </div>
             <p className="text-center text-[10px] text-gray-600 mt-2">
-              Diagnostic gratuit en boutique • 8 Rue de l'Épée, Lyon
+              8 Rue de l'Épée, Lyon • 04 72 60 16 13
             </p>
           </div>
         </div>

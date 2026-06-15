@@ -1,6 +1,6 @@
 ﻿"use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { supabase } from "../lib/supabase";
 import Link from "next/link";
@@ -13,6 +13,13 @@ export default function HomePage() {
   const [clientCode, setClientCode] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
+  const [showScrollTop, setShowScrollTop] = useState(false);
+
+  useEffect(() => {
+    const onScroll = () => setShowScrollTop(window.scrollY > 400);
+    window.addEventListener("scroll", onScroll, { passive: true });
+    return () => window.removeEventListener("scroll", onScroll);
+  }, []);
   const [showVideo, setShowVideo] = useState(false);
   const [showTrackingModal, setShowTrackingModal] = useState(false);
   const [trackingCode, setTrackingCode] = useState("");
@@ -101,132 +108,71 @@ export default function HomePage() {
 
   return (
     <Layout>
-      <div className="min-h-screen bg-black">
+      <div className="min-h-screen bg-[#080810]">
         {/* ========== HEADER NEON PRO ========== */}
-        <header className="sticky top-0 z-50 bg-black/95 backdrop-blur-2xl border-b border-orange-500/40 shadow-[0_0_50px_rgba(249,115,22,0.2)]">
+        <header className="sticky top-0 z-50 bg-[#080810]/95 backdrop-blur-2xl border-b border-orange-500/20 shadow-[0_0_40px_rgba(249,115,22,0.1)]">
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-            <div className="flex flex-wrap items-center justify-between gap-3 py-2">
-              {/* LOGO À GAUCHE AVEC ANNEAU LUMINEUX ROTATIF */}
-              <div
-                className="flex items-center gap-3 cursor-pointer group"
-                onClick={handleLogoClick}
-              >
+            <div className="flex items-center justify-between gap-4 py-2.5">
+              {/* LOGO */}
+              <div className="flex items-center gap-3 cursor-pointer group shrink-0" onClick={handleLogoClick}>
                 <div className="relative">
                   <div className="absolute -inset-2 rounded-xl bg-gradient-to-r from-orange-500 via-orange-400 to-orange-600 opacity-75 group-hover:opacity-100 blur-md animate-spin-slow"></div>
-                  <div className="relative w-12 h-12 bg-gradient-to-br from-orange-500 to-orange-600 rounded-xl flex items-center justify-center shadow-2xl overflow-hidden">
-                    <img
-                      src="/logo.png"
-                      alt="MBX Logo"
-                      className="w-full h-full object-cover rounded-xl scale-105"
-                    />
+                  <div className="relative w-11 h-11 bg-gradient-to-br from-orange-500 to-orange-600 rounded-xl flex items-center justify-center shadow-2xl overflow-hidden">
+                    <img src="/logo.png" alt="MBX Logo" className="w-full h-full object-cover rounded-xl scale-105" />
                   </div>
                 </div>
-                <div className="leading-tight">
-                  <span className="text-white font-black text-2xl tracking-tight drop-shadow-[0_0_15px_rgba(255,255,255,0.3)] leading-none block">
-                    MBX
-                  </span>
-                  <span className="text-orange-400 text-[10px] block mt-0.5 font-bold tracking-[0.2em] leading-tight drop-shadow-[0_0_4px_rgba(249,115,22,0.8)]">
-                    CENTRE
-                  </span>
-                  <span className="text-orange-400 text-[10px] block font-bold tracking-[0.2em] leading-tight drop-shadow-[0_0_4px_rgba(249,115,22,0.8)]">
-                    DE RÉPARATION
-                  </span>
+                <div className="leading-tight text-center hidden sm:block">
+                  <span className="text-white font-black text-xl tracking-tight leading-none block">MBX</span>
+                  <span className="text-orange-400 text-[9px] block mt-0.5 font-bold tracking-[0.2em]">CENTRE</span>
+                  <span className="text-orange-400 text-[9px] block font-bold tracking-[0.2em]">DE RÉPARATION</span>
                 </div>
               </div>
 
-              {/* NAVIGATION CENTRALE */}
-              <nav className="hidden lg:flex items-center gap-1 bg-white/5 backdrop-blur-xl rounded-full p-1 border border-white/10 shadow-2xl">
-                <a
-                  href="/client/soumettre-appareil"
-                  className="relative px-3 py-2 rounded-full text-sm font-medium text-gray-300 hover:text-white transition-all duration-300 group/item overflow-hidden"
-                >
-                  <span className="absolute inset-0 bg-gradient-to-r from-orange-600 to-orange-500 opacity-0 group-hover/item:opacity-100 transition-opacity duration-300 rounded-full"></span>
-                  <span className="relative z-10 flex items-center gap-2">📱 Déclarer</span>
-                </a>
-                <button
-                  onClick={openTrackingModal}
-                  className="relative px-3 py-2 rounded-full text-sm font-medium text-gray-300 hover:text-white transition-all duration-300 group/item overflow-hidden"
-                >
-                  <span className="absolute inset-0 bg-gradient-to-r from-orange-600 to-orange-500 opacity-0 group-hover/item:opacity-100 transition-opacity duration-300 rounded-full"></span>
-                  <span className="relative z-10 flex items-center gap-2">🔍 Suivre</span>
-                </button>
-                <a
-                  href="#reparations"
-                  className="relative px-3 py-2 rounded-full text-sm font-medium text-gray-300 hover:text-white transition-all duration-300 group/item overflow-hidden"
-                >
-                  <span className="absolute inset-0 bg-gradient-to-r from-orange-600 to-orange-500 opacity-0 group-hover/item:opacity-100 transition-opacity duration-300 rounded-full"></span>
-                  <span className="relative z-10 flex items-center gap-2">⚡ Réparations</span>
-                </a>
-                <a
-                  href="#centre"
-                  className="relative px-3 py-2 rounded-full text-sm font-medium text-gray-300 hover:text-white transition-all duration-300 group/item overflow-hidden"
-                >
-                  <span className="absolute inset-0 bg-gradient-to-r from-orange-600 to-orange-500 opacity-0 group-hover/item:opacity-100 transition-opacity duration-300 rounded-full"></span>
-                  <span className="relative z-10 flex items-center gap-2">🔧 Centre</span>
-                </a>
-                <a
-                  href="#formation"
-                  className="relative px-3 py-2 rounded-full text-sm font-medium text-gray-300 hover:text-white transition-all duration-300 group/item overflow-hidden"
-                >
-                  <span className="absolute inset-0 bg-gradient-to-r from-orange-600 to-orange-500 opacity-0 group-hover/item:opacity-100 transition-opacity duration-300 rounded-full"></span>
-                  <span className="relative z-10 flex items-center gap-2">🎓 Formation</span>
-                </a>
-                <a
-                  href="#envoi"
-                  className="relative px-3 py-2 rounded-full text-sm font-medium text-gray-300 hover:text-white transition-all duration-300 group/item overflow-hidden"
-                >
-                  <span className="absolute inset-0 bg-gradient-to-r from-orange-600 to-orange-500 opacity-0 group-hover/item:opacity-100 transition-opacity duration-300 rounded-full"></span>
-                  <span className="relative z-10">📦 Envoi</span>
-                </a>
-                <a
-                  href="#contact"
-                  className="relative px-3 py-2 rounded-full text-sm font-medium text-gray-300 hover:text-white transition-all duration-300 group/item overflow-hidden"
-                >
-                  <span className="absolute inset-0 bg-gradient-to-r from-orange-600 to-orange-500 opacity-0 group-hover/item:opacity-100 transition-opacity duration-300 rounded-full"></span>
-                  <span className="relative z-10 flex items-center gap-2">💬 Contact</span>
-                </a>
+              {/* NAV CENTRÉE */}
+              <nav className="hidden lg:flex items-center gap-0.5 bg-white/[0.04] backdrop-blur-2xl rounded-2xl p-1.5 border border-white/[0.08] shadow-[0_8px_32px_rgba(0,0,0,0.4),inset_0_1px_0_rgba(255,255,255,0.06)]">
+                {([
+                  { href: "/client/soumettre-appareil", icon: "📱", label: "Déclarer", isButton: false },
+                  { href: null, icon: "🔍", label: "Suivre", isButton: true },
+                  { href: "#reparations", icon: "⚡", label: "Réparations", isButton: false },
+                  { href: "#centre", icon: "🔧", label: "Centre", isButton: false },
+                  { href: "#formation", icon: "🎓", label: "Formation", isButton: false },
+                  { href: "#envoi", icon: "📦", label: "Envoi", isButton: false },
+                  { href: "#contact", icon: "💬", label: "Contact", isButton: false },
+                ] as { href: string | null; icon: string; label: string; isButton: boolean }[]).map(({ href, icon, label, isButton }) => {
+                  const cls = "relative group/nav flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-[13px] font-medium text-gray-400 hover:text-white transition-all duration-200 overflow-hidden cursor-pointer select-none";
+                  const inner = (
+                    <>
+                      <span className="absolute inset-0 rounded-xl bg-gradient-to-b from-orange-500/20 to-orange-600/10 opacity-0 group-hover/nav:opacity-100 transition-opacity duration-200 border border-orange-500/20" />
+                      <span className="absolute bottom-0 left-1/2 -translate-x-1/2 w-4/5 h-px bg-orange-500/60 opacity-0 group-hover/nav:opacity-100 transition-opacity duration-200 blur-[2px]" />
+                      <span className="relative z-10 text-base group-hover/nav:scale-110 group-hover/nav:-translate-y-0.5 transition-transform duration-200 inline-block">{icon}</span>
+                      <span className="relative z-10 group-hover/nav:text-white transition-colors duration-200">{label}</span>
+                    </>
+                  );
+                  return isButton
+                    ? <button key={label} onClick={openTrackingModal} className={cls}>{inner}</button>
+                    : <a key={label} href={href!} className={cls}>{inner}</a>;
+                })}
               </nav>
 
-              {/* BOUTONS À DROITE */}
-              <div className="flex items-center gap-2">
-              {/* TÉLÉCHARGER L'APP ANDROID (compact) */}
-              <a
-                href="/mbx.apk"
-                download
-                className="group/dl flex items-center gap-1.5 px-3 py-1.5 bg-white/5 border border-white/10 text-gray-200 rounded-full text-xs font-semibold transition-all duration-300 hover:bg-orange-500/10 hover:border-orange-500/40 hover:text-white"
-                title="Télécharger l'application Android"
-              >
-                <svg className="w-3.5 h-3.5 text-orange-400" fill="currentColor" viewBox="0 0 24 24">
-                  <path d="M12 16l-5-5h3V4h4v7h3l-5 5zm-7 2h14v2H5v-2z" />
-                </svg>
-                <span className="hidden md:inline">App</span>
-              </a>
-              {/* ESPACE PRO À DROITE */}
-              <Link
-                href="/login"
-                className="relative group/btn flex items-center gap-2 px-5 py-2 bg-gradient-to-r from-orange-500 to-orange-600 text-white rounded-full text-sm font-bold tracking-wider transition-all duration-300 shadow-[0_0_25px_rgba(249,115,22,0.4)] hover:shadow-[0_0_40px_rgba(249,115,22,0.7)] hover:scale-105 overflow-hidden"
-              >
-                <span className="absolute inset-0 bg-gradient-to-r from-orange-400 to-orange-500 opacity-0 group-hover/btn:opacity-100 transition-opacity duration-300"></span>
-                <span className="absolute -inset-1 bg-orange-500 rounded-full blur-xl opacity-0 group-hover/btn:opacity-50 transition-opacity duration-500"></span>
-                <span className="relative z-10 flex items-center gap-2">
-                  <span className="text-lg drop-shadow-[0_0_2px_white]">👨‍💼</span>
-                  <span className="hidden sm:inline">ESPACE PRO</span>
-                  <span className="inline sm:hidden">PRO</span>
-                  <svg
-                    className="w-3 h-3 group-hover/btn:translate-x-1 transition-transform duration-200"
-                    fill="none"
-                    stroke="currentColor"
-                    viewBox="0 0 24 24"
-                  >
-                    <path
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      strokeWidth={2}
-                      d="M9 5l7 7-7 7"
-                    />
-                  </svg>
-                </span>
-              </Link>
+              {/* BOUTONS DROITE */}
+              <div className="flex items-center gap-2 shrink-0">
+                <a href="/mbx.apk" download title="App Android"
+                  className="flex items-center gap-1.5 px-3 py-2 bg-white/[0.05] border border-white/[0.08] text-gray-300 rounded-xl text-xs font-semibold hover:bg-orange-500/10 hover:border-orange-500/30 hover:text-white transition-all duration-200">
+                  <svg className="w-3.5 h-3.5 text-orange-400" fill="currentColor" viewBox="0 0 24 24"><path d="M12 16l-5-5h3V4h4v7h3l-5 5zm-7 2h14v2H5v-2z"/></svg>
+                  <span className="hidden md:inline">App</span>
+                </a>
+                <Link href="/login"
+                  className="relative group/btn flex items-center gap-2 px-5 py-2.5 bg-gradient-to-r from-orange-500 to-orange-600 text-white rounded-xl text-sm font-bold transition-all duration-300 shadow-[0_0_20px_rgba(249,115,22,0.35)] hover:shadow-[0_0_35px_rgba(249,115,22,0.6)] hover:scale-105 overflow-hidden">
+                  <span className="absolute inset-0 bg-gradient-to-r from-orange-400 to-orange-500 opacity-0 group-hover/btn:opacity-100 transition-opacity duration-300"/>
+                  <span className="relative z-10 flex items-center gap-2">
+                    <span className="text-base">👨‍💼</span>
+                    <span className="hidden sm:inline tracking-wide">ESPACE PRO</span>
+                    <span className="inline sm:hidden">PRO</span>
+                    <svg className="w-3 h-3 group-hover/btn:translate-x-0.5 transition-transform duration-200" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7"/>
+                    </svg>
+                  </span>
+                </Link>
               </div>
             </div>
 
@@ -289,8 +235,8 @@ export default function HomePage() {
         </header>
 
         {/* ========== HERO SECTION NEON ULTRA MODERNE ========== */}
-        <section className="relative bg-black overflow-hidden">
-          <div className="absolute inset-0 bg-gradient-to-br from-black via-gray-950 to-black"></div>
+        <section className="relative bg-[#080810] overflow-hidden">
+          <div className="absolute inset-0 bg-gradient-to-br from-[#080810] via-[#0c0c18] to-[#080810]"></div>
           <div className="absolute inset-0 bg-[linear-gradient(rgba(249,115,22,0.05)_1px,transparent_1px),linear-gradient(90deg,rgba(249,115,22,0.05)_1px,transparent_1px)] bg-[size:50px_50px]"></div>
           <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[800px] h-[800px] bg-orange-500/20 rounded-full blur-[120px] animate-pulse"></div>
           <div className="absolute top-0 left-0 w-full h-full overflow-hidden">
@@ -303,34 +249,41 @@ export default function HomePage() {
 
           <div className="relative max-w-7xl mx-auto px-6 lg:px-8 py-16 lg:py-20 z-10">
             <div className="grid lg:grid-cols-2 gap-8 items-center">
-              <div className="text-center lg:text-left space-y-5">
+              <div className="text-center space-y-5">
                 <div className="inline-flex items-center gap-2 bg-orange-500/10 backdrop-blur-sm rounded-full px-4 py-2 border border-orange-500/50 shadow-[0_0_15px_rgba(249,115,22,0.3)]">
                   <span className="relative flex h-2.5 w-2.5">
                     <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75"></span>
                     <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-green-500 shadow-[0_0_8px_rgba(34,197,94,0.8)]"></span>
                   </span>
                   <span className="text-xs font-bold text-orange-400 tracking-wider drop-shadow-[0_0_4px_rgba(249,115,22,0.5)]">
-                    EXPERT EN RÉPARATION
+                    CENTRE DE RÉPARATION PROFESSIONNEL · LYON
                   </span>
                 </div>
                 <h1 className="text-4xl lg:text-6xl font-black leading-tight">
                   <span className="bg-gradient-to-r from-white via-gray-200 to-white bg-clip-text text-transparent drop-shadow-[0_0_20px_rgba(255,255,255,0.3)]">
-                    Réparation pro
+                    Votre téléphone
                   </span>
-                  <span className="block text-transparent bg-clip-text bg-gradient-to-r from-orange-400 via-orange-500 to-orange-600 drop-shadow-[0_0_15px_rgba(249,115,22,0.5)] animate-pulse">
-                    & pièces sur mobilax.fr
+                  <span className="block text-transparent bg-clip-text bg-gradient-to-r from-orange-400 via-orange-500 to-orange-600 drop-shadow-[0_0_15px_rgba(249,115,22,0.5)]">
+                    réparé par des experts
                   </span>
                 </h1>
-                <p className="text-gray-300 text-sm leading-relaxed max-w-xl mx-auto lg:mx-0 drop-shadow-[0_0_5px_rgba(0,0,0,0.5)]">
-                  <span className="text-orange-400 font-semibold">
-                    ✨ Envoyez votre appareil par colis
-                  </span>
-                  , nous le réparons et vous pouvez commander vos accessoires, coques, chargeurs et
-                  pièces détachées.
-                  <span className="block mt-1 text-orange-300 font-medium text-xs">
-                    📦 Le tout retourné ensemble dans le même colis !
-                  </span>
+                <p className="text-gray-300 text-base leading-relaxed max-w-xl mx-auto lg:mx-0">
+                  Déposez en boutique ou{" "}
+                  <span className="text-orange-400 font-semibold">envoyez vos appareils par colis</span> — nos techniciens interviennent sur tous types de pannes, de l'écran à la carte mère. <span className="text-white font-medium">Suivi en temps réel</span> à chaque étape de la réparation.
                 </p>
+                <a
+                  href="https://www.mobilax.fr"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="inline-flex items-center gap-2 bg-white/5 border border-orange-500/30 hover:border-orange-500/70 hover:bg-orange-500/10 rounded-xl px-4 py-2.5 transition-all duration-200 group/mobilax"
+                >
+                  <span className="text-lg">📦</span>
+                  <div>
+                    <span className="text-sm text-white font-semibold block">Commandez sur <span className="text-orange-400 group-hover/mobilax:text-white transition-colors">mobilax.fr</span></span>
+                    <span className="text-xs text-gray-400">Votre commande + vos appareils réparés expédiés ensemble dans un seul colis.</span>
+                  </div>
+                  <span className="text-orange-400 font-bold group-hover/mobilax:text-white transition-colors">→</span>
+                </a>
                 <div className="flex flex-col sm:flex-row gap-4 justify-center lg:justify-start pt-2">
                   <button
                     onClick={() => setShowVideo(true)}
@@ -407,7 +360,7 @@ export default function HomePage() {
         {/* ========== MBX CENTRE DE RÉPARATION & FORMATION ========== */}
         <section
           id="centre"
-          className="py-28 bg-gradient-to-br from-gray-900 via-gray-800 to-gray-900"
+          className="py-28 bg-[#0e0e1c]"
         >
           <div className="max-w-7xl mx-auto px-6 lg:px-8">
             <div className="text-center mb-16">
@@ -424,26 +377,38 @@ export default function HomePage() {
             </div>
             <div className="text-center mb-20">
               <p className="text-gray-300 text-xl max-w-4xl mx-auto leading-relaxed">
-                MBX Centre de Réparation & Formation est votre atelier spécialisé dans la réparation
-                électronique, smartphone et microsoudure professionnelle.
+                MBX est un vrai centre de réparation, pas seulement un changeur d'écrans. Nos techniciens interviennent sur la <span className="text-orange-400 font-semibold">carte mère par microsoudure</span>, avec caméra thermique et bain à ultrasons — pour les pannes que les autres ne savent pas réparer.
               </p>
               <div className="flex flex-wrap justify-center gap-3 mt-8">
                 {[
-                  "iPhone",
-                  "Samsung",
-                  "Huawei",
-                  "Xiaomi",
-                  "Oppo",
-                  "Redmi",
-                  "Honor",
-                  "Tablettes",
-                ].map((brand) => (
-                  <span
-                    key={brand}
-                    className="px-5 py-2.5 bg-gray-700/50 backdrop-blur-sm rounded-full text-sm font-medium hover:bg-gray-700 transition border border-gray-600"
-                  >
-                    {brand}
-                  </span>
+                  { name: "iPhone",   logo: "https://cdn.simpleicons.org/apple/000000" },
+                  { name: "Samsung",  logo: "https://cdn.simpleicons.org/samsung/1428A0" },
+                  { name: "Huawei",   logo: "https://cdn.simpleicons.org/huawei/CF0A2C" },
+                  { name: "Xiaomi",   logo: "https://cdn.simpleicons.org/xiaomi/FF6900" },
+                  { name: "Oppo",     logo: "https://cdn.simpleicons.org/oppo/1D8348" },
+                  { name: "Redmi",    logo: "https://cdn.simpleicons.org/xiaomi/FF6900" },
+                  { name: "Honor",    logo: "https://cdn.simpleicons.org/honor/000000" },
+                  { name: "OnePlus",  logo: "https://cdn.simpleicons.org/oneplus/F5010D" },
+                  { name: "Google",   logo: "https://www.gstatic.com/images/branding/googleg/1x/googleg_standard_color_128dp.png" },
+                  { name: "Motorola", logo: "https://cdn.simpleicons.org/motorola/000000" },
+                  { name: "Sony",     logo: "https://cdn.simpleicons.org/sony/000000" },
+                  { name: "Vivo",     logo: "https://cdn.simpleicons.org/vivo/415FFF" },
+                  { name: "LG",       logo: "https://cdn.simpleicons.org/lg/A50034" },
+                ].map(({ name, logo }) => (
+                  <div key={name} className="relative group/brand">
+                    {/* Halo rotatif */}
+                    <div className="absolute -inset-1 rounded-2xl bg-gradient-to-r from-orange-400 via-orange-500 to-amber-400 opacity-0 group-hover/brand:opacity-100 blur-md transition-all duration-300 animate-spin-slow" />
+                    {/* Bordure animée */}
+                    <div className="absolute -inset-[1.5px] rounded-2xl bg-gradient-to-r from-orange-400 via-white to-orange-400 opacity-0 group-hover/brand:opacity-60 transition-all duration-300" />
+                    {/* Carte */}
+                    <div className="relative w-20 h-20 bg-white rounded-2xl flex items-center justify-center p-3 transition-all duration-300 group-hover/brand:scale-115 group-hover/brand:-translate-y-1.5 group-hover/brand:shadow-[0_12px_40px_rgba(249,115,22,0.45)] cursor-pointer">
+                      <img src={logo} alt={name} className="w-full h-full object-contain transition-transform duration-300 group-hover/brand:scale-110" />
+                    </div>
+                    {/* Tooltip nom */}
+                    <div className="absolute -bottom-8 left-1/2 -translate-x-1/2 whitespace-nowrap opacity-0 group-hover/brand:opacity-100 transition-all duration-200 group-hover/brand:translate-y-0 translate-y-1 pointer-events-none">
+                      <span className="text-[10px] font-bold text-orange-400 tracking-widest uppercase bg-black/80 px-2 py-0.5 rounded-full border border-orange-500/30 backdrop-blur-sm">{name}</span>
+                    </div>
+                  </div>
                 ))}
               </div>
             </div>
@@ -482,11 +447,14 @@ export default function HomePage() {
                   icon: "🛠️",
                   title: "Diagnostic & Solutions",
                   items: [
-                    "Contrôle technique approfondi",
-                    "Identification précise",
-                    "Solutions fiables",
-                    "Réparation rapide",
-                    "Garantie durable",
+                    "Caméra thermique",
+                    "Bain à ultrasons",
+                    "Multimètre & oscillo",
+                    "Dégâts des eaux",
+                    "Récupération de données",
+                    "Déverrouillage iCloud",
+                    "Flashage logiciel",
+                    "Téléphone ne s'allume plus",
                   ],
                 },
               ].map((service, idx) => (
@@ -556,7 +524,7 @@ export default function HomePage() {
         </section>
 
         {/* ========== RÉPARATIONS ========== */}
-        <section id="reparations" className="py-28 bg-black">
+        <section id="reparations" className="py-28 bg-[#080810]">
           <div className="max-w-7xl mx-auto px-6 lg:px-8">
             <div className="text-center mb-16">
               <h2 className="text-4xl lg:text-5xl font-bold mb-4 bg-gradient-to-r from-white to-gray-400 bg-clip-text text-transparent">
@@ -566,22 +534,46 @@ export default function HomePage() {
                 Plus de 10 000 appareils réparés avec succès par nos experts
               </p>
             </div>
-            <div className="grid md:grid-cols-4 gap-8">
+            <div className="grid md:grid-cols-4 gap-6">
               {[
-                { icon: "📱", title: "Smartphones", desc: "iPhone, Samsung, Xiaomi, Pixel" },
-                { icon: "💻", title: "Ordinateurs", desc: "MacBook, PC portable, iMac" },
-                { icon: "📟", title: "Tablettes", desc: "iPad, Samsung Tab, Fire" },
-                { icon: "⌚", title: "Montres", desc: "Apple Watch, Galaxy Watch" },
+                {
+                  img: "https://images.unsplash.com/photo-1601784551446-20c9e07cdbdb?w=500&h=320&fit=crop&q=80",
+                  icon: "📱", title: "Smartphones",
+                  desc: "iPhone, Samsung, Xiaomi, Google Pixel, OnePlus, Huawei",
+                },
+                {
+                  img: "https://images.unsplash.com/photo-1517694712202-14dd9538aa97?w=500&h=320&fit=crop&q=80",
+                  icon: "💻", title: "Ordinateurs",
+                  desc: "MacBook, PC portable, iMac — écran, batterie, carte mère",
+                },
+                {
+                  img: "https://images.unsplash.com/photo-1544244015-0df4b3ffc6b0?w=500&h=320&fit=crop&q=80",
+                  icon: "📟", title: "Tablettes",
+                  desc: "iPad, Samsung Tab, Lenovo — vitre, connecteur, batterie",
+                },
+                {
+                  img: "https://images.unsplash.com/photo-1523275335684-37898b6baf30?w=500&h=320&fit=crop&q=80",
+                  icon: "⌚", title: "Montres connectées",
+                  desc: "Apple Watch, Galaxy Watch — vitre, batterie, couronne",
+                },
               ].map((item, idx) => (
                 <div
                   key={idx}
-                  className="text-center p-8 rounded-2xl hover:shadow-2xl transition-all duration-300 border border-gray-800 bg-gray-900/50 hover:border-orange-500/50 group"
+                  className="rounded-2xl overflow-hidden border border-gray-800 bg-gray-900/50 hover:border-orange-500/50 group transition-all duration-300 hover:shadow-[0_8px_40px_rgba(249,115,22,0.15)]"
                 >
-                  <div className="w-24 h-24 bg-gradient-to-br from-orange-500/20 to-orange-600/20 rounded-2xl flex items-center justify-center text-4xl mx-auto mb-5 group-hover:scale-110 transition duration-300">
-                    {item.icon}
+                  <div className="relative h-44 overflow-hidden">
+                    <img
+                      src={item.img}
+                      alt={item.title}
+                      className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
+                    />
+                    <div className="absolute inset-0 bg-gradient-to-t from-gray-900 via-transparent to-transparent" />
+                    <span className="absolute top-3 right-3 text-2xl bg-black/50 rounded-xl p-1.5 backdrop-blur-sm">{item.icon}</span>
                   </div>
-                  <h3 className="font-bold text-xl text-white mb-2">{item.title}</h3>
-                  <p className="text-gray-400 text-sm">{item.desc}</p>
+                  <div className="p-5">
+                    <h3 className="font-bold text-lg text-white mb-1">{item.title}</h3>
+                    <p className="text-gray-400 text-xs leading-relaxed">{item.desc}</p>
+                  </div>
                 </div>
               ))}
             </div>
@@ -591,7 +583,7 @@ export default function HomePage() {
         {/* ========== ENVOI PAR COLIS ========== */}
         <section
           id="envoi"
-          className="py-28 bg-gradient-to-r from-gray-900 via-gray-800 to-gray-900"
+          className="py-28 bg-[#0e0e1c]"
         >
           <div className="max-w-7xl mx-auto px-6 lg:px-8">
             <div className="grid lg:grid-cols-2 gap-16 items-center">
@@ -632,8 +624,8 @@ export default function HomePage() {
                   <div className="flex items-center gap-3">
                     <span className="text-3xl">🚚</span>
                     <div>
-                      <p className="font-bold text-white">Livraison offerte</p>
-                      <p className="text-xs text-orange-200">avec votre commande</p>
+                      <p className="font-bold text-white">Envoi sécurisé</p>
+                      <p className="text-xs text-orange-200">France & Europe</p>
                     </div>
                   </div>
                 </div>
@@ -643,7 +635,7 @@ export default function HomePage() {
         </section>
 
         {/* ========== COMMANDE ========== */}
-        <section id="commande" className="py-28 bg-black">
+        <section id="commande" className="py-28 bg-[#080810]">
           <div className="max-w-7xl mx-auto px-6 lg:px-8">
             <div className="text-center mb-16">
               <div className="inline-flex items-center gap-2 bg-orange-500/20 rounded-full px-5 py-2.5 mb-4 border border-orange-500/30">
@@ -720,7 +712,7 @@ export default function HomePage() {
         {/* ========== CONTACT ========== */}
         <section
           id="contact"
-          className="py-28 bg-gradient-to-br from-gray-900 via-gray-800 to-gray-900"
+          className="py-28 bg-[#0e0e1c]"
         >
           <div className="max-w-7xl mx-auto px-6 lg:px-8">
             <div className="grid lg:grid-cols-2 gap-16">
@@ -729,7 +721,7 @@ export default function HomePage() {
                   <span className="text-xl">📍</span>
                   <span className="text-orange-400 font-semibold">Notre atelier</span>
                 </div>
-                <h2 className="text-4xl font-bold text-white mb-6">MBX Réparations</h2>
+                <h2 className="text-4xl font-bold text-white mb-6">MBX Centre De Réparation Pro</h2>
                 <div className="space-y-5 mb-8">
                   <div className="flex items-start gap-3">
                     <span className="text-xl">📍</span>
@@ -769,8 +761,8 @@ export default function HomePage() {
                 </a>
               </div>
               <div className="bg-gray-900/50 backdrop-blur-sm rounded-2xl shadow-2xl p-8 border border-gray-800">
-                <h3 className="text-2xl font-bold text-white mb-4">Une question ?</h3>
-                <p className="text-gray-400 mb-6">Notre équipe vous répond sous 24h</p>
+                <h3 className="text-2xl font-bold text-white mb-4">Contactez-nous</h3>
+                <p className="text-gray-400 mb-6">Notre équipe vous répond rapidement</p>
                 <form>
                   <input
                     type="text"
@@ -797,22 +789,26 @@ export default function HomePage() {
         </section>
 
         {/* ========== FOOTER ========== */}
-        <footer className="bg-black border-t border-orange-500/20 text-gray-400 py-10">
-          <div className="max-w-7xl mx-auto px-6 lg:px-8 text-center">
-            <p>
-              © {new Date().getFullYear()} MBX Réparations - 8 Rue de l'Épée, 69003 Lyon - 04 72 60
-              16 13
-            </p>
-            <p className="text-sm mt-3">
-              Réparation professionnelle + Pièces sur{" "}
-              <a
-                href="https://www.mobilax.fr"
-                target="_blank"
-                className="text-orange-400 hover:underline"
-              >
-                mobilax.fr
-              </a>
-            </p>
+        <footer className="bg-[#060609] border-t border-white/5 text-gray-400 py-10">
+          <div className="max-w-7xl mx-auto px-6 lg:px-8">
+            <div className="flex flex-col md:flex-row items-center justify-between gap-4 mb-6">
+              <div className="flex items-center gap-3">
+                <div className="w-8 h-8 bg-gradient-to-br from-orange-500 to-orange-600 rounded-lg overflow-hidden">
+                  <img src="/logo.png" alt="MBX" className="w-full h-full object-cover" onError={e => { (e.target as HTMLImageElement).style.display="none"; }} />
+                </div>
+                <span className="text-white font-black tracking-tight">MBX <span className="text-orange-400 font-bold text-xs tracking-widest">CENTRE DE RÉPARATION</span></span>
+              </div>
+              <div className="flex items-center gap-6 text-sm">
+                <a href="/client/soumettre-appareil" className="hover:text-orange-400 transition">Déclarer un appareil</a>
+                <a href="/suivi-client" className="hover:text-orange-400 transition">Suivi de réparation</a>
+                <a href="https://www.mobilax.fr" target="_blank" className="hover:text-orange-400 transition">mobilax.fr</a>
+                <a href="https://mobilax-academy.fr/" target="_blank" className="hover:text-orange-400 transition">Formation</a>
+              </div>
+            </div>
+            <div className="border-t border-white/5 pt-6 flex flex-col md:flex-row items-center justify-between gap-2 text-sm">
+              <p>© {new Date().getFullYear()} MBX Centre De Réparation Pro — 8 Rue de l'Épée, 69003 Lyon — <a href="tel:0472601613" className="hover:text-orange-400 transition">04 72 60 16 13</a></p>
+              <p className="text-gray-600">Lun–Ven 10h–18h · <a href="mailto:mbxmobilax@gmail.com" className="hover:text-orange-400 transition">mbxmobilax@gmail.com</a></p>
+            </div>
           </div>
         </footer>
 
@@ -902,6 +898,24 @@ export default function HomePage() {
           </div>
         )}
       </div>
+
+      {/* Bouton scroll to top */}
+      <button
+        onClick={() => window.scrollTo({ top: 0, behavior: "smooth" })}
+        aria-label="Retour en haut"
+        className={`fixed bottom-24 right-4 z-40 group transition-all duration-500 ${
+          showScrollTop ? "opacity-100 translate-y-0 pointer-events-auto" : "opacity-0 translate-y-6 pointer-events-none"
+        }`}
+      >
+        {/* Anneau rotatif */}
+        <span className="absolute -inset-1 rounded-2xl bg-gradient-to-br from-orange-400 via-orange-500 to-amber-500 opacity-70 group-hover:opacity-100 blur-sm transition-opacity duration-300 animate-spin-slow" />
+        {/* Corps du bouton */}
+        <span className="relative flex flex-col items-center justify-center w-12 h-12 rounded-2xl bg-gradient-to-br from-orange-500 to-orange-600 shadow-[0_8px_30px_rgba(249,115,22,0.55)] group-hover:shadow-[0_8px_40px_rgba(249,115,22,0.8)] group-hover:scale-110 active:scale-95 transition-all duration-200">
+          <svg className="w-5 h-5 text-white group-hover:-translate-y-0.5 transition-transform duration-200" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M5 15l7-7 7 7" />
+          </svg>
+        </span>
+      </button>
 
       <AssistantPublic />
       <InstallPWA />

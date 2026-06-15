@@ -428,21 +428,17 @@ export default function SettingsPage() {
           {/* Onglet Techniciens */}
           {activeTab === "technicians" && isGerant && (
             <div>
-              <div className="flex justify-between items-center mb-5">
-                <h2 className="text-sm font-bold text-gray-400 uppercase tracking-widest">Gestion des techniciens</h2>
-                <Link
-                  href="/technicians"
-                  className="px-4 py-2 bg-gradient-to-r from-gray-500 to-slate-600 text-white rounded-xl text-sm font-semibold shadow-[0_4px_0_rgba(0,0,0,0.3)] active:translate-y-0.5 active:shadow-[0_2px_0_rgba(0,0,0,0.3)] transition-all"
-                >
-                  + Accéder à la gestion
-                </Link>
-              </div>
-              <p className="text-gray-500 text-sm mb-4">
-                Gérez les techniciens, leurs codes d'accès et permissions d'accès aux différentes sections.
-              </p>
-              <div className="bg-slate-500/10 border border-slate-500/20 rounded-xl px-4 py-3">
-                <p className="text-sm text-slate-400">📋 {technicians.length} technicien(s) actif(s)</p>
-              </div>
+              <h2 className="text-sm font-bold text-gray-400 uppercase tracking-widest mb-5">Gestion des techniciens</h2>
+              <Link href="/technicians"
+                className="group flex items-center justify-between p-4 bg-white/[0.04] hover:bg-white/[0.07] border border-white/10 hover:border-orange-500/30 rounded-xl transition-all duration-200">
+                <div>
+                  <p className="text-white font-semibold text-sm mb-1">Gérez les techniciens, leurs codes d'accès et permissions.</p>
+                  <p className="text-sm text-slate-400">📋 {technicians.length} technicien(s) actif(s)</p>
+                </div>
+                <svg className="w-5 h-5 text-gray-500 group-hover:text-orange-400 group-hover:translate-x-1 transition-all duration-200 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7"/>
+                </svg>
+              </Link>
             </div>
           )}
 

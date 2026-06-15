@@ -224,7 +224,8 @@ export default function HistoriquePage() {
   const [error, setError] = useState(null);
 
   const [searchTerm, setSearchTerm] = useState("");
-  const [filterStatus, setFilterStatus] = useState("all");
+  const [filterStatuses, setFilterStatuses] = useState<string[]>([]);
+  const [showStatusFilter, setShowStatusFilter] = useState(false);
   const [filterClient, setFilterClient] = useState("all");
   const [sortBy, setSortBy] = useState("date_desc");
 
@@ -357,6 +358,16 @@ export default function HistoriquePage() {
     loadTechnicians();
   }, [loadHistory]);
 
+  useEffect(() => {
+    if (!showStatusFilter) return;
+    const handler = (e: MouseEvent) => {
+      const target = e.target as HTMLElement;
+      if (!target.closest("[data-status-filter]")) setShowStatusFilter(false);
+    };
+    document.addEventListener("mousedown", handler);
+    return () => document.removeEventListener("mousedown", handler);
+  }, [showStatusFilter]);
+
   const loadAppareilHistorique = async (repairId) => {
     const historique = await getHistoriqueAppareil(repairId);
     setAppareilHistorique(historique);
@@ -377,8 +388,8 @@ export default function HistoriquePage() {
       );
     }
 
-    if (filterStatus !== "all") {
-      filtered = filtered.filter((repair) => repair.status === filterStatus);
+    if (filterStatuses.length > 0) {
+      filtered = filtered.filter((repair) => filterStatuses.includes(repair.status));
     }
 
     if (filterClient !== "all") {
@@ -410,7 +421,7 @@ export default function HistoriquePage() {
     }
 
     return filtered;
-  }, [searchTerm, filterStatus, filterClient, sortBy, repairs]);
+  }, [searchTerm, filterStatuses, filterClient, sortBy, repairs]);
 
   const getStatusBadge = useCallback((status) => {
     const config = STATUS_CONFIG[status] || {
@@ -569,18 +580,56 @@ export default function HistoriquePage() {
                 className="w-full bg-[#1a1d2e] border border-white/10 rounded-xl px-4 py-2.5 text-white placeholder-gray-600 text-sm outline-none focus:border-amber-500/60 focus:ring-2 focus:ring-amber-500/15 transition-all duration-200"
               />
             </div>
-            <select
-              value={filterStatus}
-              onChange={(e) => setFilterStatus(e.target.value)}
-              className="bg-[#1a1d2e] border border-white/10 rounded-xl px-3 py-2.5 text-white text-sm outline-none focus:border-amber-500/60 focus:ring-2 focus:ring-amber-500/15 transition-all"
-            >
-              <option value="all">Tous les statuts</option>
-              {Object.keys(STATUS_CONFIG).map((status) => (
-                <option key={status} value={status}>
-                  {STATUS_CONFIG[status].badge}
-                </option>
-              ))}
-            </select>
+            <div className="relative" data-status-filter>
+              <button
+                onClick={() => setShowStatusFilter(!showStatusFilter)}
+                className={`w-full flex items-center justify-between gap-2 px-3 py-2.5 rounded-xl text-sm border transition-all ${
+                  filterStatuses.length > 0
+                    ? "bg-amber-500/15 border-amber-500/50 text-amber-300"
+                    : "bg-[#1a1d2e] border-white/10 text-gray-400 hover:border-white/20"
+                }`}
+              >
+                <span>
+                  {filterStatuses.length === 0
+                    ? "Tous les statuts"
+                    : `${filterStatuses.length} statut${filterStatuses.length > 1 ? "s" : ""} sélectionné${filterStatuses.length > 1 ? "s" : ""}`}
+                </span>
+                <svg className={`w-4 h-4 transition-transform ${showStatusFilter ? "rotate-180" : ""}`} fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" /></svg>
+              </button>
+              {showStatusFilter && (
+                <div className="absolute top-full mt-1 left-0 right-0 z-20 bg-[#1a1d2e] border border-white/10 rounded-xl shadow-2xl p-2 min-w-[220px]">
+                  <div className="flex justify-between items-center px-2 pb-2 mb-1 border-b border-white/10">
+                    <span className="text-xs text-gray-500 uppercase tracking-wider">Filtrer</span>
+                    {filterStatuses.length > 0 && (
+                      <button onClick={() => setFilterStatuses([])} className="text-xs text-amber-400 hover:text-amber-300 transition">Tout effacer</button>
+                    )}
+                  </div>
+                  <div className="space-y-0.5 max-h-64 overflow-y-auto">
+                    {Object.entries(STATUS_CONFIG).map(([status, cfg]) => {
+                      const checked = filterStatuses.includes(status);
+                      return (
+                        <label key={status} className={`flex items-center gap-2.5 px-2 py-1.5 rounded-lg cursor-pointer transition-all ${checked ? "bg-amber-500/10" : "hover:bg-white/5"}`}>
+                          <div className={`w-4 h-4 rounded flex items-center justify-center border transition-all flex-shrink-0 ${checked ? "bg-amber-500 border-amber-500" : "border-white/20"}`}>
+                            {checked && <svg className="w-2.5 h-2.5 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" /></svg>}
+                          </div>
+                          <input
+                            type="checkbox"
+                            className="sr-only"
+                            checked={checked}
+                            onChange={() => {
+                              setFilterStatuses(prev =>
+                                prev.includes(status) ? prev.filter(s => s !== status) : [...prev, status]
+                              );
+                            }}
+                          />
+                          <span className={`text-sm ${checked ? "text-amber-300" : "text-gray-300"}`}>{cfg.badge}</span>
+                        </label>
+                      );
+                    })}
+                  </div>
+                </div>
+              )}
+            </div>
             <select
               value={filterClient}
               onChange={(e) => setFilterClient(e.target.value)}
@@ -703,17 +752,75 @@ export default function HistoriquePage() {
                 </div>
               </div>
 
-              {/* Bouton Historique + Rendu */}
+              {/* Chronologie — temps de travail */}
+              {(() => {
+                const start = selectedRepair.assigned_at;
+                const end = selectedRepair.work_ended_at;
+                if (!start) return null;
+                const startDate = new Date(start);
+                const endDate = end ? new Date(end) : null;
+                const durMs = endDate ? endDate.getTime() - startDate.getTime() : null;
+                const fmt = (ms: number) => {
+                  const s = Math.floor(ms / 1000);
+                  const h = Math.floor(s / 3600);
+                  const m = Math.floor((s % 3600) / 60);
+                  const sec = s % 60;
+                  if (h > 0) return `${h}h ${m}min`;
+                  if (m > 0) return `${m}min ${sec}s`;
+                  return `${sec}s`;
+                };
+                return (
+                  <div className="bg-[#16161d] border border-white/5 rounded-xl p-4">
+                    <h3 className="font-semibold text-white mb-3 border-b border-white/10 pb-2 text-sm uppercase tracking-wider">📅 Chronologie</h3>
+                    <div className="space-y-2 text-sm">
+                      <div className="flex items-center gap-3">
+                        <div className="w-2 h-2 rounded-full bg-blue-400 shrink-0"></div>
+                        <span className="text-gray-400">Prise en charge :</span>
+                        <span className="text-white font-medium">{startDate.toLocaleString("fr-FR")}</span>
+                      </div>
+                      {endDate ? (
+                        <div className="flex items-center gap-3">
+                          <div className="w-2 h-2 rounded-full bg-green-400 shrink-0"></div>
+                          <span className="text-gray-400">Terminé :</span>
+                          <span className="text-white font-medium">{endDate.toLocaleString("fr-FR")}</span>
+                        </div>
+                      ) : (
+                        <div className="flex items-center gap-3">
+                          <div className="w-2 h-2 rounded-full bg-orange-400 animate-pulse shrink-0"></div>
+                          <span className="text-orange-400 text-sm">En cours...</span>
+                        </div>
+                      )}
+                      {durMs !== null && (
+                        <div className="mt-2 flex items-center gap-2 bg-amber-500/10 border border-amber-500/20 rounded-xl px-4 py-2.5">
+                          <span className="text-2xl">⏱️</span>
+                          <div>
+                            <div className="text-xs text-gray-500 uppercase tracking-wider">Temps passé</div>
+                            <div className="text-xl font-black text-amber-400">{fmt(durMs)}</div>
+                          </div>
+                          <div className="ml-auto text-right">
+                            <div className="text-xs text-gray-500">Technicien</div>
+                            <div className="text-sm text-white font-semibold">{selectedRepair.technician || "—"}</div>
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                );
+              })()}
+
+              {/* Boutons actions */}
               <div className="flex justify-between items-center flex-wrap gap-2">
                 <button
                   onClick={() => setShowFullHistory(!showFullHistory)}
-                  className="flex items-center gap-2 px-4 py-2 bg-amber-500/15 text-amber-400 border border-amber-500/30 rounded-xl hover:bg-amber-500/25 transition-all duration-150 text-sm font-medium"
+                  className={`flex items-center gap-2 px-4 py-2 border rounded-xl transition-all duration-150 text-sm font-medium ${
+                    showFullHistory
+                      ? "bg-amber-500/25 border-amber-500/60 text-amber-300"
+                      : "bg-amber-500/10 border-amber-500/25 text-amber-400 hover:bg-amber-500/20"
+                  }`}
                 >
                   <span>📜</span>
-                  <span>{showFullHistory ? "Masquer" : "Afficher"} l'historique</span>
-                  <span className="bg-amber-500/20 px-2 py-0.5 rounded-full text-xs">
-                    {appareilHistorique.length}
-                  </span>
+                  <span>{showFullHistory ? "Masquer" : "Voir"} Historique complet</span>
+                  <span className="bg-amber-500/20 px-2 py-0.5 rounded-full text-xs">{appareilHistorique.length}</span>
                 </button>
                 {!["📦 Rendu", "❌ KO", "🚫 Refus client"].includes(selectedRepair.status) && (
                   <button
@@ -738,75 +845,16 @@ export default function HistoriquePage() {
                 )}
               </div>
 
-              {/* Timeline Historique Complet */}
+              {/* Chronologie + Historique complet — affichés ensemble */}
               {showFullHistory && (
                 <div className="bg-[#16161d] rounded-xl p-4 border border-amber-500/20">
                   <h3 className="font-bold text-white mb-4 flex items-center gap-2 border-b border-white/10 pb-2 text-sm">
-                    <span className="text-xl">📜</span>
-                    <span>Historique complet</span>
+                    <span>📜</span><span>Historique complet</span>
                     <span className="text-xs text-gray-500 ml-2">⏱️ Actions tracées</span>
                   </h3>
                   <FullHistoryTimeline historique={appareilHistorique} getUserDisplayName={getUserDisplayName} />
                 </div>
               )}
-
-              {/* Chronologie réparation */}
-              <div className="bg-[#16161d] border border-white/5 rounded-xl p-4">
-                <h3 className="font-semibold text-white mb-4 border-b border-white/10 pb-2 text-sm uppercase tracking-wider">
-                  📅 Chronologie
-                </h3>
-                <div className="space-y-3">
-                  <div className="flex items-start gap-3 p-3 bg-amber-500/10 rounded-xl border-l-4 border-amber-500">
-                    <div className="text-2xl">📥</div>
-                    <div className="flex-1">
-                      <div className="flex justify-between">
-                        <span className="font-bold text-white text-sm">📝 Saisie initiale</span>
-                        <span className="text-xs text-gray-500">⏱️ {formatDateTime(selectedRepair.created_at)}</span>
-                      </div>
-                      <p className="text-sm text-gray-400 mt-1">Appareil: {selectedRepair.device || "-"}</p>
-                      <p className="text-sm text-gray-400">Panne: {selectedRepair.issue || "-"}</p>
-                    </div>
-                  </div>
-
-                  {selectedRepair.diagnosis && (
-                    <div className="flex items-start gap-3 p-3 bg-blue-500/10 rounded-xl border-l-4 border-blue-500">
-                      <div className="text-2xl">🔬</div>
-                      <div className="flex-1">
-                        <div className="flex justify-between">
-                          <span className="font-bold text-white text-sm">Diagnostic</span>
-                          <span className="text-xs text-gray-500">⏱️ {formatDateTime(selectedRepair.diagnostic_date || selectedRepair.updated_at)}</span>
-                        </div>
-                        <p className="text-sm text-gray-400 mt-1">{selectedRepair.diagnosis}</p>
-                      </div>
-                    </div>
-                  )}
-
-                  {selectedRepair.end_time && (
-                    <div className="flex items-start gap-3 p-3 bg-green-500/10 rounded-xl border-l-4 border-green-500">
-                      <div className="text-2xl">✅</div>
-                      <div className="flex-1">
-                        <div className="flex justify-between">
-                          <span className="font-bold text-white text-sm">Terminée</span>
-                          <span className="text-xs text-gray-500">⏱️ {formatDateTime(selectedRepair.end_time)}</span>
-                        </div>
-                        <p className="text-sm text-gray-400 mt-1">Prix final: <span className="font-bold text-amber-400">{selectedRepair.final_price || 0}€</span></p>
-                      </div>
-                    </div>
-                  )}
-
-                  {selectedRepair.return_date && (
-                    <div className="flex items-start gap-3 p-3 bg-white/5 rounded-xl border-l-4 border-gray-500">
-                      <div className="text-2xl">📦</div>
-                      <div className="flex-1">
-                        <div className="flex justify-between">
-                          <span className="font-bold text-white text-sm">Rendu</span>
-                          <span className="text-xs text-gray-500">⏱️ {formatDateTime(selectedRepair.return_date)}</span>
-                        </div>
-                      </div>
-                    </div>
-                  )}
-                </div>
-              </div>
 
               {/* Appareil + Prix */}
               <div className="grid grid-cols-1 md:grid-cols-2 gap-3">

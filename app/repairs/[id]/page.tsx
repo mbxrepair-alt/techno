@@ -123,6 +123,7 @@ export default function RepairDetailPage() {
   // « SAV / Retour » rouvre la réparation (statut Retour) pour tout le monde.
   const [isGerant, setIsGerant] = useState(false);
   const [unlocked, setUnlocked] = useState(false);
+  const [showClientInfo, setShowClientInfo] = useState(false);
   const locked = ["✅ Terminé", "📦 Rendu", "❌ KO"].includes(repair?.status) && !unlocked;
 
   const [showPartModal, setShowPartModal] = useState(false);
@@ -513,7 +514,11 @@ export default function RepairDetailPage() {
       return;
     }
 
-    const { error } = await supabase.from("repairs").update({ status: newStatus }).eq("id", id);
+    const updatePayload: any = { status: newStatus };
+    if (["✅ Terminé", "📦 Rendu"].includes(newStatus)) {
+      updatePayload.work_ended_at = new Date().toISOString();
+    }
+    const { error } = await supabase.from("repairs").update(updatePayload).eq("id", id);
 
     if (error) {
       showMessage("Erreur mise à jour", "error");
@@ -761,6 +766,58 @@ export default function RepairDetailPage() {
           }`}
         >
           {message.text}
+        </div>
+      )}
+
+      {/* MODAL INFOS CLIENT */}
+      {showClientInfo && repair && (
+        <div className="fixed inset-0 bg-black/70 backdrop-blur-sm z-50 flex items-center justify-center p-4" onClick={() => setShowClientInfo(false)}>
+          <div className="bg-[#1a1d2e] border border-white/10 border-t-2 border-t-blue-500 rounded-2xl w-full max-w-md shadow-2xl" onClick={e => e.stopPropagation()}>
+            <div className="flex items-center justify-between px-5 py-4 border-b border-white/10">
+              <h3 className="text-white font-bold text-sm flex items-center gap-2">👤 Informations saisies par le client</h3>
+              <button onClick={() => setShowClientInfo(false)} className="w-7 h-7 bg-white/10 hover:bg-white/20 rounded-full flex items-center justify-center text-gray-400 text-xs transition">✕</button>
+            </div>
+            <div className="p-5 space-y-3 text-sm">
+              {repair.submitted_at && (
+                <div className="flex justify-between text-xs text-gray-500 mb-2">
+                  <span>Soumis le</span>
+                  <span>{new Date(repair.submitted_at).toLocaleString("fr-FR")}</span>
+                </div>
+              )}
+              <div className="grid grid-cols-2 gap-3">
+                <div className="bg-white/5 rounded-xl p-3">
+                  <div className="text-xs text-gray-500 mb-1">📱 Appareil</div>
+                  <div className="text-white font-medium">{repair.device || "—"}</div>
+                </div>
+                <div className="bg-white/5 rounded-xl p-3">
+                  <div className="text-xs text-gray-500 mb-1">🔧 Panne déclarée</div>
+                  <div className="text-white font-medium">{repair.issue || "—"}</div>
+                </div>
+              </div>
+              {repair.description && (
+                <div className="bg-white/5 rounded-xl p-3">
+                  <div className="text-xs text-gray-500 mb-1">📝 Observations client</div>
+                  <div className="text-gray-300">{repair.description}</div>
+                </div>
+              )}
+              <div className="grid grid-cols-2 gap-3">
+                <div className="bg-white/5 rounded-xl p-3">
+                  <div className="text-xs text-gray-500 mb-1">🔑 Code déverrouillage</div>
+                  <div className="text-white font-mono font-bold">{repair.unlock_code || "NC"}</div>
+                </div>
+                <div className="bg-white/5 rounded-xl p-3">
+                  <div className="text-xs text-gray-500 mb-1">🔢 IMEI</div>
+                  <div className="text-white font-mono text-xs">{repair.imei || "NC"}</div>
+                </div>
+              </div>
+              {repair.unlock_pattern && (
+                <div className="bg-white/5 rounded-xl p-3">
+                  <div className="text-xs text-gray-500 mb-1">🔷 Schéma de déverrouillage</div>
+                  <div className="text-white">{repair.unlock_pattern}</div>
+                </div>
+              )}
+            </div>
+          </div>
         </div>
       )}
 
@@ -1216,9 +1273,12 @@ export default function RepairDetailPage() {
               )}
             </div>
             <p className="text-gray-300 text-sm italic">"{repair.client_response}"</p>
-            <p className="text-xs text-gray-600 mt-1">
-              Le {new Date(repair.updated_at).toLocaleString("fr-FR")}
-            </p>
+            {repair.client_response_date && (() => {
+              const d = new Date(repair.client_response_date);
+              return isNaN(d.getTime()) ? null : (
+                <p className="text-xs text-gray-600 mt-1">Le {d.toLocaleString("fr-FR")}</p>
+              );
+            })()}
           </div>
         )}
 
@@ -1260,72 +1320,7 @@ export default function RepairDetailPage() {
           )
         )}
 
-        {/* HISTORIQUE LIST */}
-        {historique.length > 0 && (
-          <div className="mb-6 bg-[#16161d] border border-white/8 rounded-2xl overflow-hidden">
-            <div className="px-5 py-3 border-b border-white/8">
-              <h3 className="text-white font-bold flex items-center gap-2 text-sm">
-                <span>📜</span> Historique complet
-              </h3>
-            </div>
-            <div className="p-4 max-h-96 overflow-y-auto">
-              {historique.length === 0 ? (
-                <div className="text-center py-8 text-gray-600">
-                  <p className="text-2xl mb-2">📭</p>
-                  <p className="text-sm">Aucun historique enregistré pour cet appareil</p>
-                </div>
-              ) : (
-                <div className="space-y-2">
-                  {historique.map((entry) => (
-                    <div
-                      key={entry.id}
-                      className={`rounded-xl p-3 border-l-2 bg-black/20 ${
-                        entry.action === "changement_statut"
-                          ? "border-purple-500/60"
-                          : entry.action === "changement_technicien"
-                            ? "border-orange-500/60"
-                            : entry.action === "modification"
-                              ? "border-blue-500/60"
-                              : "border-gray-600/60"
-                      }`}
-                    >
-                      <div className="flex justify-between items-start flex-wrap gap-2">
-                        <p className="text-sm text-gray-300 flex-1">{entry.description}</p>
-                        <span className="text-xs text-gray-600 whitespace-nowrap">
-                          ⏱️ {new Date(entry.created_at).toLocaleString("fr-FR")}
-                        </span>
-                      </div>
-                      <div className="flex justify-between items-center mt-1.5">
-                        <span className="text-xs text-gray-600">
-                          👤 {entry.user_name || "Inconnu"}
-                        </span>
-                        <span
-                          className={`text-xs px-2 py-0.5 rounded-full ${
-                            entry.user_type === "client"
-                              ? "bg-green-500/15 text-green-400"
-                              : "bg-blue-500/15 text-blue-400"
-                          }`}
-                        >
-                          {entry.user_type === "client"
-                            ? "👤 Client"
-                            : `🔧 ${entry.user_name || "Technicien"}`}
-                        </span>
-                      </div>
-                      {entry.old_value && entry.new_value && (
-                        <div className="mt-1.5 text-xs text-gray-600 bg-white/3 rounded-lg px-2 py-1">
-                          🔄 {entry.old_value} → {entry.new_value}
-                        </div>
-                      )}
-                    </div>
-                  ))}
-                </div>
-              )}
-            </div>
-            <div className="px-5 py-2 border-t border-white/8 text-xs text-gray-600">
-              📊 Total: {historique.length} action(s)
-            </div>
-          </div>
-        )}
+        {/* HISTORIQUE LIST — masqué */}
 
         {/* MAIN 2-COL GRID */}
         <div className="grid lg:grid-cols-2 gap-5">
@@ -1333,8 +1328,16 @@ export default function RepairDetailPage() {
           <div className="space-y-4">
             {/* DIAGNOSTIC */}
             <div className="bg-[#16161d] border border-white/8 rounded-2xl overflow-hidden">
-              <div className="px-4 py-3 border-b border-white/8">
+              <div className="px-4 py-3 border-b border-white/8 flex items-center justify-between">
                 <p className="text-[10px] font-bold text-gray-500 uppercase tracking-widest">🔍 Diagnostic technicien</p>
+                {repair?.is_client_submitted && (
+                  <button
+                    onClick={() => setShowClientInfo(true)}
+                    className="flex items-center gap-1.5 px-2.5 py-1 bg-blue-500/15 hover:bg-blue-500/25 border border-blue-500/30 text-blue-400 rounded-lg text-xs font-medium transition-all"
+                  >
+                    📱 Info appareil
+                  </button>
+                )}
               </div>
               <div className="p-4">
                 <SmartTextarea

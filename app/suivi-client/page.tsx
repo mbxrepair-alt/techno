@@ -2,6 +2,7 @@
 
 import { Suspense, Fragment, useState, useEffect, useRef } from "react";
 import { useSearchParams } from "next/navigation";
+import Link from "next/link";
 import { supabase } from "../../lib/supabase";
 import PatternLock from "../../components/PatternLock";
 
@@ -70,8 +71,8 @@ function SuiviClientContent() {
   const handleValidate = async () => {
     if (!clientResponse.trim()) { alert("Écrivez un message avant de valider."); return; }
     setSending(true);
-    const { error } = await supabase.from("repairs").update({ client_response: clientResponse, client_response_type: "accepte" }).eq("id", selectedRepair.id);
-    if (!error) { const u = { ...selectedRepair, client_response: clientResponse, client_response_type: "accepte" }; setRepairs(repairs.map(r => r.id === selectedRepair.id ? u : r)); setSelectedRepair(u); setClientResponse(""); alert("✅ Réponse envoyée !"); }
+    const { error } = await supabase.from("repairs").update({ client_response: clientResponse, client_response_type: "accepte", client_response_date: new Date().toISOString() }).eq("id", selectedRepair.id);
+    if (!error) { const u = { ...selectedRepair, client_response: clientResponse, client_response_type: "accepte", client_response_date: new Date().toISOString() }; setRepairs(repairs.map(r => r.id === selectedRepair.id ? u : r)); setSelectedRepair(u); setClientResponse(""); alert("✅ Réponse envoyée !"); }
     else { alert("❌ Erreur. Réessayez."); }
     setSending(false);
   };
@@ -80,7 +81,7 @@ function SuiviClientContent() {
     if (!clientResponse.trim()) { alert("Écrivez un message avant de refuser."); return; }
     setSending(true);
     const hasDiag = selectedRepair.diagnostic_price > 0;
-    const payload: any = { client_response: clientResponse, client_response_type: "refuse", status: "🚫 Refus client" };
+    const payload: any = { client_response: clientResponse, client_response_type: "refuse", client_response_date: new Date().toISOString(), status: "🚫 Refus client" };
     if (hasDiag) { payload.final_price = selectedRepair.diagnostic_price; payload.status = "✅ Terminé"; }
     const { error } = await supabase.from("repairs").update(payload).eq("id", selectedRepair.id);
     if (!error) { const u = { ...selectedRepair, ...payload }; setRepairs(repairs.map(r => r.id === selectedRepair.id ? u : r)); setSelectedRepair(u); setClientResponse(""); alert(hasDiag ? `Forfait diagnostic ${selectedRepair.diagnostic_price}€ facturé.` : "Refus enregistré."); }
@@ -196,12 +197,19 @@ function SuiviClientContent() {
       {/* HEADER */}
       <header className="sticky top-0 z-50 bg-[#0a0a0f]/90 backdrop-blur-2xl border-b border-white/6">
         <div className="max-w-2xl lg:max-w-5xl mx-auto px-4 py-3 flex items-center justify-between gap-3">
-          <div className="flex items-center gap-2.5 shrink-0">
-            <div className="w-9 h-9 bg-gradient-to-br from-orange-500 to-orange-600 rounded-xl overflow-hidden shadow-[0_0_12px_rgba(249,115,22,0.35)]">
-              <img src="/logo.png" alt="MBX" className="w-full h-full object-cover" onError={e => { (e.target as HTMLImageElement).style.display="none"; }} />
+          <Link href="/" className="flex items-center gap-3 group cursor-pointer shrink-0">
+            <div className="relative">
+              <div className="absolute -inset-2 rounded-xl bg-gradient-to-r from-orange-500 via-orange-400 to-orange-600 opacity-75 group-hover:opacity-100 blur-md animate-spin-slow"></div>
+              <div className="relative w-10 h-10 bg-gradient-to-br from-orange-500 to-orange-600 rounded-xl flex items-center justify-center shadow-2xl overflow-hidden">
+                <img src="/logo.png" alt="MBX Logo" className="w-full h-full object-cover rounded-xl scale-105" onError={e => { (e.target as HTMLImageElement).style.display="none"; }} />
+              </div>
             </div>
-            <div><span className="font-black text-base text-white tracking-tight">MBX</span><span className="text-orange-500 text-[9px] block -mt-0.5 font-semibold tracking-[0.15em]">RÉPARATIONS</span></div>
-          </div>
+            <div className="leading-tight">
+              <span className="text-white font-black text-xl tracking-tight drop-shadow-[0_0_15px_rgba(255,255,255,0.3)] leading-none block">MBX</span>
+              <span className="text-orange-400 text-[9px] block mt-0.5 font-bold tracking-[0.2em] leading-tight drop-shadow-[0_0_4px_rgba(249,115,22,0.8)]">CENTRE</span>
+              <span className="text-orange-400 text-[9px] block font-bold tracking-[0.2em] leading-tight drop-shadow-[0_0_4px_rgba(249,115,22,0.8)]">DE RÉPARATION</span>
+            </div>
+          </Link>
 
           {client && (
             <div className="flex items-center gap-2 min-w-0">

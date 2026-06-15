@@ -19,17 +19,17 @@ export default function PaiePage() {
   const load = async () => {
     setLoading(true);
     try {
-      const user = await getCurrentUser();
-      if (!user) {
+      const companyId = typeof window !== "undefined" ? localStorage.getItem("company_id") : null;
+      if (!companyId) {
         router.push("/login");
         return;
       }
       const [techRes, repRes] = await Promise.all([
-        supabase.from("technicians").select("*").eq("user_id", user.id).order("name", { ascending: true }),
+        supabase.from("technicians").select("*").eq("user_id", companyId).order("name", { ascending: true }),
         supabase
           .from("repairs")
           .select("technician, final_price, status, created_at")
-          .eq("user_id", user.id)
+          .eq("user_id", companyId)
           .in("status", ["✅ Terminé", "📦 Rendu"]),
       ]);
       setTechs(techRes.data || []);

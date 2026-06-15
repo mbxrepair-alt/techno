@@ -72,20 +72,20 @@ export default function FacturesPage() {
   const loadData = async () => {
     setLoading(true);
     try {
-      const user = await getCurrentUser();
-      if (!user) {
+      const companyId = typeof window !== "undefined" ? localStorage.getItem("company_id") : null;
+      if (!companyId) {
         router.push("/login");
         return;
       }
 
       // Charger le profil entreprise + TVA + réparations en parallèle
       const [profileResult, tvaResult, repairsResult, clientsResult, productsResult, salesResult] = await Promise.all([
-        supabase.from("profiles").select("*").eq("id", user.id).single(),
-        supabase.from("clients").select("id, default_tva_rate").eq("user_id", user.id),
-        supabase.from("repairs").select("*, clients(*)").eq("user_id", user.id).in("status", ["✅ Terminé", "📦 Rendu", "🚫 Refus client"]).order("created_at", { ascending: false }),
-        supabase.from("clients").select("*").eq("user_id", user.id),
-        supabase.from("products").select("*").eq("user_id", user.id).gt("stock", 0).order("name"),
-        supabase.from("product_sales").select("*").eq("user_id", user.id).order("sold_at", { ascending: false }).limit(500),
+        supabase.from("profiles").select("*").eq("id", companyId).single(),
+        supabase.from("clients").select("id, default_tva_rate").eq("user_id", companyId),
+        supabase.from("repairs").select("*, clients(*)").eq("user_id", companyId).in("status", ["✅ Terminé", "📦 Rendu", "🚫 Refus client"]).order("created_at", { ascending: false }),
+        supabase.from("clients").select("*").eq("user_id", companyId),
+        supabase.from("products").select("*").eq("user_id", companyId).gt("stock", 0).order("name"),
+        supabase.from("product_sales").select("*").eq("user_id", companyId).order("sold_at", { ascending: false }).limit(500),
       ]);
       setAvailableProducts(productsResult.data || []);
       setBoutiqueSales(salesResult.data || []);

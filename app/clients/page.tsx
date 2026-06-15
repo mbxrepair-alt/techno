@@ -54,8 +54,8 @@ export default function ClientsPage() {
   const loadClients = async () => {
     setLoading(true);
     try {
-      const user = await getCurrentUser();
-      if (!user) {
+      const companyId = typeof window !== "undefined" ? localStorage.getItem("company_id") : null;
+      if (!companyId) {
         router.push("/login");
         return;
       }
@@ -63,7 +63,7 @@ export default function ClientsPage() {
       const { data, error } = await supabase
         .from("clients")
         .select("*")
-        .eq("user_id", user.id)
+        .eq("user_id", companyId)
         .order("created_at", { ascending: false });
 
       if (error) throw error;
@@ -271,8 +271,8 @@ export default function ClientsPage() {
 
   const handleAddClient = async (e) => {
     e.preventDefault();
-    const user = await getCurrentUser();
-    if (!user) return;
+    const companyId = typeof window !== "undefined" ? localStorage.getItem("company_id") : null;
+    if (!companyId) return;
 
     if (formData.type === "pro" && (!formData.companyName || formData.companyName.trim() === "")) {
       showMessage("Le nom de la société est requis", "error");
@@ -335,7 +335,7 @@ export default function ClientsPage() {
       {
         ...fullData,
         client_code: clientCode,
-        user_id: user.id,
+        user_id: companyId,
         default_tax_rate: formData.type === "pro" ? 20 : 0,
       },
     ]);
@@ -352,8 +352,7 @@ export default function ClientsPage() {
 
   const handleEditClient = async (e) => {
     e.preventDefault();
-    const user = await getCurrentUser();
-    if (!user || !selectedClient) return;
+    if (!selectedClient) return;
 
     let displayName = "";
     let updateData = {};

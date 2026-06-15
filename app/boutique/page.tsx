@@ -118,12 +118,12 @@ export default function BoutiquePage() {
   const load = async () => {
     setLoading(true);
     try {
-      const { data: { user }, error: userError } = await supabase.auth.getUser();
-      if (userError || !user) { router.push("/login"); return; }
-      setUserId(user.id);
+      const companyId = typeof window !== "undefined" ? localStorage.getItem("company_id") : null;
+      if (!companyId) { router.push("/login"); return; }
+      setUserId(companyId);
       const [pRes, sRes] = await Promise.all([
-        supabase.from("products").select("*").eq("user_id", user.id).order("name", { ascending: true }),
-        supabase.from("product_sales").select("*").eq("user_id", user.id).order("sold_at", { ascending: false }).limit(200),
+        supabase.from("products").select("*").eq("user_id", companyId).order("name", { ascending: true }),
+        supabase.from("product_sales").select("*").eq("user_id", companyId).order("sold_at", { ascending: false }).limit(200),
       ]);
       if (pRes.error) throw pRes.error;
       if (sRes.error) throw sRes.error;
@@ -138,13 +138,13 @@ export default function BoutiquePage() {
 
   useEffect(() => {
     const init = async () => {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) { router.push("/login"); return; }
+      const companyId = typeof window !== "undefined" ? localStorage.getItem("company_id") : null;
+      if (!companyId) { router.push("/login"); return; }
       const t = getCurrentTechnician();
       setIsGerant(t?.is_gerant === true);
       setTechName(t?.name || "");
       setSelectedTech("");
-      const { data: techs } = await supabase.from("technicians").select("id, name").eq("user_id", user.id);
+      const { data: techs } = await supabase.from("technicians").select("id, name").eq("user_id", companyId);
       if (techs) setTechniciens(techs);
       await load();
     };
@@ -154,15 +154,15 @@ export default function BoutiquePage() {
 
   const addProduct = async () => {
     if (!form.name.trim()) { alert("Le nom du produit est requis."); return; }
-    const { data: { user }, error: userError } = await supabase.auth.getUser();
-    if (userError || !user) { alert("Vous devez être connecté pour ajouter un produit."); return; }
+    const companyId = typeof window !== "undefined" ? localStorage.getItem("company_id") : null;
+    if (!companyId) { alert("Session expirée, veuillez vous reconnecter."); return; }
     // Vérifier doublon code-barres
     if (form.barcode.trim()) {
-      const { data: existing } = await supabase.from("products").select("id, name").eq("user_id", user.id).eq("barcode", form.barcode.trim()).maybeSingle();
+      const { data: existing } = await supabase.from("products").select("id, name").eq("user_id", companyId).eq("barcode", form.barcode.trim()).maybeSingle();
       if (existing) { setBarcodeConflict(existing); return; }
     }
     const { error } = await supabase.from("products").insert({
-      user_id: user.id,
+      user_id: companyId,
       name: form.name.trim(),
       category: form.category.trim() || null,
       stock: Number(form.stock) || 0,

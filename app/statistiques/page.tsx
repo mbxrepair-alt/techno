@@ -64,20 +64,26 @@ export default function StatistiquesPage() {
   const loadStats = async () => {
     setLoading(true);
     try {
-      const user = await getCurrentUser();
-      if (!user) { router.push("/login"); return; }
+      const companyId = typeof window !== "undefined" ? localStorage.getItem("company_id") : null;
+      if (!companyId) {
+        router.push("/login");
+        return;
+      }
 
-      let query = supabase.from("repairs").select("*");
+      let query = supabase.from("repairs").select("*").eq("user_id", companyId);
       if (!isGerant && currentTechnician) {
         query = query.eq("technician", currentTechnician.name);
       }
       const { data: repairs } = await query;
 
       const { data: technicians } = await supabase
-        .from("technicians").select("*").eq("is_active", true);
+        .from("technicians")
+        .select("*")
+        .eq("user_id", companyId)
+        .eq("is_active", true);
 
       const { data: sales } = await supabase
-        .from("product_sales").select("total, created_at, quantity");
+        .from("product_sales").select("total, created_at, quantity").eq("user_id", companyId);
 
       const totalRepairs = repairs?.length || 0;
       const completedRepairs = repairs?.filter((r) => r.status === "✅ Terminé" || r.status === "📦 Rendu").length || 0;

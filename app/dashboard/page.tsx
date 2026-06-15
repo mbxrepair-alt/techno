@@ -260,24 +260,22 @@ export default function Dashboard() {
   // Charger les infos de l'atelier
   useEffect(() => {
     const loadCompanyInfo = async () => {
-      const user = await getCurrentUser();
-      if (user) {
-        setUserId(user.id);
-        const { data: profile } = await supabase
-          .from("profiles")
-          .select("*")
-          .eq("id", user.id)
-          .single();
+      const companyId = typeof window !== "undefined" ? localStorage.getItem("company_id") : null;
+      if (!companyId) return;
+      const { data: profile } = await supabase
+        .from("profiles")
+        .select("company_name, contact_phone, contact_address, email")
+        .eq("id", companyId)
+        .single();
 
-        if (profile) {
-          setCompanyInfo({
-            name: profile.company_name || "MBX Réparations",
-            phone: profile.contact_phone || "",
-            email: profile.email || user.email,
-            address: profile.contact_address || "",
-            siret: profile.siret || "",
-          });
-        }
+      if (profile) {
+        setCompanyInfo({
+          name: profile.company_name || "MBX Réparations",
+          phone: profile.contact_phone || "",
+          email: profile.email || "",
+          address: profile.contact_address || "",
+          siret: "",
+        });
       }
     };
     loadCompanyInfo();
@@ -467,13 +465,13 @@ export default function Dashboard() {
       setSelectedClientIndex(-1);
       return;
     }
-    const user = await getCurrentUser();
-    if (!user) return;
+    const companyId = typeof window !== "undefined" ? localStorage.getItem("company_id") : null;
+    if (!companyId) return;
 
     const { data } = await supabase
       .from("clients")
       .select("id, name, phone, email")
-      .eq("user_id", user.id)
+      .eq("user_id", companyId)
       .or(`name.ilike.%${term}%, phone.ilike.%${term}%`)
       .limit(8);
     setClientSuggestions(data || []);
@@ -488,13 +486,13 @@ export default function Dashboard() {
       setSelectedPhoneIndex(-1);
       return;
     }
-    const user = await getCurrentUser();
-    if (!user) return;
+    const companyId = typeof window !== "undefined" ? localStorage.getItem("company_id") : null;
+    if (!companyId) return;
 
     const { data } = await supabase
       .from("clients")
       .select("id, name, phone, email")
-      .eq("user_id", user.id)
+      .eq("user_id", companyId)
       .ilike("phone", `%${term}%`)
       .limit(5);
     setPhoneSuggestions(data || []);
@@ -799,12 +797,12 @@ export default function Dashboard() {
   };
 
   const saveReceiptToSupabase = async (tickets, client) => {
-    const user = await getCurrentUser();
-    if (!user) return false;
+    const companyId = typeof window !== "undefined" ? localStorage.getItem("company_id") : null;
+    if (!companyId) return false;
     try {
       const receiptData = {
         receipt_number: `REC-${Date.now()}-${Math.floor(Math.random() * 1000)}`,
-        user_id: user.id,
+        user_id: companyId,
         client_name: client.name,
         client_phone: client.phone,
         client_email: client.email,
@@ -1129,9 +1127,9 @@ export default function Dashboard() {
   };
 
   const createIntake = async () => {
-    const user = await getCurrentUser();
-    if (!user) {
-      showMessage("Utilisateur non authentifié", "error");
+    const companyId = typeof window !== "undefined" ? localStorage.getItem("company_id") : null;
+    if (!companyId) {
+      showMessage("Session expirée, veuillez vous reconnecter", "error");
       return;
     }
 
@@ -1150,7 +1148,7 @@ export default function Dashboard() {
       const { data: existing, error: searchError } = await supabase
         .from("clients")
         .select("*")
-        .eq("user_id", user.id)
+        .eq("user_id", companyId)
         .ilike("name", intakeClient)
         .maybeSingle();
 
@@ -1168,7 +1166,7 @@ export default function Dashboard() {
               name: intakeClient,
               phone: intakePhone || "NC",
               email: intakeEmail || "NC",
-              user_id: user.id,
+              user_id: companyId,
               client_code: clientCode,
             },
           ])
@@ -1217,7 +1215,7 @@ export default function Dashboard() {
               estimated_price: parseFloat(repair.estimatedPrice) || 0,
               final_price: 0,
               status: "🟡 Réceptionné",
-              user_id: user.id,
+              user_id: companyId,
             },
           ])
           .select()

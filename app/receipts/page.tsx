@@ -23,8 +23,8 @@ export default function ReceiptsHistory() {
 
   const loadReceipts = async () => {
     setLoading(true);
-    const user = await getCurrentUser();
-    if (!user) {
+    const companyId = typeof window !== "undefined" ? localStorage.getItem("company_id") : null;
+    if (!companyId) {
       setLoading(false);
       return;
     }
@@ -34,7 +34,7 @@ export default function ReceiptsHistory() {
       const { data, error } = await supabase
         .from("receipts")
         .select("*")
-        .eq("user_id", user.id)
+        .eq("user_id", companyId)
         .order("created_at", { ascending: false });
 
       if (error) {

@@ -19,15 +19,15 @@ export default function ReceptionsPage() {
   const load = async () => {
     setLoading(true);
     try {
-      const user = await getCurrentUser();
-      if (!user) {
+      const companyId = typeof window !== "undefined" ? localStorage.getItem("company_id") : null;
+      if (!companyId) {
         router.push("/login");
         return;
       }
       const { data } = await supabase
         .from("repairs")
         .select("*, clients(name, client_code, phone, email)")
-        .eq("user_id", user.id)
+        .eq("user_id", companyId)
         .eq("status", SUBMITTED_STATUS)
         .order("submitted_at", { ascending: false });
       setItems(data || []);

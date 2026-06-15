@@ -53,17 +53,16 @@ export default function SettingsPage() {
       }
 
       // Récupérer les infos de l'entreprise
-      const user = await getCurrentUser();
-      if (user) {
-        setCompanyEmail(user.email || "");
-
+      const companyId = typeof window !== "undefined" ? localStorage.getItem("company_id") : null;
+      if (companyId) {
         const { data, error } = await supabase
           .from("profiles")
           .select("*")
-          .eq("id", user.id)
+          .eq("id", companyId)
           .single();
 
         if (data && !error) {
+          setCompanyEmail(data.email || "");
           setCompanyName(data.company_name || "");
           setCompanyPhone(data.contact_phone || "");
           setCompanyAddress(data.contact_address || "");
@@ -92,12 +91,12 @@ export default function SettingsPage() {
 
   const loadTechnicians = async () => {
     try {
-      const user = await getCurrentUser();
-      if (!user) return;
+      const companyId = typeof window !== "undefined" ? localStorage.getItem("company_id") : null;
+      if (!companyId) return;
       const { data } = await supabase
         .from("technicians")
         .select("*")
-        .eq("user_id", user.id)
+        .eq("user_id", companyId)
         .eq("is_active", true);
       setTechnicians(data || []);
     } catch (error) {
@@ -110,8 +109,8 @@ export default function SettingsPage() {
     setMessage("");
 
     try {
-      const user = await getCurrentUser();
-      if (user) {
+      const companyId = typeof window !== "undefined" ? localStorage.getItem("company_id") : null;
+      if (companyId) {
         const { error } = await supabase
           .from("profiles")
           .update({
@@ -120,7 +119,7 @@ export default function SettingsPage() {
             contact_address: settings.contact_address,
             logo_url: settings.logo_url,
           })
-          .eq("id", user.id);
+          .eq("id", companyId);
 
         if (error) throw error;
         setMessage("✅ Paramètres enregistrés avec succès");
@@ -157,11 +156,11 @@ export default function SettingsPage() {
     setMessage("");
 
     try {
-      const user = await getCurrentUser();
-      if (!user) throw new Error("Non authentifié");
+      const companyId = typeof window !== "undefined" ? localStorage.getItem("company_id") : null;
+      if (!companyId) throw new Error("Non authentifié");
 
       const fileExt = file.name.split(".").pop();
-      const fileName = `logo_${user.id}_${Date.now()}.${fileExt}`;
+      const fileName = `logo_${companyId}_${Date.now()}.${fileExt}`;
       const filePath = `logos/${fileName}`;
 
       const { error: uploadError } = await supabase.storage
@@ -217,12 +216,12 @@ export default function SettingsPage() {
   const exportDatabase = async () => {
     setExporting(true);
     try {
-      const user = await getCurrentUser();
-      if (!user) return;
+      const companyId = typeof window !== "undefined" ? localStorage.getItem("company_id") : null;
+      if (!companyId) return;
 
       const [clientsRes, repairsRes] = await Promise.all([
-        supabase.from("clients").select("*").eq("user_id", user.id),
-        supabase.from("repairs").select("*").eq("user_id", user.id).order("created_at", { ascending: false }),
+        supabase.from("clients").select("*").eq("user_id", companyId),
+        supabase.from("repairs").select("*").eq("user_id", companyId).order("created_at", { ascending: false }),
       ]);
 
       const clients = clientsRes.data || [];

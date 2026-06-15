@@ -134,12 +134,12 @@ export default function RepairsPage() {
 
   const loadTechnicians = async () => {
     try {
-      const user = await getCurrentUser();
-      if (!user) return;
+      const companyId = typeof window !== "undefined" ? localStorage.getItem("company_id") : null;
+      if (!companyId) return;
       const { data } = await supabase
         .from("technicians")
         .select("*")
-        .eq("user_id", user.id)
+        .eq("user_id", companyId)
         .eq("is_active", true);
       setTechnicians(data || []);
     } catch (error) {
@@ -148,14 +148,13 @@ export default function RepairsPage() {
   };
 
   const loadData = async () => {
-    const user = await getCurrentUser();
-    if (!user) return router.push("/login");
-    setUserId(user.id);
+    const companyId = typeof window !== "undefined" ? localStorage.getItem("company_id") : null;
+    if (!companyId) return router.push("/login");
 
     const { data: repairsData } = await supabase
       .from("repairs")
       .select("*, clients(*)")
-      .eq("user_id", user.id)
+      .eq("user_id", companyId)
       .order("created_at", { ascending: false });
 
     const normalizedRepairs = (repairsData || []).map((repair) => ({

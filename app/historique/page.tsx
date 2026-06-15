@@ -243,10 +243,10 @@ export default function HistoriquePage() {
   // Charger la correspondance email -> nom technicien
   const loadTechnicians = async () => {
     try {
-      const user = await getCurrentUser();
-      if (!user) return;
+      const companyId = typeof window !== "undefined" ? localStorage.getItem("company_id") : null;
+      if (!companyId) return;
 
-      const { data } = await supabase.from("technicians").select("*").eq("user_id", user.id);
+      const { data } = await supabase.from("technicians").select("*").eq("user_id", companyId);
 
       const emailMap = {};
       const nameMap = {};
@@ -279,8 +279,8 @@ export default function HistoriquePage() {
     setError(null);
 
     try {
-      const user = await getCurrentUser();
-      if (!user) {
+      const companyId = typeof window !== "undefined" ? localStorage.getItem("company_id") : null;
+      if (!companyId) {
         router.push("/login");
         return;
       }
@@ -288,7 +288,7 @@ export default function HistoriquePage() {
       const { data: repairsData, error: repairsError } = await supabase
         .from("repairs")
         .select("*")
-        .eq("user_id", user.id)
+        .eq("user_id", companyId)
         .order("created_at", { ascending: false });
 
       if (repairsError) throw repairsError;
@@ -296,7 +296,7 @@ export default function HistoriquePage() {
       const { data: clientsData, error: clientsError } = await supabase
         .from("clients")
         .select("*")
-        .eq("user_id", user.id);
+        .eq("user_id", companyId);
 
       if (clientsError) throw clientsError;
 

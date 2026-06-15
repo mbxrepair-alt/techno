@@ -186,14 +186,13 @@ export default function RepairDetailPage() {
 
   useEffect(() => {
     const init = async () => {
-      const user = await getCurrentUser();
-      if (user) {
-        setCurrentUserId(user.id);
-        // Load company profile for email sending
+      const companyId = typeof window !== "undefined" ? localStorage.getItem("company_id") : null;
+      if (companyId) {
+        setCurrentUserId(companyId);
         const { data: profile } = await supabase
           .from("profiles")
-          .select("*")
-          .eq("id", user.id)
+          .select("company_name, contact_phone, contact_address, email")
+          .eq("id", companyId)
           .single();
         if (profile) {
           setCompanyInfo({
@@ -236,8 +235,6 @@ export default function RepairDetailPage() {
   const loadRepair = async () => {
     setLoading(true);
     try {
-      const user = await getCurrentUser();
-      if (!user) return;
       const { data, error } = await supabase
         .from("repairs")
         .select("*")

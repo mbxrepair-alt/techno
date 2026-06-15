@@ -19,8 +19,8 @@ export default function PaiementsPage() {
   const loadPayments = async () => {
     setLoading(true);
     try {
-      const user = await getCurrentUser();
-      if (!user) {
+      const companyId = typeof window !== "undefined" ? localStorage.getItem("company_id") : null;
+      if (!companyId) {
         router.push("/login");
         return;
       }
@@ -43,7 +43,7 @@ export default function PaiementsPage() {
           clients (id, name, email, phone, client_code)
         `
         )
-        .eq("user_id", user.id)
+        .eq("user_id", companyId)
         .neq("paid_amount", 0)
         .order("payment_date", { ascending: false });
 

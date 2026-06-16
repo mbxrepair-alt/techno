@@ -63,7 +63,7 @@ export async function POST(req: NextRequest) {
 
     // 3. Licence selon la durée choisie
     const expires_at = computeExpiry((duration as Duration) || "1m");
-    await supabase.from("licences").upsert(
+    const { error: licErr } = await supabase.from("licences").upsert(
       {
         email: String(email).trim(),
         profile_id: userId,
@@ -79,6 +79,12 @@ export async function POST(req: NextRequest) {
       },
       { onConflict: "email" },
     );
+    if (licErr) {
+      return NextResponse.json(
+        { error: `Compte créé mais licence non enregistrée : ${licErr.message}`, userId, access_code: code },
+        { status: 200 },
+      );
+    }
 
     // 4. Technicien gérant par défaut (sinon impossible de passer l'étape "code" au login)
     await supabase.from("technicians").insert([

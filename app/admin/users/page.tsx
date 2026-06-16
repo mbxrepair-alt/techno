@@ -93,19 +93,29 @@ export default function AdminUsersPage() {
 
   const getUserLicence = (email) => licences.find((l) => l.email === email);
 
+  const remainingLabel = (end) => {
+    const daysLeft = Math.ceil((new Date(end).getTime() - Date.now()) / (1000 * 60 * 60 * 24));
+    if (daysLeft <= 0) return { expired: true, label: "" };
+    if (daysLeft >= 60) return { expired: false, label: `${Math.round(daysLeft / 30)} mois` };
+    return { expired: false, label: `${daysLeft}j` };
+  };
+
   const getLicenceStatus = (email) => {
     const licence = getUserLicence(email);
     if (!licence) return { text: "❌ Aucune", color: "bg-gray-100 text-gray-700" };
-    if (licence.status !== "active")
+    if (licence.status === "suspended")
       return { text: "⏸ Suspendue", color: "bg-yellow-100 text-yellow-800" };
     if (licence.is_unlimited)
       return { text: "♾️ Illimitée", color: "bg-purple-100 text-purple-800" };
-    if (licence.is_trial) {
-      const daysLeft = Math.ceil(
-        (new Date(licence.trial_end_date).getTime() - Date.now()) / (1000 * 60 * 60 * 24)
-      );
-      if (daysLeft <= 0) return { text: "📅 Expirée", color: "bg-red-100 text-red-800" };
-      return { text: `🎁 Essai (${daysLeft}j)`, color: "bg-green-100 text-green-800" };
+
+    // Licence d'essai ou à durée : on affiche le temps restant
+    const end = licence.trial_end_date || licence.expires_at;
+    if (end) {
+      const { expired, label } = remainingLabel(end);
+      if (expired) return { text: "📅 Expirée", color: "bg-red-100 text-red-800" };
+      return licence.is_trial
+        ? { text: `🎁 Essai (${label})`, color: "bg-green-100 text-green-800" }
+        : { text: `✅ Active (${label})`, color: "bg-blue-100 text-blue-800" };
     }
     return { text: "✅ Active", color: "bg-blue-100 text-blue-800" };
   };

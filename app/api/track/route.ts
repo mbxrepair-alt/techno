@@ -2,7 +2,9 @@ import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
-const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY!;
+// Clé service en priorité (contourne RLS) ; sinon repli sur la clé publique
+// (l'insertion reste permise par la policy "insert analytics (tous)").
+const writeKey = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
 
 /** Déduit un nom/modèle d'appareil lisible à partir du user-agent. */
 function deviceName(ua?: string | null): string | null {
@@ -48,17 +50,17 @@ function geo(req: NextRequest) {
 
 export async function POST(req: NextRequest) {
   try {
-    if (!supabaseUrl || !serviceKey) {
+    if (!supabaseUrl || !writeKey) {
       return NextResponse.json({ ok: false, error: "config" }, { status: 200 });
     }
     const body = await req.json();
     const ua = req.headers.get("user-agent") || body.user_agent || null;
 
-    const supabase = createClient(supabaseUrl, serviceKey, {
+    const supabase = createClient(supabaseUrl, writeKey, {
       auth: { persistSession: false },
     });
 
-    await supabase.from("analytics_events").insert({
+    const { error } = await supabase.from("analytics_events").insert({
       event_type: body.event_type,
       path: body.path ?? null,
       referrer: body.referrer ?? null,
@@ -75,9 +77,13 @@ export async function POST(req: NextRequest) {
       ...geo(req),
     });
 
+    if (error) {
+      console.error("[track] insert error:", error.message);
+      return NextResponse.json({ ok: false, error: error.message }, { status: 200 });
+    }
     return NextResponse.json({ ok: true });
-  } catch {
+  } catch (e) {
     // Le tracking ne doit jamais casser quoi que ce soit
-    return NextResponse.json({ ok: false }, { status: 200 });
+    return NextResponse.json({ ok: false, error: String(e) }, { status: 200 });
   }
 }

@@ -60,6 +60,38 @@ export default function LoginPage() {
       }
 
       if (data?.user) {
+        // Contrôle de licence (le propriétaire n'est jamais bloqué).
+        // Prudent : on ne bloque QUE si une licence existe ET qu'elle est
+        // explicitement suspendue/expirée. Sans licence → accès laissé ouvert.
+        if (data.user.email !== "mbxrepair@gmail.com") {
+          const { data: lic } = await supabase
+            .from("licences")
+            .select("status, is_unlimited, is_trial, trial_end_date, expires_at")
+            .eq("email", data.user.email)
+            .maybeSingle();
+
+          if (lic) {
+            const now = Date.now();
+            const expired =
+              !lic.is_unlimited &&
+              ((lic.is_trial && lic.trial_end_date && new Date(lic.trial_end_date).getTime() < now) ||
+                (lic.expires_at && new Date(lic.expires_at).getTime() < now));
+
+            if (lic.status === "suspended") {
+              setError("⛔ Votre compte est suspendu. Contactez MBX pour le réactiver.");
+              await supabase.auth.signOut();
+              setLoading(false);
+              return;
+            }
+            if (expired) {
+              setError("📅 Votre licence a expiré. Contactez MBX pour la renouveler.");
+              await supabase.auth.signOut();
+              setLoading(false);
+              return;
+            }
+          }
+        }
+
         const { data: profile } = await supabase
           .from("profiles")
           .select("company_name")

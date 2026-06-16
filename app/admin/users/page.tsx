@@ -14,6 +14,8 @@ export default function AdminUsersPage() {
   const [selectedUser, setSelectedUser] = useState(null);
   const [showUserModal, setShowUserModal] = useState(false);
   const [showLicenceModal, setShowLicenceModal] = useState(false);
+  const [showCreateModal, setShowCreateModal] = useState(false);
+  const [creating, setCreating] = useState(false);
   const [searchTerm, setSearchTerm] = useState("");
   const [filterRole, setFilterRole] = useState("all");
   const [filterLicence, setFilterLicence] = useState("all");
@@ -186,6 +188,44 @@ export default function AdminUsersPage() {
     }
   };
 
+  const createAccount = async (e) => {
+    e.preventDefault();
+    const fd = new FormData(e.target);
+    const payload = {
+      email: fd.get("email"),
+      password: fd.get("password"),
+      name: fd.get("name"),
+      phone: fd.get("phone"),
+      shop_name: fd.get("shop_name"),
+      duration: fd.get("duration"),
+      access_code: fd.get("access_code"),
+    };
+    if (!payload.email || !payload.password) {
+      alert("Email et mot de passe requis");
+      return;
+    }
+    setCreating(true);
+    try {
+      const res = await fetch("/api/admin/create-user", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
+      });
+      const result = await res.json();
+      if (result.success) {
+        alert(`✅ Compte créé : ${payload.email}\n\n🔑 Code technicien : ${result.access_code}\n\nLe client se connecte avec son email + mot de passe, puis ce code à 4 chiffres.`);
+        setShowCreateModal(false);
+        await loadData();
+      } else {
+        alert("❌ " + (result.error || "Erreur"));
+      }
+    } catch (err) {
+      alert("❌ Erreur lors de la création");
+    } finally {
+      setCreating(false);
+    }
+  };
+
   const renewLicence = async (email, days) => {
     const newEndDate = new Date();
     newEndDate.setDate(newEndDate.getDate() + days);
@@ -315,9 +355,17 @@ export default function AdminUsersPage() {
   return (
     <Layout>
       <div className="max-w-7xl mx-auto">
-        <div className="mb-6">
-          <h1 className="text-2xl font-bold text-gray-800">👥 Gestion des utilisateurs</h1>
-          <p className="text-gray-500 text-sm mt-1">Gérez les comptes et licences</p>
+        <div className="mb-6 flex items-center justify-between flex-wrap gap-3">
+          <div>
+            <h1 className="text-2xl font-bold text-gray-800">👥 Gestion des utilisateurs</h1>
+            <p className="text-gray-500 text-sm mt-1">Gérez les comptes et licences</p>
+          </div>
+          <button
+            onClick={() => setShowCreateModal(true)}
+            className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2.5 rounded-lg font-semibold text-sm flex items-center gap-2 transition"
+          >
+            ➕ Créer un compte
+          </button>
         </div>
 
         <div className="grid grid-cols-2 md:grid-cols-6 gap-3 mb-6">
@@ -586,18 +634,26 @@ export default function AdminUsersPage() {
               >
                 ♾️ Licence illimitée
               </button>
-              <button
-                onClick={() => renewLicence(selectedUser.email, 30)}
-                className="w-full bg-green-600 text-white p-2 rounded-lg"
-              >
-                🔄 Renouveler 30 jours
-              </button>
-              <button
-                onClick={() => renewLicence(selectedUser.email, 365)}
-                className="w-full bg-blue-600 text-white p-2 rounded-lg"
-              >
-                🔄 Renouveler 1 an
-              </button>
+              <div className="grid grid-cols-3 gap-2">
+                <button
+                  onClick={() => renewLicence(selectedUser.email, 30)}
+                  className="bg-green-600 hover:bg-green-700 text-white p-2 rounded-lg text-sm"
+                >
+                  📅 1 mois
+                </button>
+                <button
+                  onClick={() => renewLicence(selectedUser.email, 180)}
+                  className="bg-green-600 hover:bg-green-700 text-white p-2 rounded-lg text-sm"
+                >
+                  📅 6 mois
+                </button>
+                <button
+                  onClick={() => renewLicence(selectedUser.email, 365)}
+                  className="bg-blue-600 hover:bg-blue-700 text-white p-2 rounded-lg text-sm"
+                >
+                  📅 1 an
+                </button>
+              </div>
               <div className="border-t my-2"></div>
               <button
                 onClick={() => suspendLicence(selectedUser.email)}
@@ -618,6 +674,64 @@ export default function AdminUsersPage() {
             >
               Fermer
             </button>
+          </div>
+        </div>
+      )}
+
+      {/* Modal Créer un compte */}
+      {showCreateModal && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-xl w-full max-w-md p-6 max-h-[90vh] overflow-y-auto">
+            <div className="flex justify-between items-center mb-4">
+              <h2 className="text-xl font-bold">➕ Créer un compte</h2>
+              <button onClick={() => setShowCreateModal(false)} className="text-gray-400 hover:text-gray-600 text-2xl">✕</button>
+            </div>
+            <form onSubmit={createAccount} className="space-y-3">
+              <div>
+                <label className="block text-sm font-medium mb-1">Email *</label>
+                <input type="email" name="email" required className="w-full p-2 border rounded-lg" placeholder="client@exemple.com" />
+              </div>
+              <div>
+                <label className="block text-sm font-medium mb-1">Mot de passe *</label>
+                <input type="text" name="password" required minLength={6} className="w-full p-2 border rounded-lg" placeholder="6 caractères minimum" />
+              </div>
+              <div>
+                <label className="block text-sm font-medium mb-1">Nom</label>
+                <input type="text" name="name" className="w-full p-2 border rounded-lg" />
+              </div>
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-sm font-medium mb-1">Téléphone</label>
+                  <input type="tel" name="phone" className="w-full p-2 border rounded-lg" />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium mb-1">Atelier</label>
+                  <input type="text" name="shop_name" className="w-full p-2 border rounded-lg" />
+                </div>
+              </div>
+              <div>
+                <label className="block text-sm font-medium mb-1">Code technicien (4 chiffres)</label>
+                <input type="text" name="access_code" defaultValue="1234" maxLength={4} inputMode="numeric" pattern="\d{4}" className="w-full p-2 border rounded-lg font-mono" placeholder="1234" />
+                <p className="text-xs text-gray-500 mt-1">Le client tape ce code après son email + mot de passe.</p>
+              </div>
+              <div>
+                <label className="block text-sm font-medium mb-1">Durée de la licence</label>
+                <select name="duration" defaultValue="1m" className="w-full p-2 border rounded-lg">
+                  <option value="1m">📅 1 mois</option>
+                  <option value="6m">📅 6 mois</option>
+                  <option value="1y">📅 1 an</option>
+                  <option value="unlimited">♾️ Illimitée</option>
+                </select>
+              </div>
+              <div className="flex gap-3 pt-2">
+                <button type="submit" disabled={creating} className="flex-1 bg-blue-600 hover:bg-blue-700 disabled:opacity-60 text-white p-2.5 rounded-lg font-semibold">
+                  {creating ? "Création..." : "✅ Créer le compte"}
+                </button>
+                <button type="button" onClick={() => setShowCreateModal(false)} className="flex-1 bg-gray-200 p-2.5 rounded-lg">
+                  Annuler
+                </button>
+              </div>
+            </form>
           </div>
         </div>
       )}

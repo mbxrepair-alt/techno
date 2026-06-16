@@ -262,6 +262,7 @@ export default function SettingsPage() {
     { id: "backup", label: "💾 Sauvegarde", visible: isGerant },
     { id: "logs", label: "📋 Logs", visible: isGerant },
     { id: "stats", label: "📊 Statistiques visites", visible: companyEmail === "mbxrepair@gmail.com" },
+    { id: "admin", label: "👑 Comptes & licences", visible: companyEmail === "mbxrepair@gmail.com" },
   ];
 
   const visibleTabs = tabs.filter((tab) => tab.visible);
@@ -452,6 +453,23 @@ export default function SettingsPage() {
                 <div>
                   <p className="text-white font-semibold text-sm mb-1">📊 Voir les visiteurs, installations de l&apos;app et accès espace pro.</p>
                   <p className="text-sm text-slate-400">Appareils, systèmes, navigateurs et connexions des techniciens.</p>
+                </div>
+                <svg className="w-5 h-5 text-gray-500 group-hover:text-orange-400 group-hover:translate-x-1 transition-all duration-200 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7"/>
+                </svg>
+              </Link>
+            </div>
+          )}
+
+          {/* Onglet Comptes & licences (propriétaire uniquement) */}
+          {activeTab === "admin" && companyEmail === "mbxrepair@gmail.com" && (
+            <div>
+              <h2 className="text-sm font-bold text-gray-400 uppercase tracking-widest mb-5">Gestion des comptes pro</h2>
+              <Link href="/admin/users"
+                className="group flex items-center justify-between p-4 bg-white/[0.04] hover:bg-white/[0.07] border border-white/10 hover:border-orange-500/30 rounded-xl transition-all duration-200">
+                <div>
+                  <p className="text-white font-semibold text-sm mb-1">👑 Gérer tous les comptes, licences et durées.</p>
+                  <p className="text-sm text-slate-400">Créer un compte, bloquer, renouveler (1 mois / 6 mois / 1 an / illimité), changer mot de passe.</p>
                 </div>
                 <svg className="w-5 h-5 text-gray-500 group-hover:text-orange-400 group-hover:translate-x-1 transition-all duration-200 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7"/>

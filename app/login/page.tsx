@@ -4,6 +4,7 @@ import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { supabase } from "../../lib/supabase";
 import { addLog } from "../../lib/logs";
+import { trackEvent } from "../../lib/analytics";
 import Link from "next/link";
 
 export default function LoginPage() {
@@ -118,6 +119,11 @@ export default function LoginPage() {
 
       localStorage.setItem("technician_name", tech.name);
       localStorage.setItem("company_id", tempUser.id);
+
+      void trackEvent("tech_login", {
+        user_email: tempUser.email || null,
+        technician_name: tech.name,
+      });
 
       document.cookie = `mbx_token=${tech.id}; path=/; max-age=86400`;
       document.cookie = `mbx_auth_token=${tech.id}; path=/; max-age=86400`;

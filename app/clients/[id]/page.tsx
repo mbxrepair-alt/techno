@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { supabase } from "../../../lib/supabase";
 import { useParams, useRouter } from "next/navigation";
 import Layout from "../../../components/Layout";
+import { StatusBadge } from "../../../lib/status";
 
 export default function ClientDetailPage() {
   const { id } = useParams();
@@ -149,11 +150,7 @@ export default function ClientDetailPage() {
                         <span className="font-mono text-sm font-bold bg-gray-100 px-2 py-0.5 rounded">
                           MBX-{repair.id}
                         </span>
-                        <span
-                          className={`text-xs px-2 py-0.5 rounded-full ${getStatusColor(repair.status)}`}
-                        >
-                          {repair.status}
-                        </span>
+                        <StatusBadge status={repair.status} size="sm" />
                       </div>
                       <div className="text-sm text-gray-600 mt-1">
                         📱 {repair.device} • 🔧 {repair.issue}

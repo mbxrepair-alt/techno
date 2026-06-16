@@ -8,6 +8,7 @@ import ClientResponsesBell from "../../components/ClientResponsesBell";
 import Layout from "../../components/Layout";
 import QrScanner from "../../components/QrScanner";
 import { addHistoriqueAction, getCurrentTechnician } from "../../lib/historique";
+import { StatusBadge } from "../../lib/status";
 
 // ========== NORMALISATION DES STATUTS ==========
 const normalizeStatus = (status) => {
@@ -488,9 +489,7 @@ export default function RepairsPage() {
                     )}
                   </div>
                   <div className="col-span-2">
-                    <span className={`inline-block px-2 py-0.5 rounded-lg text-[10px] font-bold border ${STATUS_STYLE[repair.status] || "bg-gray-700 text-gray-300 border-gray-600"}`}>
-                      {repair.status}
-                    </span>
+                    <StatusBadge status={repair.status} size="sm" />
                   </div>
                   <div className="col-span-1 text-right font-bold text-orange-400 text-sm">
                     {repair.final_price ? `${Number(repair.final_price).toFixed(0)}€` : repair.estimated_price ? `~${Number(repair.estimated_price).toFixed(0)}€` : "—"}
@@ -533,9 +532,7 @@ export default function RepairsPage() {
                 </div>
                 {repair.issue && <div className="text-xs text-gray-500 mb-2.5 truncate">{repair.issue}</div>}
                 <div className="flex items-center justify-between">
-                  <span className={`px-2 py-0.5 rounded-lg text-[10px] font-bold border ${STATUS_STYLE[repair.status] || "bg-gray-700 text-gray-300 border-gray-600"}`}>
-                    {repair.status}
-                  </span>
+                  <StatusBadge status={repair.status} size="sm" />
                   {repair.technician ? (
                     <div className="flex items-center gap-1.5">
                       <div className="w-5 h-5 rounded-full bg-orange-500/15 flex items-center justify-center text-orange-400 text-[10px] font-bold">{repair.technician.charAt(0)}</div>

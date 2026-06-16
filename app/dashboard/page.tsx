@@ -14,6 +14,7 @@ import CartValidationModal from "../../components/CartValidationModal";
 import ClientResponsesBell from "../../components/ClientResponsesBell";
 import type { ExtractedFormData } from "../../lib/ai";
 import { ScanLine, ShoppingCart, X, Check } from "lucide-react";
+import { StatusBadge } from "../../lib/status";
 
 interface Product {
   id: number;
@@ -1494,7 +1495,7 @@ export default function Dashboard() {
                     <div className="flex items-center justify-between">
                       <div className="flex items-center gap-2">
                         <span className="font-mono font-bold text-blue-400 text-sm">MBX-{r.id}</span>
-                        <span className={`text-[10px] px-2 py-0.5 rounded-full text-white ${statusColors[r.status] || "bg-yellow-500"}`}>{r.status || "🟡 Réceptionné"}</span>
+                        <StatusBadge status={r.status} size="sm" />
                       </div>
                       <span className="text-gray-500 text-xs">→</span>
                     </div>
@@ -2008,9 +2009,7 @@ export default function Dashboard() {
             </div>
             <div className="p-5 space-y-4">
               <div className="flex items-center gap-2">
-                <span className={`px-3 py-1 rounded-full text-xs font-bold text-white ${statusColors[selectedRepairDetail.status] || "bg-gray-500"}`}>
-                  {selectedRepairDetail.status || "📥 Réceptionné"}
-                </span>
+                <StatusBadge status={selectedRepairDetail.status || "📥 Réceptionné"} size="md" />
                 <span className="text-xs text-gray-500">#{selectedRepairDetail.id}</span>
               </div>
               <div className="bg-black/20 border border-white/10 rounded-xl p-4 space-y-1.5">

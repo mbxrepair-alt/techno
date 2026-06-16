@@ -5,6 +5,7 @@ import { useRouter, usePathname } from "next/navigation";
 import { supabase } from "../lib/supabase";
 import Navigation from "./Navigation";
 import AssistantPro from "./AssistantPro";
+import { trackOncePerSession } from "../lib/analytics";
 
 interface LayoutProps {
   children: React.ReactNode;
@@ -81,6 +82,13 @@ export default function Layout({ children }: LayoutProps) {
       router.push("/login");
     }
   }, [loading, user, pathname, router]);
+
+  useEffect(() => {
+    if (!loading && user && !isPublic(pathname)) {
+      const techName = typeof window !== "undefined" ? localStorage.getItem("technician_name") : null;
+      trackOncePerSession("pro_visit", "pro_visit", { technician_name: techName });
+    }
+  }, [loading, user, pathname]);
 
   // Public routes: bare children, no pro chrome
   if (isPublic(pathname)) {

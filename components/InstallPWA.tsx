@@ -9,8 +9,16 @@ interface BeforeInstallPromptEvent extends Event {
 
 export default function InstallPWA() {
   const [prompt, setPrompt] = useState<BeforeInstallPromptEvent | null>(null);
+  const [isStandalone, setIsStandalone] = useState(false);
 
   useEffect(() => {
+    // App déjà installée / lancée en mode application (Android, iOS) : ne pas proposer l'installation
+    const standalone =
+      window.matchMedia("(display-mode: standalone)").matches ||
+      // @ts-expect-error iOS Safari
+      window.navigator.standalone === true;
+    setIsStandalone(standalone);
+
     const handler = (e: Event) => {
       e.preventDefault();
       setPrompt(e as BeforeInstallPromptEvent);
@@ -19,7 +27,7 @@ export default function InstallPWA() {
     return () => window.removeEventListener("beforeinstallprompt", handler);
   }, []);
 
-  if (!prompt) return null;
+  if (isStandalone || !prompt) return null;
 
   const handleInstall = async () => {
     await prompt.prompt();

@@ -7,6 +7,8 @@ import Layout from "../../../components/Layout";
 import SmartTextarea from "../../../components/SmartTextarea";
 import ClientResponsesBell from "../../../components/ClientResponsesBell";
 import QRCode from "qrcode";
+import { Inbox, Microscope, Wrench, BadgeCheck, PackageCheck } from "lucide-react";
+import { StatusBadge } from "../../../lib/status";
 
 // Schema de deverrouillage (niveau module - evite la re-creation a chaque render)
 function PatternSmall({ pattern }) {
@@ -142,12 +144,6 @@ export default function RepairDetailPage() {
 
   const quickActions = [
     {
-      status: "📤 Envoyé à l'atelier",
-      label: "Envoyé",
-      color: "bg-blue-500",
-      textColor: "text-white",
-    },
-    {
       label: "⏳ Attente validation client",
       status: "⏳ Attente validation client",
       color: "bg-amber-500",
@@ -163,18 +159,6 @@ export default function RepairDetailPage() {
       label: "📦 Attente pièce",
       status: "📦 Attente pièce",
       color: "bg-orange-500",
-      textColor: "text-white",
-    },
-    {
-      label: "🔬 Diagnostic",
-      status: "🔬 Diagnostic",
-      color: "bg-blue-500",
-      textColor: "text-white",
-    },
-    {
-      label: "🔧 En réparation",
-      status: "🔧 En réparation",
-      color: "bg-orange-600",
       textColor: "text-white",
     },
     {
@@ -730,12 +714,21 @@ export default function RepairDetailPage() {
   };
 
   const steps = [
-    { status: "📥 Réceptionné", label: "Reçu", icon: "📥", color: "amber", step: 1 },
-    { status: "🔬 Diagnostic", label: "Diag", icon: "🔬", color: "blue", step: 2 },
-    { status: "🔧 En réparation", label: "Réparation", icon: "🔧", color: "orange", step: 3 },
-    { status: "✅ Terminé", label: "Terminé", icon: "✅", color: "purple", step: 4 },
-    { status: "📦 Rendu", label: "Rendu", icon: "📦", color: "gray", step: 5 },
+    { status: "📥 Réceptionné", label: "Reçu", Icon: Inbox, color: "amber", step: 1 },
+    { status: "🔬 Diagnostic", label: "Diag", Icon: Microscope, color: "blue", step: 2 },
+    { status: "🔧 En réparation", label: "Réparation", Icon: Wrench, color: "orange", step: 3 },
+    { status: "✅ Terminé", label: "Terminé", Icon: BadgeCheck, color: "purple", step: 4 },
+    { status: "📦 Rendu", label: "Rendu", Icon: PackageCheck, color: "gray", step: 5 },
   ];
+
+  // Tons pour le stepper (style "contour lumineux")
+  const STEP_TONE: Record<string, { border: string; text: string; glow: string }> = {
+    amber: { border: "#EF9F27", text: "#f5c172", glow: "rgba(239,159,39,0.6)" },
+    blue: { border: "#378ADD", text: "#7cc0f5", glow: "rgba(55,138,221,0.6)" },
+    orange: { border: "#f97316", text: "#fdba74", glow: "rgba(249,115,22,0.6)" },
+    purple: { border: "#7f77dd", text: "#b4a9ec", glow: "rgba(127,119,221,0.6)" },
+    gray: { border: "#9ca3af", text: "#d1d5db", glow: "rgba(156,163,175,0.5)" },
+  };
 
   const getCurrentStep = () => {
     const step = steps.find((s) => s.status === repair?.status);
@@ -1102,27 +1095,7 @@ export default function RepairDetailPage() {
                   MBX-{id}
                 </span>
                 {currentUserId && <ClientResponsesBell userId={currentUserId} />}
-                <span
-                  className={`px-3 py-1 rounded-full text-sm font-semibold ${
-                    repair?.status === "✅ Terminé"
-                      ? "bg-green-500/20 text-green-400 border border-green-500/30"
-                      : repair?.status === "📦 Rendu"
-                        ? "bg-gray-500/20 text-gray-400 border border-gray-500/30"
-                        : repair?.status === "🔧 En réparation"
-                          ? "bg-orange-500/20 text-orange-400 border border-orange-500/30"
-                          : repair?.status === "🔬 Diagnostic"
-                            ? "bg-blue-500/20 text-blue-400 border border-blue-500/30"
-                            : repair?.status === "📥 Réceptionné"
-                              ? "bg-amber-500/20 text-amber-400 border border-amber-500/30"
-                              : repair?.status === "❌ KO"
-                                ? "bg-red-600/20 text-red-400 border border-red-600/30"
-                                : repair?.status === "🚫 Refus client"
-                                  ? "bg-pink-600/20 text-pink-400 border border-pink-600/30"
-                                  : "bg-gray-500/20 text-gray-400 border border-gray-500/30"
-                  }`}
-                >
-                  {repair?.status || "📥 Réceptionné"}
-                </span>
+                <StatusBadge status={repair?.status || "📥 Réceptionné"} size="md" />
               </div>
               <div className="flex gap-2 flex-wrap">
                 <button
@@ -1218,28 +1191,36 @@ export default function RepairDetailPage() {
                     <button
                       key={idx}
                       onClick={() => {
+                        // Statut déjà actif : aucun effet
+                        if (step.status === repair?.status) return;
+                        // Retour en arrière réservé au gérant
+                        if (step.step < currentStep && !isGerant) return;
                         if (step.status === "✅ Terminé") {
                           setShowOkKoModal(true);
                         } else {
                           updateStatus(step.status);
                         }
                       }}
-                      className="flex flex-col items-center group flex-1"
+                      className={`flex flex-col items-center group flex-1 ${step.status !== repair?.status && step.step < currentStep && !isGerant ? "cursor-not-allowed" : "cursor-pointer"}`}
                     >
                       <div
-                        className={`w-10 h-10 rounded-full flex items-center justify-center text-base transition-all duration-300 ${
+                        className="w-10 h-10 rounded-full flex items-center justify-center transition-all duration-300"
+                        style={
                           currentStep >= step.step
-                            ? step.status === "✅ Terminé"
-                              ? "bg-green-500 shadow-[0_0_14px_rgba(34,197,94,0.5)] text-white"
-                              : step.status === "📦 Rendu"
-                                ? "bg-gray-500 shadow-[0_0_14px_rgba(107,114,128,0.5)] text-white"
-                                : step.status === "🔧 En réparation"
-                                  ? "bg-orange-500 shadow-[0_0_14px_rgba(249,115,22,0.5)] text-white"
-                                  : "bg-blue-500 shadow-[0_0_14px_rgba(59,130,246,0.5)] text-white"
-                            : "bg-white/8 text-gray-600"
-                        }`}
+                            ? {
+                                background: "transparent",
+                                border: `2px solid ${STEP_TONE[step.color].border}`,
+                                color: STEP_TONE[step.color].text,
+                                boxShadow: `0 0 12px ${STEP_TONE[step.color].glow}, inset 0 0 8px ${STEP_TONE[step.color].glow.replace("0.6", "0.25").replace("0.5", "0.2")}`,
+                              }
+                            : {
+                                background: "transparent",
+                                border: "1.5px solid rgba(255,255,255,0.12)",
+                                color: "#4b5563",
+                              }
+                        }
                       >
-                        {step.icon}
+                        <step.Icon size={18} />
                       </div>
                       <span
                         className={`text-xs mt-2 font-medium ${

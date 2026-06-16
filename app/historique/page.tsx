@@ -6,6 +6,7 @@ import { supabase, getCurrentUser } from "../../lib/supabase";
 import { useRouter } from "next/navigation";
 import Layout from "../../components/Layout";
 import { getHistoriqueAppareil, addHistoriqueAction } from "../../lib/historique";
+import { StatusBadge, StatusIcon, getStatusLabel } from "../../lib/status";
 
 // Configuration des statuts
 const STATUS_CONFIG = {
@@ -424,15 +425,7 @@ export default function HistoriquePage() {
   }, [searchTerm, filterStatuses, filterClient, sortBy, repairs]);
 
   const getStatusBadge = useCallback((status) => {
-    const config = STATUS_CONFIG[status] || {
-      color: "bg-gray-100 text-gray-800",
-      badge: status || "❓ Inconnu",
-    };
-    return (
-      <span className={`px-2 py-1 rounded-full text-xs font-medium ${config.color}`}>
-        {config.badge}
-      </span>
-    );
+    return <StatusBadge status={status} size="sm" />;
   }, []);
 
   const openDetails = useCallback(async (repair) => {
@@ -622,7 +615,7 @@ export default function HistoriquePage() {
                               );
                             }}
                           />
-                          <span className={`text-sm ${checked ? "text-amber-300" : "text-gray-300"}`}>{cfg.badge}</span>
+                          <span className={`inline-flex items-center gap-1.5 text-sm ${checked ? "text-amber-300" : "text-gray-300"}`}><StatusIcon status={status} size={14} />{getStatusLabel(status)}</span>
                         </label>
                       );
                     })}

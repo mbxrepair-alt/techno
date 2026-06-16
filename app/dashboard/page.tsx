@@ -1413,8 +1413,6 @@ export default function Dashboard() {
     const total = items.reduce((s, c) => s + Number(c.product.sale_price) * c.quantity, 0);
     showMessage(`✅ ${items.length} produit(s) vendu(s) — ${total.toFixed(2)} €`, "success");
     setDashCartItems([]);
-    setScannedProduct(null);
-    setSaleQuantity(1);
   };
 
   return (

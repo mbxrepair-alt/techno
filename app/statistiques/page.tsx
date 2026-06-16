@@ -117,7 +117,7 @@ export default function StatistiquesPage() {
       });
 
       sales?.forEach((s) => {
-        const date = new Date(s.created_at);
+        const date = new Date(s.sold_at);
         const monthKey = monthNames[date.getMonth()];
         const monthData = last6Months.find((m) => m.month === monthKey);
         if (monthData) { monthData.revenue += s.total || 0; monthData.salesRev += s.total || 0; }

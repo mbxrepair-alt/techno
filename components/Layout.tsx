@@ -4,7 +4,6 @@ import { useState, useEffect } from "react";
 import { useRouter, usePathname } from "next/navigation";
 import { supabase } from "../lib/supabase";
 import Navigation from "./Navigation";
-import AssistantPro from "./AssistantPro";
 
 interface LayoutProps {
   children: React.ReactNode;
@@ -115,7 +114,6 @@ export default function Layout({ children }: LayoutProps) {
     <div className="min-h-screen bg-[#0f0f13] lg:flex lg:items-start">
       <Navigation user={user} permissions={permissions} />
       <main className="flex-1 min-w-0 px-4 lg:px-6 py-4 lg:py-6 pb-24 lg:pb-6 overflow-x-hidden">{children}</main>
-      <AssistantPro />
     </div>
   );
 }

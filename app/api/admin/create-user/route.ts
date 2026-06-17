@@ -4,24 +4,13 @@ import { createClient } from "@supabase/supabase-js";
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
 const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY!;
 
-type Duration = "1m" | "6m" | "1y" | "unlimited";
-
-function computeExpiry(duration: Duration): string | null {
-  if (duration === "unlimited") return null;
-  const d = new Date();
-  if (duration === "1m") d.setMonth(d.getMonth() + 1);
-  else if (duration === "6m") d.setMonth(d.getMonth() + 6);
-  else if (duration === "1y") d.setFullYear(d.getFullYear() + 1);
-  return d.toISOString();
-}
-
 export async function POST(req: NextRequest) {
   try {
     if (!serviceKey) {
       return NextResponse.json({ error: "Clé service non configurée sur le serveur" }, { status: 500 });
     }
 
-    const { email, password, name, phone, shop_name, duration, access_code } = await req.json();
+    const { email, password, name, phone, shop_name, access_code } = await req.json();
     const code = /^\d{4}$/.test(String(access_code || "")) ? String(access_code) : "1234";
 
     if (!email || !password) {
@@ -61,32 +50,7 @@ export async function POST(req: NextRequest) {
       { onConflict: "id" },
     );
 
-    // 3. Licence selon la durée choisie
-    const expires_at = computeExpiry((duration as Duration) || "1m");
-    const { error: licErr } = await supabase.from("licences").upsert(
-      {
-        email: String(email).trim(),
-        profile_id: userId,
-        device_fingerprint: `admin_${userId}_${Date.now()}`,
-        device_name: "Créé par l'administrateur",
-        status: "active",
-        is_trial: false,
-        is_unlimited: duration === "unlimited",
-        trial_end_date: null,
-        expires_at,
-        approved_at: new Date().toISOString(),
-        unlimited_since: duration === "unlimited" ? new Date().toISOString() : null,
-      },
-      { onConflict: "email" },
-    );
-    if (licErr) {
-      return NextResponse.json(
-        { error: `Compte créé mais licence non enregistrée : ${licErr.message}`, userId, access_code: code },
-        { status: 200 },
-      );
-    }
-
-    // 4. Technicien gérant par défaut (sinon impossible de passer l'étape "code" au login)
+    // 3. Technicien gérant par défaut (sinon impossible de passer l'étape "code" au login)
     await supabase.from("technicians").insert([
       {
         name: name || "Gérant",

@@ -207,7 +207,6 @@ export default function AdminUsersPage() {
       name: fd.get("name"),
       phone: fd.get("phone"),
       shop_name: fd.get("shop_name"),
-      duration: fd.get("duration"),
       access_code: fd.get("access_code"),
     };
     if (!payload.email || !payload.password) {
@@ -367,8 +366,8 @@ export default function AdminUsersPage() {
       <div className="max-w-7xl mx-auto">
         <div className="mb-6 flex items-center justify-between flex-wrap gap-3">
           <div>
-            <h1 className="text-2xl font-bold text-gray-800">👥 Gestion des utilisateurs</h1>
-            <p className="text-gray-500 text-sm mt-1">Gérez les comptes et licences</p>
+            <h1 className="text-2xl font-bold text-gray-800">👥 Gestion des comptes</h1>
+            <p className="text-gray-500 text-sm mt-1">Créez, bloquez et gérez la durée des comptes</p>
           </div>
           <button
             onClick={() => setShowCreateModal(true)}
@@ -723,15 +722,6 @@ export default function AdminUsersPage() {
                 <label className="block text-sm font-medium mb-1">Code technicien (4 chiffres)</label>
                 <input type="text" name="access_code" defaultValue="1234" maxLength={4} inputMode="numeric" pattern="\d{4}" className="w-full p-2 border rounded-lg font-mono" placeholder="1234" />
                 <p className="text-xs text-gray-500 mt-1">Le client tape ce code après son email + mot de passe.</p>
-              </div>
-              <div>
-                <label className="block text-sm font-medium mb-1">Durée de la licence</label>
-                <select name="duration" defaultValue="1m" className="w-full p-2 border rounded-lg">
-                  <option value="1m">📅 1 mois</option>
-                  <option value="6m">📅 6 mois</option>
-                  <option value="1y">📅 1 an</option>
-                  <option value="unlimited">♾️ Illimitée</option>
-                </select>
               </div>
               <div className="flex gap-3 pt-2">
                 <button type="submit" disabled={creating} className="flex-1 bg-blue-600 hover:bg-blue-700 disabled:opacity-60 text-white p-2.5 rounded-lg font-semibold">

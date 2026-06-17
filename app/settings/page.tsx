@@ -213,6 +213,154 @@ export default function SettingsPage() {
   };
 
   // Export complet de la base du compte (clients + réparations) en Excel.
+  const buildFileName = (label: string) => {
+    const today = new Date().toISOString().slice(0, 10);
+    const atelier = (settings.company_name || companyName || "atelier")
+      .replace(/[^a-z0-9]+/gi, "_")
+      .replace(/^_+|_+$/g, "") || "atelier";
+    return `${atelier}_${label}_${today}.xlsx`;
+  };
+
+  // Export d'une seule table dans son propre fichier Excel (colonnes choisies si fournies)
+  const exportOne = async (
+    table: string,
+    label: string,
+    orderBy?: string,
+    columns?: { label: string; value: (r: any) => any }[],
+  ) => {
+    setExporting(true);
+    try {
+      const companyId = typeof window !== "undefined" ? localStorage.getItem("company_id") : null;
+      if (!companyId) return;
+      let q = supabase.from(table).select("*").eq("user_id", companyId);
+      if (orderBy) q = q.order(orderBy, { ascending: false });
+      const { data } = await q;
+      const raw = data || [];
+      const rows = columns
+        ? raw.map((r: any) => {
+            const obj: Record<string, any> = {};
+            columns.forEach((c) => { obj[c.label] = c.value(r); });
+            return obj;
+          })
+        : raw;
+      const XLSX = await import("xlsx");
+      const wb = XLSX.utils.book_new();
+      XLSX.utils.book_append_sheet(
+        wb,
+        rows.length ? XLSX.utils.json_to_sheet(rows) : XLSX.utils.aoa_to_sheet([["Aucune donnée"]]),
+        label,
+      );
+      XLSX.writeFile(wb, buildFileName(label));
+    } catch (e) {
+      console.error("exportOne error:", e);
+      alert("Erreur lors de l'export. Réessayez.");
+    } finally {
+      setExporting(false);
+    }
+  };
+
+  // Factures / Paiements dérivent de la table repairs → on filtre + colonnes choisies
+  const fmtD = (d: any) => (d ? new Date(d).toLocaleString("fr-FR") : "");
+  const exportRepairsSubset = async (
+    label: string,
+    predicate: (r: any) => boolean,
+    columns: { label: string; value: (r: any, clientName: string) => any }[],
+  ) => {
+    setExporting(true);
+    try {
+      const companyId = typeof window !== "undefined" ? localStorage.getItem("company_id") : null;
+      if (!companyId) return;
+      const [repRes, cliRes] = await Promise.all([
+        supabase.from("repairs").select("*").eq("user_id", companyId).order("created_at", { ascending: false }),
+        supabase.from("clients").select("id, name").eq("user_id", companyId),
+      ]);
+      const clientMap: Record<string, string> = {};
+      (cliRes.data || []).forEach((c: any) => { clientMap[c.id] = c.name; });
+      const rows = (repRes.data || []).filter(predicate).map((r: any) => {
+        const obj: Record<string, any> = {};
+        columns.forEach((c) => { obj[c.label] = c.value(r, clientMap[r.client_id] || ""); });
+        return obj;
+      });
+      const XLSX = await import("xlsx");
+      const wb = XLSX.utils.book_new();
+      XLSX.utils.book_append_sheet(
+        wb,
+        rows.length ? XLSX.utils.json_to_sheet(rows) : XLSX.utils.aoa_to_sheet([["Aucune donnée"]]),
+        label,
+      );
+      XLSX.writeFile(wb, buildFileName(label));
+    } catch (e) {
+      console.error("exportRepairsSubset error:", e);
+      alert("Erreur lors de l'export. Réessayez.");
+    } finally {
+      setExporting(false);
+    }
+  };
+
+  const FACTURE_COLS = [
+    { label: "N° Ticket", value: (r: any) => `MBX-${r.id}` },
+    { label: "Date", value: (r: any) => fmtD(r.created_at) },
+    { label: "Client", value: (_r: any, name: string) => name },
+    { label: "Appareil", value: (r: any) => r.device },
+    { label: "Panne", value: (r: any) => r.issue },
+    { label: "Statut", value: (r: any) => r.status },
+    { label: "Prix estimé (€)", value: (r: any) => Number(r.estimated_price) || 0 },
+    { label: "Prix final (€)", value: (r: any) => Number(r.final_price) || 0 },
+    { label: "Payé (€)", value: (r: any) => Number(r.paid_amount) || 0 },
+    { label: "Statut paiement", value: (r: any) => r.payment_status || "" },
+  ];
+
+  const PAIEMENT_COLS = [
+    { label: "N° Ticket", value: (r: any) => `MBX-${r.id}` },
+    { label: "Date paiement", value: (r: any) => fmtD(r.payment_date) },
+    { label: "Client", value: (_r: any, name: string) => name },
+    { label: "Appareil", value: (r: any) => r.device },
+    { label: "Montant payé (€)", value: (r: any) => Number(r.paid_amount) || 0 },
+    { label: "Méthode", value: (r: any) => r.payment_method || "" },
+    { label: "Statut paiement", value: (r: any) => r.payment_status || "" },
+    { label: "Prix final (€)", value: (r: any) => Number(r.final_price) || 0 },
+  ];
+
+  const CLIENT_COLS = [
+    { label: "Nom", value: (r: any) => r.name || "" },
+    { label: "Téléphone", value: (r: any) => r.phone || "" },
+    { label: "Email", value: (r: any) => r.email || "" },
+    { label: "Code client", value: (r: any) => r.client_code || "" },
+    { label: "Date création", value: (r: any) => fmtD(r.created_at) },
+  ];
+
+  const STOCK_COLS = [
+    { label: "Produit", value: (r: any) => r.name || "" },
+    { label: "Catégorie", value: (r: any) => r.category || "" },
+    { label: "Stock", value: (r: any) => Number(r.stock) || 0 },
+    { label: "Prix achat (€)", value: (r: any) => Number(r.purchase_price) || 0 },
+    { label: "Prix vente (€)", value: (r: any) => Number(r.sale_price) || 0 },
+    { label: "Marge (€)", value: (r: any) => (Number(r.sale_price) || 0) - (Number(r.purchase_price) || 0) },
+    { label: "Code-barres", value: (r: any) => r.barcode || "" },
+  ];
+
+  const VENTE_COLS = [
+    { label: "Produit", value: (r: any) => r.product_name || "" },
+    { label: "Quantité", value: (r: any) => Number(r.quantity) || 0 },
+    { label: "Prix unitaire (€)", value: (r: any) => Number(r.unit_price) || 0 },
+    { label: "Total (€)", value: (r: any) => Number(r.total) || 0 },
+    { label: "Vendu par", value: (r: any) => r.sold_by || "" },
+    { label: "Date", value: (r: any) => fmtD(r.sold_at) },
+  ];
+
+  const REPAIR_COLS = [
+    { label: "N° Ticket", value: (r: any) => `MBX-${r.id}` },
+    { label: "Date", value: (r: any) => fmtD(r.created_at) },
+    { label: "Client", value: (_r: any, name: string) => name },
+    { label: "Appareil", value: (r: any) => r.device },
+    { label: "Panne", value: (r: any) => r.issue },
+    { label: "Statut", value: (r: any) => r.status },
+    { label: "Technicien", value: (r: any) => r.technician || "" },
+    { label: "Prix estimé (€)", value: (r: any) => Number(r.estimated_price) || 0 },
+    { label: "Prix final (€)", value: (r: any) => Number(r.final_price) || 0 },
+    { label: "Payé (€)", value: (r: any) => Number(r.paid_amount) || 0 },
+  ];
+
   const exportDatabase = async () => {
     setExporting(true);
     try {
@@ -490,8 +638,8 @@ export default function SettingsPage() {
                 <div className="flex items-center gap-3 mb-4">
                   <div className="w-11 h-11 rounded-xl bg-green-500/10 flex items-center justify-center text-2xl">📊</div>
                   <div>
-                    <div className="text-white font-semibold text-sm">Export Excel</div>
-                    <div className="text-xs text-gray-500">2 feuilles : Clients · Réparations</div>
+                    <div className="text-white font-semibold text-sm">Tout exporter</div>
+                    <div className="text-xs text-gray-500">1 fichier · 2 feuilles : Clients · Réparations</div>
                   </div>
                 </div>
                 <button
@@ -499,8 +647,39 @@ export default function SettingsPage() {
                   disabled={exporting}
                   className="px-6 py-2.5 bg-green-600 hover:bg-green-500 text-white rounded-xl text-sm font-semibold transition-all disabled:opacity-50 flex items-center gap-2"
                 >
-                  {exporting ? "⏳ Export en cours…" : "⬇️ Télécharger ma base (Excel)"}
+                  {exporting ? "⏳ Export en cours…" : "⬇️ Télécharger toute ma base (Excel)"}
                 </button>
+              </div>
+
+              <div className="mt-5 max-w-lg">
+                <p className="text-xs font-bold text-gray-400 uppercase tracking-widest mb-3">Ou exporter un par un</p>
+                <div className="grid grid-cols-2 gap-2">
+                  <button onClick={() => exportOne("clients", "Clients", undefined, CLIENT_COLS)} disabled={exporting}
+                    className="flex items-center gap-2 px-4 py-3 bg-[#1a1d2e] hover:bg-white/[0.07] border border-white/10 hover:border-green-500/30 rounded-xl text-sm text-white transition disabled:opacity-50">
+                    👤 Clients
+                  </button>
+                  <button onClick={() => exportRepairsSubset("Reparations", () => true, REPAIR_COLS)} disabled={exporting}
+                    className="flex items-center gap-2 px-4 py-3 bg-[#1a1d2e] hover:bg-white/[0.07] border border-white/10 hover:border-green-500/30 rounded-xl text-sm text-white transition disabled:opacity-50">
+                    🔧 Réparations
+                  </button>
+                  <button onClick={() => exportOne("products", "Stock", undefined, STOCK_COLS)} disabled={exporting}
+                    className="flex items-center gap-2 px-4 py-3 bg-[#1a1d2e] hover:bg-white/[0.07] border border-white/10 hover:border-green-500/30 rounded-xl text-sm text-white transition disabled:opacity-50">
+                    📦 Stock
+                  </button>
+                  <button onClick={() => exportOne("product_sales", "Ventes", "sold_at", VENTE_COLS)} disabled={exporting}
+                    className="flex items-center gap-2 px-4 py-3 bg-[#1a1d2e] hover:bg-white/[0.07] border border-white/10 hover:border-green-500/30 rounded-xl text-sm text-white transition disabled:opacity-50">
+                    🧾 Ventes
+                  </button>
+                  <button onClick={() => exportRepairsSubset("Factures", (r) => ["✅ Terminé", "📦 Rendu", "🚫 Refus client"].includes(r.status), FACTURE_COLS)} disabled={exporting}
+                    className="flex items-center gap-2 px-4 py-3 bg-[#1a1d2e] hover:bg-white/[0.07] border border-white/10 hover:border-green-500/30 rounded-xl text-sm text-white transition disabled:opacity-50">
+                    💶 Factures
+                  </button>
+                  <button onClick={() => exportRepairsSubset("Paiements", (r) => !!r.payment_status || Number(r.paid_amount) > 0, PAIEMENT_COLS)} disabled={exporting}
+                    className="flex items-center gap-2 px-4 py-3 bg-[#1a1d2e] hover:bg-white/[0.07] border border-white/10 hover:border-green-500/30 rounded-xl text-sm text-white transition disabled:opacity-50">
+                    💳 Paiements
+                  </button>
+                </div>
+                {exporting && <p className="text-xs text-gray-500 mt-2">⏳ Export en cours…</p>}
               </div>
             </div>
           )}

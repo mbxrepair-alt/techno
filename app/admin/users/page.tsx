@@ -377,64 +377,21 @@ export default function AdminUsersPage() {
           </button>
         </div>
 
-        <div className="grid grid-cols-2 md:grid-cols-6 gap-3 mb-6">
+        <div className="grid grid-cols-2 gap-3 mb-6">
           <div className="bg-blue-50 rounded-lg p-3 text-center">
             <div className="text-2xl font-bold text-blue-600">{stats.total}</div>
-            <div className="text-xs text-gray-600">Total</div>
-          </div>
-          <div className="bg-green-50 rounded-lg p-3 text-center">
-            <div className="text-2xl font-bold text-green-600">{stats.active}</div>
-            <div className="text-xs text-gray-600">Actives</div>
-          </div>
-          <div className="bg-purple-50 rounded-lg p-3 text-center">
-            <div className="text-2xl font-bold text-purple-600">{stats.unlimited}</div>
-            <div className="text-xs text-gray-600">Illimitées</div>
-          </div>
-          <div className="bg-orange-50 rounded-lg p-3 text-center">
-            <div className="text-2xl font-bold text-orange-600">{stats.trial}</div>
-            <div className="text-xs text-gray-600">Essai</div>
-          </div>
-          <div className="bg-red-50 rounded-lg p-3 text-center">
-            <div className="text-2xl font-bold text-red-600">{stats.expired}</div>
-            <div className="text-xs text-gray-600">Expirées</div>
-          </div>
-          <div className="bg-purple-50 rounded-lg p-3 text-center">
-            <div className="text-2xl font-bold text-purple-600">{stats.admin}</div>
-            <div className="text-xs text-gray-600">Admins</div>
+            <div className="text-xs text-gray-600">Comptes</div>
           </div>
         </div>
 
         <div className="bg-white rounded-lg shadow-sm border p-4 mb-6">
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            <input
-              type="text"
-              placeholder="🔍 Rechercher..."
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              className="w-full p-2 border rounded-lg"
-            />
-            <select
-              value={filterRole}
-              onChange={(e) => setFilterRole(e.target.value)}
-              className="w-full p-2 border rounded-lg"
-            >
-              <option value="all">Tous les rôles</option>
-              <option value="admin">Administrateurs</option>
-              <option value="user">Utilisateurs</option>
-            </select>
-            <select
-              value={filterLicence}
-              onChange={(e) => setFilterLicence(e.target.value)}
-              className="w-full p-2 border rounded-lg"
-            >
-              <option value="all">Toutes licences</option>
-              <option value="active">✅ Actives</option>
-              <option value="unlimited">♾️ Illimitées</option>
-              <option value="trial">🎁 Essai</option>
-              <option value="expired">📅 Expirées</option>
-              <option value="no_license">❌ Sans licence</option>
-            </select>
-          </div>
+          <input
+            type="text"
+            placeholder="🔍 Rechercher un compte..."
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+            className="w-full p-2 border rounded-lg"
+          />
         </div>
 
         <div className="bg-white rounded-lg shadow-sm border overflow-hidden">
@@ -442,10 +399,8 @@ export default function AdminUsersPage() {
             <table className="w-full">
               <thead className="bg-gray-50 border-b">
                 <tr>
-                  <th className="px-4 py-3 text-left">Utilisateur</th>
+                  <th className="px-4 py-3 text-left">Compte</th>
                   <th className="px-4 py-3 text-left">Contact</th>
-                  <th className="px-4 py-3 text-left">Licence</th>
-                  <th className="px-4 py-3 text-left">Rôle</th>
                   <th className="px-4 py-3 text-center">Actions</th>
                 </tr>
               </thead>
@@ -458,22 +413,6 @@ export default function AdminUsersPage() {
                     </td>
                     <td className="px-4 py-3 text-sm">{user.phone || "-"}</td>
                     <td className="px-4 py-3">
-                      <span
-                        className={`px-2 py-1 rounded-full text-xs ${getLicenceStatus(user.email).color}`}
-                      >
-                        {getLicenceStatus(user.email).text}
-                      </span>
-                    </td>
-                    <td className="px-4 py-3">
-                      {user.is_admin ? (
-                        <span className="px-2 py-1 rounded-full text-xs bg-purple-100 text-purple-800">
-                          👑 Admin
-                        </span>
-                      ) : (
-                        <span className="px-2 py-1 rounded-full text-xs bg-gray-100">👤 User</span>
-                      )}
-                    </td>
-                    <td className="px-4 py-3">
                       <div className="flex justify-center gap-1">
                         <button
                           onClick={() => {
@@ -481,35 +420,18 @@ export default function AdminUsersPage() {
                             setShowUserModal(true);
                           }}
                           className="p-1.5 text-blue-600 hover:bg-blue-50 rounded"
-                          title="Modifier profil"
+                          title="Modifier"
                         >
                           ✏️
                         </button>
                         <button
-                          onClick={() => toggleAdmin(user.id, user.is_admin)}
-                          className="p-1.5 text-purple-600 hover:bg-purple-50 rounded"
-                          title={user.is_admin ? "Retirer admin" : "Nommer admin"}
-                        >
-                          👑
-                        </button>
-                        <button
                           onClick={() => changePasswordDirect(user.id, user.email)}
-                          className="p-1.5 text-red-600 hover:bg-red-50 rounded"
+                          className="p-1.5 text-amber-600 hover:bg-amber-50 rounded"
                           title="Changer mot de passe"
                         >
                           🔒
                         </button>
-                        <button
-                          onClick={() => {
-                            setSelectedUser(user);
-                            setShowLicenceModal(true);
-                          }}
-                          className="p-1.5 text-green-600 hover:bg-green-50 rounded"
-                          title="Gérer licence"
-                        >
-                          📄
-                        </button>
-                        {!user.is_admin && (
+                        {user.email !== "mbxrepair@gmail.com" && (
                           <button
                             onClick={() => deleteUser(user.id, user.email)}
                             className="p-1.5 text-red-600 hover:bg-red-50 rounded"

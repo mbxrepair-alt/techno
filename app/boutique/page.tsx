@@ -1,11 +1,11 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useMemo } from "react";
 import { supabase } from "../../lib/supabase";
 import { useRouter } from "next/navigation";
 import Layout from "../../components/Layout";
 import { getCurrentTechnician } from "../../lib/historique";
-import { Package, Plus, Trash2, ShoppingCart, ScanLine, X, Check } from "lucide-react";
+import { Package, Plus, Trash2, ShoppingCart, ScanLine, X, Check, AlertTriangle, Download, Minus } from "lucide-react";
 import QrScanner from "../../components/QrScanner";
 import { createInvoice, type InvoiceItem } from "../../lib/invoices";
 import CartValidationModal from "../../components/CartValidationModal";
@@ -34,8 +34,14 @@ interface Product {
   sale_price: number;
   barcode: string;
   imei: string;
+  low_stock_threshold?: number | null;
+  supplier?: string | null;
   created_at?: string;
 }
+
+const DEFAULT_LOW_STOCK = 5;
+const lowThreshold = (p: { low_stock_threshold?: number | null }) =>
+  p.low_stock_threshold != null && p.low_stock_threshold > 0 ? p.low_stock_threshold : DEFAULT_LOW_STOCK;
 
 interface Sale {
   id: number;
@@ -66,6 +72,9 @@ export default function BoutiquePage() {
   const router = useRouter();
   const [tab, setTab] = useState<"stock" | "ventes">("stock");
   const [productSearch, setProductSearch] = useState("");
+  const [sortBy, setSortBy] = useState<"name" | "stock_asc" | "margin_desc" | "value_desc">("name");
+  const [filterCat, setFilterCat] = useState("all");
+  const [lowStockOnly, setLowStockOnly] = useState(false);
   const [products, setProducts] = useState<Product[]>([]);
   const [sales, setSales] = useState<Sale[]>([]);
   const [loading, setLoading] = useState(true);
@@ -438,6 +447,87 @@ export default function BoutiquePage() {
   const totalSales = sales.reduce((s, v) => s + (Number(v.total) || 0), 0);
   const totalProfit = sales.reduce((s, v) => s + ((Number(v.unit_price) || 0) - (Number(v.unit_cost) || 0)) * (Number(v.quantity) || 0), 0);
 
+  // Réapprovisionnement : ajuste le stock et enregistre le mouvement (silencieux si table absente)
+  const restock = async (p: Product, delta: number) => {
+    const newStock = Math.max(0, (Number(p.stock) || 0) + delta);
+    setProducts((prev) => prev.map((x) => (x.id === p.id ? { ...x, stock: newStock } : x)));
+    await supabase.from("products").update({ stock: newStock }).eq("id", p.id);
+    try {
+      await supabase.from("stock_movements").insert({
+        product_id: p.id,
+        product_name: p.name,
+        type: delta >= 0 ? "entree" : "sortie",
+        quantity: Math.abs(delta),
+        stock_after: newStock,
+        company_id: userId || null,
+        author: techName || null,
+      });
+    } catch { /* table optionnelle */ }
+  };
+
+  // Catégories disponibles
+  const categories = useMemo(
+    () => Array.from(new Set(products.map((p) => p.category).filter(Boolean))).sort(),
+    [products],
+  );
+
+  // Indicateurs de stock
+  const stockStats = useMemo(() => {
+    let valeurAchat = 0, valeurVente = 0, lowCount = 0, rupture = 0;
+    products.forEach((p) => {
+      const stock = Number(p.stock) || 0;
+      valeurAchat += stock * (Number(p.purchase_price) || 0);
+      valeurVente += stock * (Number(p.sale_price) || 0);
+      if (stock <= 0) rupture += 1;
+      else if (stock <= lowThreshold(p)) lowCount += 1;
+    });
+    return {
+      count: products.length,
+      valeurAchat,
+      valeurVente,
+      margePotentielle: valeurVente - valeurAchat,
+      lowCount,
+      rupture,
+    };
+  }, [products]);
+
+  // Liste filtrée + triée
+  const displayedProducts = useMemo(() => {
+    const term = productSearch.trim().toLowerCase();
+    let list = products.filter((p) => {
+      if (term && !(p.name.toLowerCase().includes(term) || (p.barcode && p.barcode.includes(productSearch.trim())))) return false;
+      if (filterCat !== "all" && p.category !== filterCat) return false;
+      if (lowStockOnly && Number(p.stock) > lowThreshold(p)) return false;
+      return true;
+    });
+    list = [...list].sort((a, b) => {
+      if (sortBy === "stock_asc") return (Number(a.stock) || 0) - (Number(b.stock) || 0);
+      if (sortBy === "margin_desc") return ((Number(b.sale_price) || 0) - (Number(b.purchase_price) || 0)) - ((Number(a.sale_price) || 0) - (Number(a.purchase_price) || 0));
+      if (sortBy === "value_desc") return ((Number(b.stock) || 0) * (Number(b.sale_price) || 0)) - ((Number(a.stock) || 0) * (Number(a.sale_price) || 0));
+      return a.name.localeCompare(b.name);
+    });
+    return list;
+  }, [products, productSearch, filterCat, lowStockOnly, sortBy]);
+
+  // Export CSV de l'inventaire
+  const exportInventoryCsv = () => {
+    const header = ["Nom", "Catégorie", "Stock", "Seuil", "Prix achat", "Prix vente", "Marge", "Valeur stock (vente)", "Code-barres"];
+    const rows = displayedProducts.map((p) => {
+      const stock = Number(p.stock) || 0;
+      const achat = Number(p.purchase_price) || 0;
+      const vente = Number(p.sale_price) || 0;
+      return [p.name, p.category || "", stock, lowThreshold(p), achat.toFixed(2), vente.toFixed(2), (vente - achat).toFixed(2), (stock * vente).toFixed(2), p.barcode || ""];
+    });
+    const csv = [header, ...rows].map((r) => r.map((c) => `"${String(c).replace(/"/g, '""')}"`).join(";")).join("\n");
+    const blob = new Blob(["﻿" + csv], { type: "text/csv;charset=utf-8;" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `inventaire_${new Date().toISOString().slice(0, 10)}.csv`;
+    a.click();
+    URL.revokeObjectURL(url);
+  };
+
   return (
     <Layout>
       <div className="w-full max-w-4xl mx-auto">
@@ -599,14 +689,62 @@ export default function BoutiquePage() {
           )}
         </div>
 
+        {/* KPIs + contrôles stock */}
+        {tab === "stock" && !loading && products.length > 0 && (
+          <>
+            {isGerant && (
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-4">
+                <div className="bg-[#16161d] border border-white/8 rounded-2xl p-4">
+                  <div className="text-xs text-gray-500 uppercase tracking-wider">Produits</div>
+                  <div className="text-2xl font-black text-white mt-1">{stockStats.count}</div>
+                </div>
+                <div className="bg-[#16161d] border border-white/8 rounded-2xl p-4">
+                  <div className="text-xs text-gray-500 uppercase tracking-wider">Valeur stock (achat)</div>
+                  <div className="text-2xl font-black text-blue-400 mt-1">{stockStats.valeurAchat.toFixed(0)} €</div>
+                </div>
+                <div className="bg-[#16161d] border border-white/8 rounded-2xl p-4">
+                  <div className="text-xs text-gray-500 uppercase tracking-wider">Marge potentielle</div>
+                  <div className="text-2xl font-black text-green-400 mt-1">{stockStats.margePotentielle.toFixed(0)} €</div>
+                </div>
+                <button onClick={() => setLowStockOnly((v) => !v)} className={`text-left rounded-2xl p-4 border transition ${lowStockOnly ? "bg-amber-500/15 border-amber-500/40" : "bg-[#16161d] border-white/8 hover:border-amber-500/30"}`}>
+                  <div className="text-xs text-gray-500 uppercase tracking-wider flex items-center gap-1"><AlertTriangle size={12} className="text-amber-400" /> À recommander</div>
+                  <div className="text-2xl font-black text-amber-400 mt-1">{stockStats.lowCount + stockStats.rupture}</div>
+                </button>
+              </div>
+            )}
+            <div className="flex flex-wrap items-center gap-2 mb-4">
+              <select value={sortBy} onChange={(e) => setSortBy(e.target.value as any)} className="bg-[#16161d] border border-white/10 rounded-xl px-3 py-2 text-white text-sm outline-none focus:border-pink-500/50">
+                <option value="name">Trier : Nom A-Z</option>
+                <option value="stock_asc">Trier : Stock croissant</option>
+                <option value="margin_desc">Trier : Marge ↓</option>
+                <option value="value_desc">Trier : Valeur stock ↓</option>
+              </select>
+              <select value={filterCat} onChange={(e) => setFilterCat(e.target.value)} className="bg-[#16161d] border border-white/10 rounded-xl px-3 py-2 text-white text-sm outline-none focus:border-pink-500/50">
+                <option value="all">Toutes catégories</option>
+                {categories.map((c) => <option key={c} value={c}>{c}</option>)}
+              </select>
+              {lowStockOnly && (
+                <button onClick={() => setLowStockOnly(false)} className="px-3 py-2 rounded-xl text-sm bg-amber-500/15 text-amber-300 border border-amber-500/40">⚠️ Stock bas seulement ✕</button>
+              )}
+              {isGerant && (
+                <button onClick={exportInventoryCsv} className="ml-auto flex items-center gap-1.5 px-3 py-2 rounded-xl text-sm bg-[#16161d] border border-white/10 text-gray-300 hover:border-pink-500/40 transition">
+                  <Download size={14} /> Export CSV
+                </button>
+              )}
+            </div>
+          </>
+        )}
+
         {loading ? (
           <div className="flex justify-center py-16"><div className="animate-spin rounded-full h-10 w-10 border-b-2 border-pink-500" /></div>
         ) : tab === "stock" ? (
           products.length === 0 ? (
             <div className="text-center text-gray-600 py-16 bg-[#16161d] border border-white/5 rounded-2xl text-sm">Aucun produit. Ajoutez-en avec le bouton « Produit ».</div>
+          ) : displayedProducts.length === 0 ? (
+            <div className="text-center text-gray-600 py-16 bg-[#16161d] border border-white/5 rounded-2xl text-sm">Aucun produit ne correspond.</div>
           ) : (
             <div className="space-y-2">
-              {products.filter(p => !productSearch.trim() || p.name.toLowerCase().includes(productSearch.toLowerCase()) || (p.barcode && p.barcode.includes(productSearch.trim()))).map((p) => {
+              {displayedProducts.map((p) => {
                 const margin = (Number(p.sale_price) || 0) - (Number(p.purchase_price) || 0);
                 return (
                   <div key={p.id} id={`product-${p.id}`} className="bg-[#16161d] border border-white/8 rounded-2xl p-4">
@@ -618,8 +756,13 @@ export default function BoutiquePage() {
                         {p.imei && <div className="text-[10px] text-gray-600 font-mono">IMEI {p.imei}</div>}
                       </div>
                       <div className="text-right shrink-0">
-                        <div className={`text-sm font-bold ${p.stock <= 0 ? "text-red-400" : p.stock <= 3 ? "text-amber-400" : "text-white"}`}>{p.stock} en stock</div>
-                        <div className="text-xs text-gray-500">Vente : {Number(p.sale_price).toFixed(2)} €</div>
+                        <div className={`text-sm font-bold ${p.stock <= 0 ? "text-red-400" : p.stock <= lowThreshold(p) ? "text-amber-400" : "text-white"}`}>{p.stock} en stock</div>
+                        {p.stock <= 0 ? (
+                          <span className="inline-block mt-0.5 text-[10px] font-bold bg-red-500/15 text-red-400 border border-red-500/25 px-1.5 py-0.5 rounded">⛔ Rupture</span>
+                        ) : p.stock <= lowThreshold(p) ? (
+                          <span className="inline-block mt-0.5 text-[10px] font-bold bg-amber-500/15 text-amber-400 border border-amber-500/25 px-1.5 py-0.5 rounded">⚠️ À recommander</span>
+                        ) : null}
+                        <div className="text-xs text-gray-500 mt-0.5">Vente : {Number(p.sale_price).toFixed(2)} €</div>
                       </div>
                     </div>
                     {isGerant && (
@@ -633,8 +776,20 @@ export default function BoutiquePage() {
                         <label className="flex items-center gap-1.5">Vente €
                           <input autoComplete="new-password" type="number" value={p.sale_price} onChange={(e) => updateField(p.id, "sale_price", Number(e.target.value))} onBlur={(e) => saveField(p.id, "sale_price", Number(e.target.value))} className="w-20 bg-black/30 border border-white/10 rounded-lg px-2 py-1 text-white text-right outline-none focus:border-pink-500/50" />
                         </label>
+                        <label className="flex items-center gap-1.5">Seuil
+                          <input autoComplete="new-password" type="number" value={p.low_stock_threshold ?? ""} placeholder={String(DEFAULT_LOW_STOCK)} onChange={(e) => updateField(p.id, "low_stock_threshold", Number(e.target.value))} onBlur={(e) => saveField(p.id, "low_stock_threshold", Number(e.target.value))} className="w-14 bg-black/30 border border-white/10 rounded-lg px-2 py-1 text-white text-right outline-none focus:border-pink-500/50" />
+                        </label>
                         <span className={`font-semibold ${margin >= 0 ? "text-green-400" : "text-red-400"}`}>Marge {margin.toFixed(2)} €</span>
                         <button onClick={() => deleteProduct(p.id)} className="ml-auto text-red-400 hover:text-red-300"><Trash2 size={15} /></button>
+                      </div>
+                    )}
+                    {isGerant && (
+                      <div className="flex items-center gap-2 mt-2">
+                        <span className="text-xs text-gray-500">Réappro :</span>
+                        <button onClick={() => restock(p, -1)} className="w-7 h-7 rounded-lg bg-white/5 hover:bg-white/10 border border-white/10 text-gray-300 flex items-center justify-center transition"><Minus size={13} /></button>
+                        <button onClick={() => restock(p, 1)} className="w-7 h-7 rounded-lg bg-white/5 hover:bg-white/10 border border-white/10 text-gray-300 flex items-center justify-center transition"><Plus size={13} /></button>
+                        <button onClick={() => restock(p, 5)} className="px-2.5 h-7 rounded-lg bg-pink-500/15 hover:bg-pink-500/25 border border-pink-500/30 text-pink-300 text-xs font-semibold transition">+5</button>
+                        <button onClick={() => restock(p, 10)} className="px-2.5 h-7 rounded-lg bg-pink-500/15 hover:bg-pink-500/25 border border-pink-500/30 text-pink-300 text-xs font-semibold transition">+10</button>
                       </div>
                     )}
                     <button

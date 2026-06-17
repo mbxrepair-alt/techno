@@ -1308,9 +1308,9 @@ export default function RepairDetailPage() {
           {/* LEFT COLUMN */}
           <div className="space-y-4">
             {/* DIAGNOSTIC */}
-            <div className="bg-[#16161d] border border-white/8 rounded-2xl overflow-hidden">
-              <div className="px-4 py-3 border-b border-white/8 flex items-center justify-between">
-                <p className="text-[10px] font-bold text-gray-500 uppercase tracking-widest">🔍 Diagnostic technicien</p>
+            <div className="bg-[#16161d] border border-blue-500/25 rounded-2xl overflow-hidden">
+              <div className="px-4 py-3 border-b border-blue-500/15 flex items-center justify-between">
+                <p className="text-[10px] font-bold text-blue-300 uppercase tracking-widest">🔍 Diagnostic technicien</p>
                 {repair?.is_client_submitted && (
                   <button
                     onClick={() => setShowClientInfo(true)}
@@ -1339,9 +1339,9 @@ export default function RepairDetailPage() {
             </div>
 
             {/* TRAVAUX */}
-            <div className="bg-[#16161d] border border-white/8 rounded-2xl overflow-hidden">
-              <div className="px-4 py-3 border-b border-white/8 flex justify-between items-center">
-                <p className="text-[10px] font-bold text-gray-500 uppercase tracking-widest">🔧 Travaux effectués</p>
+            <div className="bg-[#16161d] border border-orange-500/25 rounded-2xl overflow-hidden">
+              <div className="px-4 py-3 border-b border-orange-500/15 flex justify-between items-center">
+                <p className="text-[10px] font-bold text-orange-300 uppercase tracking-widest">🔧 Travaux effectués</p>
                 <button
                   onClick={() => setShowPartModal(true)}
                   className="text-orange-400 hover:text-orange-300 text-xs flex items-center gap-1 transition"
@@ -1384,9 +1384,9 @@ export default function RepairDetailPage() {
             </div>
 
             {/* RISQUES */}
-            <div className="bg-[#16161d] border border-white/8 rounded-2xl overflow-hidden">
-              <div className="px-4 py-3 border-b border-white/8">
-                <p className="text-[10px] font-bold text-gray-500 uppercase tracking-widest">⚠️ Risques & Préconisations</p>
+            <div className="bg-[#16161d] border border-amber-500/25 rounded-2xl overflow-hidden">
+              <div className="px-4 py-3 border-b border-amber-500/15">
+                <p className="text-[10px] font-bold text-amber-300 uppercase tracking-widest">⚠️ Risques & Préconisations</p>
               </div>
               <div className="p-4">
                 <div className="flex flex-wrap gap-1.5 mb-3">
@@ -1420,9 +1420,9 @@ export default function RepairDetailPage() {
             </div>
 
             {/* TESTS */}
-            <div className="bg-[#16161d] border border-white/8 rounded-2xl overflow-hidden">
-              <div className="px-4 py-3 border-b border-white/8">
-                <p className="text-[10px] font-bold text-gray-500 uppercase tracking-widest">✅ Tests & contrôles qualité</p>
+            <div className="bg-[#16161d] border border-green-500/25 rounded-2xl overflow-hidden">
+              <div className="px-4 py-3 border-b border-green-500/15">
+                <p className="text-[10px] font-bold text-green-300 uppercase tracking-widest">✅ Tests & contrôles qualité</p>
               </div>
               <div className="p-4">
                 <textarea
@@ -1440,9 +1440,9 @@ export default function RepairDetailPage() {
           {/* RIGHT COLUMN */}
           <div className="space-y-4">
             {/* PRIX */}
-            <div className="bg-[#16161d] border border-white/8 rounded-2xl overflow-hidden">
-              <div className="px-4 py-3 border-b border-white/8">
-                <p className="text-[10px] font-bold text-gray-500 uppercase tracking-widest">💰 À payer</p>
+            <div className="bg-[#16161d] border border-emerald-500/25 rounded-2xl overflow-hidden">
+              <div className="px-4 py-3 border-b border-emerald-500/15">
+                <p className="text-[10px] font-bold text-emerald-300 uppercase tracking-widest">💰 À payer</p>
               </div>
               <div className="p-4 space-y-4">
                 <div className="flex items-center justify-between">
@@ -1480,9 +1480,9 @@ export default function RepairDetailPage() {
             </div>
 
             {/* PHOTOS */}
-            <div className="bg-[#16161d] border border-white/8 rounded-2xl overflow-hidden">
-              <div className="px-4 py-3 border-b border-white/8 flex justify-between items-center">
-                <p className="text-[10px] font-bold text-gray-500 uppercase tracking-widest">📸 Photos</p>
+            <div className="bg-[#16161d] border border-purple-500/25 rounded-2xl overflow-hidden">
+              <div className="px-4 py-3 border-b border-purple-500/15 flex justify-between items-center">
+                <p className="text-[10px] font-bold text-purple-300 uppercase tracking-widest">📸 Photos</p>
                 <label className="cursor-pointer text-orange-400 hover:text-orange-300 text-xs flex items-center gap-1 transition">
                   <span className="text-base font-bold">+</span> Ajouter
                   <input

@@ -1455,7 +1455,12 @@ export default function Dashboard() {
       )}
 
       {/* ========== HEADER AVEC SCANNER QR ET RECHERCHE ========== */}
-      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-8">
+      <div className="mb-6 rounded-2xl border border-blue-500/25 bg-blue-500/[0.03] p-4">
+        <div className="flex items-center gap-2 mb-3">
+          <span className="text-[10px] font-bold bg-blue-500/20 text-blue-300 px-2.5 py-1 rounded-full uppercase tracking-wider">🔍 Rechercher</span>
+          <span className="text-sm font-semibold text-blue-200">Ouvrir un ticket existant</span>
+        </div>
+        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
         <div className="flex items-center gap-2">
           <button
             onClick={() => setShowScanner(true)}
@@ -1507,11 +1512,16 @@ export default function Dashboard() {
             </div>
           )}
         </div>
+        </div>
       </div>
 
       {/* ========== CAISSE ========== */}
-      <div className="mb-8">
-        <div className="bg-[#16161d] border border-white/8 rounded-2xl overflow-hidden shadow-xl">
+      <div className="mb-8 rounded-2xl border border-green-500/25 bg-green-500/[0.03] p-4">
+        <div className="flex items-center gap-2 mb-3">
+          <span className="text-[10px] font-bold bg-green-500/20 text-green-300 px-2.5 py-1 rounded-full uppercase tracking-wider">🛒 Caisse</span>
+          <span className="text-sm font-semibold text-green-200">Vendre un produit</span>
+        </div>
+        <div className="bg-[#16161d] border border-green-500/20 rounded-2xl overflow-hidden shadow-xl">
           {/* Header Caisse */}
           <div className="flex items-center justify-between px-5 py-4 border-b border-white/6">
             <div className="flex items-center gap-2.5">
@@ -1636,13 +1646,13 @@ export default function Dashboard() {
       )}
 
       {/* ========== SECTION NOUVELLE RÉPARATION ========== */}
-      <div className="flex items-center gap-2 mb-4">
-        <span className="w-2 h-2 rounded-full bg-green-400 shrink-0" />
-        <h2 className="text-xs font-semibold text-gray-300 uppercase tracking-wider">Nouvelle réparation</h2>
+      <div className="flex items-center gap-2 mb-3">
+        <span className="text-[10px] font-bold bg-orange-500/20 text-orange-300 px-2.5 py-1 rounded-full uppercase tracking-wider">✨ Nouvelle réparation</span>
+        <span className="text-sm font-semibold text-orange-200">Enregistrer un appareil</span>
       </div>
 
-      <div ref={formRef} className="bg-[#16161d] border border-white/5 rounded-2xl overflow-hidden shadow-xl mb-6">
-        <div className="relative overflow-hidden bg-gradient-to-r from-blue-600 via-purple-600 to-blue-600 px-6 py-5">
+      <div ref={formRef} className="bg-[#16161d] border border-orange-500/20 rounded-2xl overflow-hidden shadow-xl mb-6">
+        <div className="relative overflow-hidden bg-gradient-to-r from-orange-600 via-amber-600 to-orange-600 px-6 py-5">
           <div className="absolute inset-0 opacity-[0.08]" style={{ backgroundImage: "radial-gradient(circle, white 1px, transparent 1px)", backgroundSize: "18px 18px" }} />
           <h2 className="relative text-white font-black text-xl tracking-tight">✨ Nouvelle Réparation</h2>
           <p className="relative text-white/60 text-sm mt-0.5">Multi-appareils supporté</p>
@@ -2012,24 +2022,61 @@ export default function Dashboard() {
                 <StatusBadge status={selectedRepairDetail.status || "📥 Réceptionné"} size="md" />
                 <span className="text-xs text-gray-500">#{selectedRepairDetail.id}</span>
               </div>
-              <div className="bg-black/20 border border-white/10 rounded-xl p-4 space-y-1.5">
-                <div className="font-semibold text-white">👤 {selectedRepairClient.name}</div>
-                {selectedRepairClient.phone !== "NC" && <div className="text-sm text-gray-400">📞 {selectedRepairClient.phone}</div>}
-                {selectedRepairClient.email !== "NC" && <div className="text-sm text-gray-400">✉️ {selectedRepairClient.email}</div>}
-                {selectedRepairClient.client_code && <div className="text-sm font-mono text-blue-400">🔑 Code : {selectedRepairClient.client_code}</div>}
+
+              {/* CLIENT — bleu */}
+              <div className="bg-black/20 border border-blue-500/25 rounded-xl overflow-hidden">
+                <div className="px-4 py-2 border-b border-blue-500/15 text-[10px] font-bold text-blue-300 uppercase tracking-widest">👤 Client</div>
+                <div className="p-4 space-y-1.5">
+                  <div className="font-semibold text-white">{selectedRepairClient.name}</div>
+                  {selectedRepairClient.phone !== "NC" && <div className="text-sm text-gray-400">📞 {selectedRepairClient.phone}</div>}
+                  {selectedRepairClient.email !== "NC" && <div className="text-sm text-gray-400">✉️ {selectedRepairClient.email}</div>}
+                  {selectedRepairClient.client_code && <div className="text-sm font-mono text-blue-400">🔑 Code : {selectedRepairClient.client_code}</div>}
+                </div>
               </div>
-              <div className="bg-black/20 border border-white/10 rounded-xl overflow-hidden">
+
+              {/* APPAREIL — orange */}
+              <div className="bg-black/20 border border-orange-500/25 rounded-xl overflow-hidden">
+                <div className="px-4 py-2 border-b border-orange-500/15 text-[10px] font-bold text-orange-300 uppercase tracking-widest">📱 Appareil</div>
                 {[
-                  { label: "📱 Appareil", value: selectedRepairDetail.device },
+                  { label: "📱 Modèle", value: selectedRepairDetail.device },
                   { label: "🔧 Panne", value: selectedRepairDetail.issue },
                   selectedRepairDetail.imei && selectedRepairDetail.imei !== "NC" ? { label: "🔍 IMEI", value: selectedRepairDetail.imei } : null,
-                  selectedRepairDetail.technician ? { label: "👷 Technicien", value: selectedRepairDetail.technician } : null,
-                  { label: "💰 Prix estimé", value: selectedRepairDetail.estimated_price ? `${Number(selectedRepairDetail.estimated_price).toFixed(2)} €` : "—" },
-                  selectedRepairDetail.final_price ? { label: "✅ Prix final", value: `${Number(selectedRepairDetail.final_price).toFixed(2)} €` } : null,
+                  selectedRepairDetail.unlock_code && selectedRepairDetail.unlock_code !== "NC" ? { label: "🔓 Code déverrouillage", value: selectedRepairDetail.unlock_code } : null,
+                  selectedRepairDetail.description && selectedRepairDetail.description !== "NC" ? { label: "📝 Description", value: selectedRepairDetail.description } : null,
                 ].filter(Boolean).map((row, i, arr) => (
-                  <div key={i} className={`grid grid-cols-2 ${i < arr.length - 1 ? "border-b border-white/10" : ""}`}>
+                  <div key={i} className={`grid grid-cols-2 ${i < arr.length - 1 ? "border-b border-white/8" : ""}`}>
                     <div className="px-4 py-2.5 text-gray-400 text-xs font-semibold uppercase tracking-widest bg-white/5">{row!.label}</div>
-                    <div className="px-4 py-2.5 text-white text-sm">{row!.value}</div>
+                    <div className="px-4 py-2.5 text-white text-sm break-words">{row!.value}</div>
+                  </div>
+                ))}
+              </div>
+
+              {/* SUIVI — vert */}
+              <div className="bg-black/20 border border-green-500/25 rounded-xl overflow-hidden">
+                <div className="px-4 py-2 border-b border-green-500/15 text-[10px] font-bold text-green-300 uppercase tracking-widest">👷 Suivi</div>
+                {[
+                  { label: "👷 Technicien", value: selectedRepairDetail.technician || "⚠️ Non assigné" },
+                  selectedRepairDetail.created_at ? { label: "📅 Créé le", value: new Date(selectedRepairDetail.created_at).toLocaleString("fr-FR") } : null,
+                  selectedRepairDetail.submitted_at ? { label: "📤 Soumis le", value: new Date(selectedRepairDetail.submitted_at).toLocaleString("fr-FR") } : null,
+                  selectedRepairDetail.assigned_at ? { label: "🛠️ Prise en charge", value: new Date(selectedRepairDetail.assigned_at).toLocaleString("fr-FR") } : null,
+                ].filter(Boolean).map((row, i, arr) => (
+                  <div key={i} className={`grid grid-cols-2 ${i < arr.length - 1 ? "border-b border-white/8" : ""}`}>
+                    <div className="px-4 py-2.5 text-gray-400 text-xs font-semibold uppercase tracking-widest bg-white/5">{row!.label}</div>
+                    <div className={`px-4 py-2.5 text-sm ${row!.label === "👷 Technicien" && !selectedRepairDetail.technician ? "text-amber-400" : "text-white"}`}>{row!.value}</div>
+                  </div>
+                ))}
+              </div>
+
+              {/* PRIX — émeraude */}
+              <div className="bg-black/20 border border-emerald-500/25 rounded-xl overflow-hidden">
+                <div className="px-4 py-2 border-b border-emerald-500/15 text-[10px] font-bold text-emerald-300 uppercase tracking-widest">💰 Prix</div>
+                {[
+                  { label: "💰 Estimé", value: selectedRepairDetail.estimated_price ? `${Number(selectedRepairDetail.estimated_price).toFixed(2)} €` : "—" },
+                  selectedRepairDetail.final_price ? { label: "✅ Final", value: `${Number(selectedRepairDetail.final_price).toFixed(2)} €` } : null,
+                ].filter(Boolean).map((row, i, arr) => (
+                  <div key={i} className={`grid grid-cols-2 ${i < arr.length - 1 ? "border-b border-white/8" : ""}`}>
+                    <div className="px-4 py-2.5 text-gray-400 text-xs font-semibold uppercase tracking-widest bg-white/5">{row!.label}</div>
+                    <div className="px-4 py-2.5 text-white text-sm font-bold">{row!.value}</div>
                   </div>
                 ))}
               </div>

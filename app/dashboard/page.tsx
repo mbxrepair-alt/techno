@@ -1645,6 +1645,25 @@ export default function Dashboard() {
         />
       )}
 
+      {/* BOUTON PANIER FLOTTANT */}
+      {(dashCartItems.length > 0 || dashLinkedRepair) && !showCartModal && (
+        <button
+          onClick={() => setShowCartModal(true)}
+          className="fixed bottom-24 right-5 lg:bottom-8 z-40 flex items-center gap-2 bg-green-600 hover:bg-green-500 text-white pl-4 pr-5 py-3 rounded-full shadow-xl shadow-green-900/40 active:scale-95 transition-all"
+          aria-label="Ouvrir la caisse"
+        >
+          <div className="relative">
+            <ShoppingCart size={20} />
+            <span className="absolute -top-2 -right-2 bg-white text-green-600 text-[10px] font-black rounded-full min-w-[16px] h-4 flex items-center justify-center px-1">
+              {dashCartItems.length + (dashLinkedRepair ? 1 : 0)}
+            </span>
+          </div>
+          <span className="text-sm font-bold">
+            {(Number(dashLinkedRepair?.final_price ?? dashLinkedRepair?.estimated_price ?? 0) + dashCartItems.reduce((s, c) => s + Number(c.product.sale_price) * c.quantity, 0)).toFixed(2)} €
+          </span>
+        </button>
+      )}
+
       {/* ========== SECTION NOUVELLE RÉPARATION ========== */}
       <div className="flex items-center gap-2 mb-3">
         <span className="text-[10px] font-bold bg-orange-500/20 text-orange-300 px-2.5 py-1 rounded-full uppercase tracking-wider">✨ Nouvelle réparation</span>

@@ -75,9 +75,33 @@ export default function BoutiquePage() {
   const [sortBy, setSortBy] = useState<"name" | "stock_asc" | "margin_desc" | "value_desc">("name");
   const [filterCat, setFilterCat] = useState("all");
   const [lowStockOnly, setLowStockOnly] = useState(false);
+  const [customCats, setCustomCats] = useState<string[]>([]);
+
+  useEffect(() => {
+    try {
+      const saved = localStorage.getItem("mbx_custom_categories");
+      if (saved) setCustomCats(JSON.parse(saved));
+    } catch { /* ignore */ }
+  }, []);
+
+  const addCategory = () => {
+    const name = prompt("Nom de la nouvelle catégorie :")?.trim();
+    if (!name) return;
+    const exists = [...CATEGORIES, ...customCats].some((c) => c.toLowerCase() === name.toLowerCase());
+    if (!exists) {
+      const next = [...customCats, name];
+      setCustomCats(next);
+      try { localStorage.setItem("mbx_custom_categories", JSON.stringify(next)); } catch { /* ignore */ }
+    }
+    setForm((f) => ({ ...f, category: name }));
+  };
   const [products, setProducts] = useState<Product[]>([]);
   const [sales, setSales] = useState<Sale[]>([]);
   const [loading, setLoading] = useState(true);
+  const [showImport, setShowImport] = useState(false);
+  const [importText, setImportText] = useState("");
+  const [importCat, setImportCat] = useState("");
+  const [importing, setImporting] = useState(false);
   const [isGerant, setIsGerant] = useState(false);
   const [techName, setTechName] = useState("");
   const [userId, setUserId] = useState<string>("");
@@ -428,6 +452,57 @@ export default function BoutiquePage() {
   };
 
 
+  // Import en masse : lignes "nom | code-barres" (séparateur | ; , ou tabulation)
+  const importProducts = async () => {
+    const uid = userId || (typeof window !== "undefined" ? localStorage.getItem("company_id") : null);
+    if (!uid) { alert("Session expirée, reconnectez-vous."); return; }
+    const lines = importText.split("\n").map((l) => l.trim()).filter(Boolean);
+    const rows = lines.map((l) => {
+      const parts = l.split(/[|;\t]| {2,}/).map((s) => s.trim()).filter(Boolean);
+      const name = parts[0] || "";
+      const barcode = (parts[1] || "").replace(/\s/g, "");
+      return { name, barcode };
+    }).filter((r) => r.name);
+
+    if (rows.length === 0) { alert("Aucune ligne valide. Format : nom | code-barres"); return; }
+
+    setImporting(true);
+    try {
+      // On évite les doublons par code-barres déjà présents
+      const existingCodes = new Set(products.map((p) => p.barcode).filter(Boolean));
+      const toInsert = rows
+        .filter((r) => !r.barcode || !existingCodes.has(r.barcode))
+        .map((r) => ({
+          user_id: uid,
+          name: r.name,
+          category: importCat.trim() || null,
+          barcode: r.barcode || null,
+          stock: 0,
+          purchase_price: 0,
+          sale_price: 0,
+        }));
+
+      if (toInsert.length === 0) { alert("Tous ces produits existent déjà."); setImporting(false); return; }
+
+      // Insertion par paquets de 200
+      for (let i = 0; i < toInsert.length; i += 200) {
+        const chunk = toInsert.slice(i, i + 200);
+        const { error } = await supabase.from("products").insert(chunk);
+        if (error) { console.error("import error:", error); alert("Erreur d'import : " + error.message); break; }
+      }
+      alert(`✅ ${toInsert.length} produit(s) importé(s)${rows.length - toInsert.length > 0 ? ` (${rows.length - toInsert.length} doublon(s) ignoré(s))` : ""}.`);
+      setImportText("");
+      setImportCat("");
+      setShowImport(false);
+      await load();
+    } catch (e) {
+      console.error(e);
+      alert("Erreur lors de l'import.");
+    } finally {
+      setImporting(false);
+    }
+  };
+
   const updateField = (id: number, field: keyof Product, value: number) => {
     setProducts((prev) => prev.map((p) => (p.id === id ? { ...p, [field]: value } : p)));
   };
@@ -469,6 +544,12 @@ export default function BoutiquePage() {
   const categories = useMemo(
     () => Array.from(new Set(products.map((p) => p.category).filter(Boolean))).sort(),
     [products],
+  );
+
+  // Toutes les catégories pour le formulaire (fixes + personnalisées + utilisées)
+  const allCategories = useMemo(
+    () => Array.from(new Set([...CATEGORIES, ...customCats, ...products.map((p) => p.category).filter(Boolean)])),
+    [customCats, products],
   );
 
   // Indicateurs de stock
@@ -552,12 +633,20 @@ export default function BoutiquePage() {
                 <ScanLine size={16} /> Scanner
               </button>
               {isGerant && (
-                <button
-                  onClick={() => setShowAdd(true)}
-                  className="flex items-center gap-2 px-4 py-2 bg-pink-500 hover:bg-pink-400 text-white rounded-xl text-sm font-bold transition active:scale-95"
-                >
-                  <Plus size={16} /> Produit
-                </button>
+                <>
+                  <button
+                    onClick={() => setShowAdd(true)}
+                    className="flex items-center gap-2 px-4 py-2 bg-pink-500 hover:bg-pink-400 text-white rounded-xl text-sm font-bold transition active:scale-95"
+                  >
+                    <Plus size={16} /> Produit
+                  </button>
+                  <button
+                    onClick={() => setShowImport(true)}
+                    className="flex items-center gap-2 px-4 py-2 bg-[#16161d] border border-pink-500/30 text-pink-300 hover:bg-pink-500/10 rounded-xl text-sm font-bold transition active:scale-95"
+                  >
+                    <Download size={16} /> Importer
+                  </button>
+                </>
               )}
             </div>
           )}
@@ -776,7 +865,7 @@ export default function BoutiquePage() {
                         <label className="flex items-center gap-1.5">Vente €
                           <input autoComplete="new-password" type="number" value={p.sale_price} onChange={(e) => updateField(p.id, "sale_price", Number(e.target.value))} onBlur={(e) => saveField(p.id, "sale_price", Number(e.target.value))} className="w-20 bg-black/30 border border-white/10 rounded-lg px-2 py-1 text-white text-right outline-none focus:border-pink-500/50" />
                         </label>
-                        <label className="flex items-center gap-1.5">Seuil
+                        <label className="flex items-center gap-1.5">Alerte à
                           <input autoComplete="new-password" type="number" value={p.low_stock_threshold ?? ""} placeholder={String(DEFAULT_LOW_STOCK)} onChange={(e) => updateField(p.id, "low_stock_threshold", Number(e.target.value))} onBlur={(e) => saveField(p.id, "low_stock_threshold", Number(e.target.value))} className="w-14 bg-black/30 border border-white/10 rounded-lg px-2 py-1 text-white text-right outline-none focus:border-pink-500/50" />
                         </label>
                         <span className={`font-semibold ${margin >= 0 ? "text-green-400" : "text-red-400"}`}>Marge {margin.toFixed(2)} €</span>
@@ -841,16 +930,53 @@ export default function BoutiquePage() {
       </div>
 
       {/* MODAL AJOUT PRODUIT */}
+      {showImport && (
+        <div className="fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-4" onClick={() => setShowImport(false)}>
+          <div className="bg-[#16161d] border border-white/10 rounded-2xl w-full max-w-lg p-5" onClick={(e) => e.stopPropagation()}>
+            <div className="flex items-center justify-between mb-3">
+              <h2 className="text-lg font-bold text-white">📥 Importer en masse</h2>
+              <button onClick={() => setShowImport(false)} className="w-7 h-7 bg-white/10 hover:bg-white/20 rounded-full flex items-center justify-center text-gray-400 text-sm">✕</button>
+            </div>
+            <p className="text-xs text-gray-500 mb-3">Une ligne par produit, format <span className="text-pink-300 font-mono">nom | code-barres</span>. Le code-barres est optionnel.</p>
+            <input
+              type="text"
+              value={importCat}
+              onChange={(e) => setImportCat(e.target.value)}
+              placeholder="Catégorie à appliquer à tout le lot (optionnel)"
+              className="w-full mb-2 bg-[#1a1d2e] border border-white/10 rounded-xl px-4 py-2.5 text-white text-sm outline-none focus:border-pink-500/50 placeholder-gray-600"
+            />
+            <textarea
+              value={importText}
+              onChange={(e) => setImportText(e.target.value)}
+              rows={10}
+              placeholder={"Coque Bambou iPhone 14 Pro Vert Menthe | 3000000195871\nVitre Trempée iPhone 15 | 1234567890123"}
+              className="w-full bg-[#1a1d2e] border border-white/10 rounded-xl px-4 py-3 text-white text-sm font-mono outline-none focus:border-pink-500/50 placeholder-gray-700 resize-none"
+            />
+            <div className="flex gap-2 mt-3">
+              <button onClick={() => setShowImport(false)} className="flex-1 bg-white/5 hover:bg-white/10 text-gray-300 py-2.5 rounded-xl text-sm border border-white/10 transition">Annuler</button>
+              <button onClick={importProducts} disabled={importing} className="flex-1 bg-pink-600 hover:bg-pink-500 disabled:opacity-50 text-white py-2.5 rounded-xl text-sm font-bold transition">
+                {importing ? "Import en cours…" : "Importer"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {showAdd && (
         <div className="fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-4" onClick={() => setShowAdd(false)}>
           <div className="bg-[#16161d] border border-white/10 rounded-2xl w-full max-w-md p-5" onClick={(e) => e.stopPropagation()}>
             <h2 className="text-lg font-bold text-white mb-4">➕ Nouveau produit</h2>
             <div className="space-y-3">
               <input autoComplete="new-password" placeholder="Nom du produit" value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} className="w-full bg-[#1a1d2e] border border-white/10 rounded-xl px-4 py-2.5 text-white text-sm outline-none focus:border-pink-500/50" />
-              <select value={form.category} onChange={(e) => setForm({ ...form, category: e.target.value })} className="w-full bg-[#1a1d2e] border border-white/10 rounded-xl px-4 py-2.5 text-white text-sm outline-none focus:border-pink-500/50">
-                <option value="">— Catégorie —</option>
-                {CATEGORIES.map((c) => <option key={c} value={c}>{c}</option>)}
-              </select>
+              <div className="flex gap-2">
+                <select value={form.category} onChange={(e) => setForm({ ...form, category: e.target.value })} className="flex-1 bg-[#1a1d2e] border border-white/10 rounded-xl px-4 py-2.5 text-white text-sm outline-none focus:border-pink-500/50">
+                  <option value="">— Catégorie —</option>
+                  {allCategories.map((c) => <option key={c} value={c}>{c}</option>)}
+                </select>
+                <button type="button" onClick={addCategory} title="Ajouter une catégorie" className="px-3 bg-pink-500/15 border border-pink-500/30 text-pink-300 rounded-xl hover:bg-pink-500/25 transition flex items-center gap-1.5 text-sm font-semibold">
+                  <Plus size={16} /> Cat.
+                </button>
+              </div>
               <div className="flex gap-2">
                 <input autoComplete="new-password" placeholder="Code-barres" value={form.barcode} onChange={(e) => setForm({ ...form, barcode: e.target.value })} className="flex-1 bg-[#1a1d2e] border border-white/10 rounded-xl px-4 py-2.5 text-white text-sm outline-none focus:border-pink-500/50" />
                 <button type="button" onClick={() => setScanMode("form")} className="px-3 bg-pink-500/15 border border-pink-500/30 text-pink-300 rounded-xl hover:bg-pink-500/25 transition flex items-center gap-1.5 text-sm">
@@ -893,6 +1019,23 @@ export default function BoutiquePage() {
             )}
           </div>
         </div>
+      )}
+
+      {/* BOUTON PANIER FLOTTANT */}
+      {cartItems.length > 0 && !showClientModal && (
+        <button
+          onClick={() => { setShowClientModal(true); searchExistingClients(""); }}
+          className="fixed bottom-24 right-5 lg:bottom-8 z-40 flex items-center gap-2 bg-pink-600 hover:bg-pink-500 text-white pl-4 pr-5 py-3 rounded-full shadow-xl shadow-pink-900/40 active:scale-95 transition-all"
+          aria-label="Ouvrir le panier"
+        >
+          <div className="relative">
+            <ShoppingCart size={20} />
+            <span className="absolute -top-2 -right-2 bg-white text-pink-600 text-[10px] font-black rounded-full min-w-[16px] h-4 flex items-center justify-center px-1">
+              {cartItems.reduce((s, i) => s + i.quantity, 0)}
+            </span>
+          </div>
+          <span className="text-sm font-bold">{cartItems.reduce((s, i) => s + Number(i.product.sale_price) * i.quantity, 0).toFixed(2)} €</span>
+        </button>
       )}
 
       {/* MODAL PANIER + CLIENT */}

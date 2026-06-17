@@ -29,15 +29,25 @@ export async function createInvoice(
   _paymentMethod: string
 ): Promise<InvoiceResult> {
   try {
-    // Créer le client s'il n'a pas encore d'ID
+    // Créer le client seulement s'il n'existe pas déjà (évite les doublons "CLIENT CAISSE")
     if (!client.id && client.name) {
-      const { error: clientError } = await supabase.from("clients").insert({
-        user_id: userId,
-        name: client.name,
-        phone: client.phone || "NC",
-        email: client.email || "NC",
-      });
-      if (clientError) console.warn("createInvoice: client insert warning:", clientError);
+      const { data: existing } = await supabase
+        .from("clients")
+        .select("id")
+        .eq("user_id", userId)
+        .eq("name", client.name)
+        .limit(1)
+        .maybeSingle();
+
+      if (!existing) {
+        const { error: clientError } = await supabase.from("clients").insert({
+          user_id: userId,
+          name: client.name,
+          phone: client.phone || "NC",
+          email: client.email || "NC",
+        });
+        if (clientError) console.warn("createInvoice: client insert warning:", clientError);
+      }
     }
 
     // Générer une référence de facture unique

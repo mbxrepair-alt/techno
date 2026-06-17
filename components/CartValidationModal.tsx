@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { supabase } from "../lib/supabase";
 import { createInvoice, type InvoiceItem } from "../lib/invoices";
-import { ScanLine, X, SendHorizonal } from "lucide-react";
+import { ScanLine, X, SendHorizonal, ShoppingCart, Minus } from "lucide-react";
 import QrScanner from "./QrScanner";
 
 export interface CartProduct {
@@ -57,6 +57,8 @@ export default function CartValidationModal({
   const [paymentError, setPaymentError] = useState("");
   const [tvaRate, setTvaRate] = useState(20);
   const [isProcessingSale, setIsProcessingSale] = useState(false);
+  const [minimized, setMinimized] = useState(false);
+  const [showCancelWarn, setShowCancelWarn] = useState(false);
   const [showEmailPrompt, setShowEmailPrompt] = useState(false);
   const [emailInput, setEmailInput] = useState("");
 
@@ -91,8 +93,17 @@ export default function CartValidationModal({
   };
 
   const searchExistingClients = async (search: string) => {
-    if (!search.trim() || !userId) { setClientSearchResults([]); return; }
-    const { data } = await supabase.from("clients").select("id,name,phone,email").eq("user_id", userId).ilike("name", `%${search}%`).limit(5);
+    const uid = userId || (typeof window !== "undefined" ? localStorage.getItem("company_id") : null);
+    if (!uid) { setClientSearchResults([]); return; }
+    let q = supabase.from("clients").select("id,name,phone,email").eq("user_id", uid).limit(8);
+    if (search.trim()) {
+      const term = search.trim();
+      q = q.or(`name.ilike.%${term}%,phone.ilike.%${term}%`);
+    } else {
+      // Sans saisie : on propose les clients les plus récents
+      q = q.order("created_at", { ascending: false });
+    }
+    const { data } = await q;
     setClientSearchResults(data || []);
   };
 
@@ -358,14 +369,51 @@ export default function CartValidationModal({
   const rawEmail = selectedClient?.email || linkedRepair?.clients?.email || "";
   const clientEmail = rawEmail && rawEmail !== "NC" && rawEmail.includes("@") ? rawEmail : "";
 
+  // Annuler = tout effacer (panier, réparation liée, saisie)
+  const handleCancel = () => {
+    if (cartItems.length > 0 || linkedRepair || selectedClient) {
+      setShowCancelWarn(true);
+      return;
+    }
+    onClose();
+  };
+
+  const doCancel = () => {
+    setCartItems(() => []);
+    setLinkedRepair(null);
+    setSelectedClient(null);
+    setClientSearch("");
+    setShowCancelWarn(false);
+    onClose();
+  };
+
+  const miniCount = cartItems.reduce((s, i) => s + i.quantity, 0) + (linkedRepair ? 1 : 0);
+  const miniTotal = cartItems.reduce((s, i) => s + Number(i.product.sale_price) * i.quantity, 0) + (linkedRepair ? Number(linkedRepair.final_price ?? linkedRepair.estimated_price ?? 0) : 0);
+
   return (
     <>
-      <div className="fixed inset-0 bg-black/70 backdrop-blur-sm flex items-center justify-center p-4 z-50">
+      {minimized && (
+        <button
+          onClick={() => setMinimized(false)}
+          className="fixed bottom-24 right-5 lg:bottom-8 z-50 flex items-center gap-2 bg-pink-600 hover:bg-pink-500 text-white pl-4 pr-5 py-3 rounded-full shadow-xl shadow-pink-900/40 active:scale-95 transition-all"
+          aria-label="Reprendre la validation"
+        >
+          <div className="relative">
+            <ShoppingCart size={20} />
+            <span className="absolute -top-2 -right-2 bg-white text-pink-600 text-[10px] font-black rounded-full min-w-[16px] h-4 flex items-center justify-center px-1">{miniCount}</span>
+          </div>
+          <span className="text-sm font-bold">{miniTotal.toFixed(2)} € · Reprendre</span>
+        </button>
+      )}
+      <div className={`fixed inset-0 bg-black/70 backdrop-blur-sm flex items-center justify-center p-4 z-50 ${minimized ? "hidden" : ""}`}>
         <div className="bg-[#16161d] border border-white/10 rounded-2xl w-full max-w-2xl max-h-[92vh] overflow-auto">
           {/* Header */}
           <div className="sticky top-0 bg-[#16161d] border-b border-white/10 px-5 py-4 flex items-center justify-between">
             <h2 className="text-base font-bold text-white">🛒 Validation</h2>
-            <button onClick={onClose} className="w-7 h-7 bg-white/10 hover:bg-white/20 rounded-full flex items-center justify-center text-gray-400 text-sm">✕</button>
+            <div className="flex items-center gap-2">
+              <button onClick={() => setMinimized(true)} title="Réduire (garder le panier)" className="w-7 h-7 bg-white/10 hover:bg-white/20 rounded-full flex items-center justify-center text-gray-300"><Minus size={15} /></button>
+              <button onClick={handleCancel} title="Annuler et vider" className="w-7 h-7 bg-white/10 hover:bg-white/20 rounded-full flex items-center justify-center text-gray-400 text-sm">✕</button>
+            </div>
           </div>
 
           <div className="p-4 space-y-3">
@@ -388,6 +436,7 @@ export default function CartValidationModal({
                       placeholder="Rechercher client *"
                       value={clientSearch}
                       onChange={(e) => { setClientSearch(e.target.value); searchExistingClients(e.target.value); }}
+                      onFocus={() => searchExistingClients(clientSearch)}
                       className="flex-1 bg-[#1a1d2e] border border-white/10 rounded-xl px-3 py-2 text-white text-sm outline-none focus:border-pink-500/50"
                     />
                     <button onClick={() => { setShowNewClientForm((v) => !v); setNewClientForm({ name: "", phone: "", email: "" }); }} className="w-8 h-8 shrink-0 bg-pink-500/15 hover:bg-pink-500/25 text-pink-300 rounded-xl text-lg font-bold border border-pink-500/20 flex items-center justify-center">+</button>
@@ -623,7 +672,7 @@ export default function CartValidationModal({
                 className="px-4 bg-sky-500/15 hover:bg-sky-500/25 text-sky-300 py-3 rounded-xl text-sm border border-sky-500/20 transition-all disabled:opacity-50"
                 title="Valider et envoyer par email"
               ><SendHorizonal size={15} /></button>
-              <button onClick={onClose} className="px-4 bg-white/5 hover:bg-white/10 text-gray-300 py-3 rounded-xl text-sm">Annuler</button>
+              <button onClick={handleCancel} className="px-4 bg-white/5 hover:bg-white/10 text-gray-300 py-3 rounded-xl text-sm">Annuler</button>
             </div>
           </div>
         </div>
@@ -655,6 +704,26 @@ export default function CartValidationModal({
           onClose={() => { setShowRepairScanner(false); setShowModalProductScanner(false); }}
           label="Scanner réparation ou produit"
         />
+      )}
+
+      {/* AVERTISSEMENT ANNULATION */}
+      {showCancelWarn && (
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4 z-[60]">
+          <div className="bg-[#16161d] border border-white/10 rounded-2xl w-full max-w-sm p-6 shadow-2xl">
+            <h2 className="text-white font-bold text-base mb-1">Vider le panier ?</h2>
+            <p className="text-sm text-gray-400 mb-5">
+              Les produits et la saisie en cours seront retirés.
+            </p>
+            <div className="flex gap-2">
+              <button onClick={() => setShowCancelWarn(false)} className="flex-1 bg-white/5 hover:bg-white/10 text-gray-300 py-2.5 rounded-xl text-sm font-medium border border-white/10 transition">
+                Revenir
+              </button>
+              <button onClick={doCancel} className="flex-1 bg-pink-600/90 hover:bg-pink-500 text-white py-2.5 rounded-xl text-sm font-semibold transition">
+                Vider
+              </button>
+            </div>
+          </div>
+        </div>
       )}
     </>
   );

@@ -15,6 +15,23 @@ export default function SoumettreAppareilDirectPage() {
   const [error, setError] = useState(null);
   const [patternValue, setPatternValue] = useState("");
   const [submittedTickets, setSubmittedTickets] = useState([]);
+  const [photos, setPhotos] = useState([]);
+  const [photoPreviews, setPhotoPreviews] = useState([]);
+
+  const addPhotos = (files: FileList | null) => {
+    if (!files) return;
+    const valid = Array.from(files).filter((f) => f.type.startsWith("image/"));
+    setPhotos((prev) => [...prev, ...valid]);
+    setPhotoPreviews((prev) => [...prev, ...valid.map((f) => URL.createObjectURL(f))]);
+  };
+
+  const removePhoto = (index) => {
+    setPhotos((prev) => prev.filter((_, i) => i !== index));
+    setPhotoPreviews((prev) => {
+      URL.revokeObjectURL(prev[index]);
+      return prev.filter((_, i) => i !== index);
+    });
+  };
   const [formData, setFormData] = useState({
     device: "",
     issue: "",
@@ -105,6 +122,9 @@ export default function SoumettreAppareilDirectPage() {
     });
     setPatternValue("");
     setError(null);
+    photoPreviews.forEach((p) => URL.revokeObjectURL(p));
+    setPhotos([]);
+    setPhotoPreviews([]);
   };
 
   const isMissingBoth = () => {
@@ -178,6 +198,23 @@ export default function SoumettreAppareilDirectPage() {
         .single();
 
       if (insertError) throw insertError;
+
+      if (photos.length > 0) {
+        const urls = [];
+        for (const file of photos) {
+          const ext = file.name.split(".").pop();
+          const fileName = `${Date.now()}_${Math.random().toString(36).substring(2)}.${ext}`;
+          const filePath = `repairs/${newTicket.id}/${fileName}`;
+          const { error: uploadError } = await supabase.storage.from("repair-photos").upload(filePath, file);
+          if (!uploadError) {
+            const { data: { publicUrl } } = supabase.storage.from("repair-photos").getPublicUrl(filePath);
+            urls.push(publicUrl);
+          }
+        }
+        if (urls.length > 0) {
+          await supabase.from("repairs").update({ photos: urls }).eq("id", newTicket.id);
+        }
+      }
 
       setSubmittedTickets((prev) => [...prev, { id: newTicket.id, device: formData.device }]);
       resetForm();
@@ -404,6 +441,29 @@ export default function SoumettreAppareilDirectPage() {
                 onChange={handleInputChange}
                 className="w-full px-4 py-3 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-orange-400"
               ></textarea>
+            </div>
+
+            <div>
+              <label className="block text-sm font-semibold text-gray-700 mb-1">
+                📸 Photos (optionnel)
+              </label>
+              <label className="flex flex-col items-center justify-center gap-1.5 border-2 border-dashed border-gray-300 hover:border-orange-400 rounded-xl py-5 cursor-pointer transition bg-gray-50">
+                <span className="text-2xl">📷</span>
+                <span className="text-xs text-gray-500">Ajouter des photos de l'appareil (état, dégâts...)</span>
+                <input type="file" accept="image/*" multiple className="hidden"
+                  onChange={(e) => { addPhotos(e.target.files); e.target.value = ""; }} />
+              </label>
+              {photoPreviews.length > 0 && (
+                <div className="flex flex-wrap gap-2 mt-3">
+                  {photoPreviews.map((src, i) => (
+                    <div key={i} className="relative w-16 h-16 shrink-0">
+                      <img src={src} alt="" className="w-16 h-16 object-cover rounded-lg border border-gray-200" />
+                      <button type="button" onClick={() => removePhoto(i)}
+                        className="absolute -top-1.5 -right-1.5 w-5 h-5 bg-red-500 hover:bg-red-600 text-white rounded-full text-xs flex items-center justify-center">✕</button>
+                    </div>
+                  ))}
+                </div>
+              )}
             </div>
 
             <div className="bg-red-50 border border-red-200 rounded-xl p-3">

@@ -26,11 +26,20 @@ const STATUS_BADGE: Record<string, string> = {
 function getStepIndex(s: string) { return STATUS_STEPS.indexOf(s); }
 const formatDate = (d?: string) => d ? new Date(d).toLocaleDateString("fr-FR", { day: "2-digit", month: "short", year: "numeric" }) : "—";
 const cleanNotes = (t?: string) => t?.replace(/\[DIAGNOSTIC VALIDÉ\]/gi, "").replace(/Risques\s*:\s*Aucun/gi, "").trim() || "";
+// Les colonnes photos peuvent revenir en tableau natif OU en chaîne JSON selon le type de colonne
+function toPhotoArray(v: unknown): string[] {
+  if (Array.isArray(v)) return v;
+  if (typeof v === "string" && v.trim()) {
+    try { const p = JSON.parse(v); return Array.isArray(p) ? p : []; } catch { return []; }
+  }
+  return [];
+}
 
 function SuiviClientContent() {
   const searchParams = useSearchParams();
   const codeFromUrl = searchParams.get("code") || "";
   const nameFromUrl = searchParams.get("name") || "";
+  const ticketFromUrl = searchParams.get("ticket") || "";
 
   const [nameInput, setNameInput] = useState(nameFromUrl);
   const [codeInput, setCodeInput] = useState(codeFromUrl);
@@ -46,7 +55,7 @@ function SuiviClientContent() {
   const [photoModal, setPhotoModal] = useState<string | null>(null);
   const filterRef = useRef<HTMLInputElement>(null);
 
-  const runSearch = async (name: string, code: string) => {
+  const runSearch = async (name: string, code: string, ticketId?: string) => {
     if (!code.trim()) { setError("Veuillez entrer votre code client."); return; }
     setLoading(true); setError(""); setClient(null); setRepairs([]); setSelectedRepair(null); setShowDetail(false); setTicketFilter("");
     try {
@@ -57,12 +66,14 @@ function SuiviClientContent() {
       setClient(json.client);
       const list: any[] = json.repairs || [];
       setRepairs(list);
-      if (list.length > 0) setSelectedRepair(list[0]);
+      const direct = ticketId ? list.find((r) => String(r.id) === String(ticketId)) : null;
+      if (direct) { setSelectedRepair(direct); setClientResponse(""); setShowDetail(true); setTicketFilter(String(direct.id)); }
+      else if (list.length > 0) setSelectedRepair(list[0]);
     } catch { setError("❌ Erreur de chargement. Réessayez."); }
     finally { setLoading(false); }
   };
 
-  useEffect(() => { if (codeFromUrl.trim()) runSearch(nameFromUrl, codeFromUrl); }, []);
+  useEffect(() => { if (codeFromUrl.trim()) runSearch(nameFromUrl, codeFromUrl, ticketFromUrl); }, []);
 
   const handleSearch = (e: React.FormEvent) => { e.preventDefault(); runSearch(nameInput, codeInput); };
   const resetSearch = () => { setClient(null); setRepairs([]); setSelectedRepair(null); setNameInput(""); setCodeInput(""); setError(""); setShowDetail(false); setTicketFilter(""); };
@@ -109,6 +120,8 @@ function SuiviClientContent() {
   // Détail d'un ticket
   const RepairDetail = ({ repair }: { repair: any }) => {
     const stepIdx = getStepIndex(repair.status);
+    const clientPhotos = toPhotoArray(repair.photos);
+    const techPhotos = toPhotoArray(repair.diagnostic_photos);
     return (
       <div className="space-y-4">
         <div className="flex items-start justify-between gap-3">
@@ -156,17 +169,33 @@ function SuiviClientContent() {
           </div>
         )}
 
-        {repair.photos?.length > 0 && (
+        {clientPhotos.length > 0 && (
           <div className="bg-white/3 border border-white/6 rounded-2xl p-4">
-            <p className="text-[10px] font-bold text-gray-600 uppercase tracking-widest mb-3">📸 Photos</p>
-            <div className="grid grid-cols-3 gap-2">{repair.photos.map((p: string, i: number) => <div key={i} className="aspect-square rounded-xl overflow-hidden cursor-pointer active:scale-95 transition" onClick={() => setPhotoModal(p)}><img src={p} alt="" className="w-full h-full object-cover" /></div>)}</div>
+            <p className="text-[10px] font-bold text-gray-600 uppercase tracking-widest mb-3">📸 Vos photos (envoyées avant expédition)</p>
+            <div className="grid grid-cols-3 gap-2">{clientPhotos.map((p: string, i: number) => <div key={i} className="aspect-square rounded-xl overflow-hidden cursor-pointer active:scale-95 transition" onClick={() => setPhotoModal(p)}><img src={p} alt="" className="w-full h-full object-cover" /></div>)}</div>
+          </div>
+        )}
+
+        {techPhotos.length > 0 && (
+          <div className="bg-amber-500/5 border border-amber-500/20 rounded-2xl p-4">
+            <p className="text-[10px] font-bold text-amber-400 uppercase tracking-widest mb-3">🔍 Photos prises par le technicien à la réception</p>
+            <div className="grid grid-cols-3 gap-2">{techPhotos.map((p: string, i: number) => <div key={i} className="aspect-square rounded-xl overflow-hidden cursor-pointer active:scale-95 transition border border-amber-500/20" onClick={() => setPhotoModal(p)}><img src={p} alt="" className="w-full h-full object-cover" /></div>)}</div>
           </div>
         )}
 
         {(repair.status === "⏳ Attente validation client" || repair.status === "🔐 Mot de passe incorrect") && !repair.client_response && (
           <div className="bg-amber-500/8 border border-amber-500/25 rounded-2xl p-4">
-            <p className="text-sm font-bold text-amber-300 mb-1">{repair.status === "⏳ Attente validation client" ? "⏳ Votre accord est requis" : "🔐 Code de déverrouillage requis"}</p>
-            <p className="text-xs text-amber-200/60 mb-4">{repair.status === "⏳ Attente validation client" ? "Le technicien attend votre validation." : "Le technicien a besoin de votre code."}</p>
+            {repair.status === "⏳ Attente validation client" && techPhotos.length > 0 ? (
+              <>
+                <p className="text-sm font-bold text-amber-300 mb-1">⚠️ État différent constaté</p>
+                <p className="text-xs text-amber-200/60 mb-4">Le technicien a constaté un état différent de vos photos à la réception. Comparez les photos ci-dessus puis validez ou contestez.</p>
+              </>
+            ) : (
+              <>
+                <p className="text-sm font-bold text-amber-300 mb-1">{repair.status === "⏳ Attente validation client" ? "⏳ Votre accord est requis" : "🔐 Code de déverrouillage requis"}</p>
+                <p className="text-xs text-amber-200/60 mb-4">{repair.status === "⏳ Attente validation client" ? "Le technicien attend votre validation." : "Le technicien a besoin de votre code."}</p>
+              </>
+            )}
             {repair.diagnostic_price > 0 && repair.status === "⏳ Attente validation client" && <div className="bg-red-500/8 border border-red-500/20 rounded-xl px-3 py-2 mb-4 text-xs text-red-300">⚠️ <strong>Forfait diagnostic : {repair.diagnostic_price}€</strong> — facturé si vous refusez.</div>}
             {repair.status === "🔐 Mot de passe incorrect" && <div className="mb-4 max-w-[220px] mx-auto"><PatternLock onComplete={(p) => setClientResponse(`Schéma : ${p.join("-")}`)} onClear={() => setClientResponse("")} /></div>}
             <textarea className="w-full bg-white/5 border border-white/10 rounded-2xl px-4 py-3 text-white placeholder-gray-600 text-sm outline-none focus:border-amber-500/40 resize-none mb-3" rows={3} placeholder={repair.status === "⏳ Attente validation client" ? "Votre réponse..." : "Code PIN / mot de passe"} value={clientResponse} onChange={e => setClientResponse(e.target.value)} />

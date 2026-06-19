@@ -25,8 +25,6 @@ export default function ClientsPage() {
   const [passwordToDelete, setPasswordToDelete] = useState("");
   const [clientToDelete, setClientToDelete] = useState(null);
 
-  const [filterType, setFilterType] = useState("all");
-
   const [formData, setFormData] = useState({
     civility: "mr",
     lastName: "",
@@ -463,11 +461,11 @@ export default function ClientsPage() {
     ) {
       return false;
     }
-    if (filterType !== "all" && client.type !== filterType) {
-      return false;
-    }
     return true;
   });
+
+  const proClients = filteredClients.filter((c) => c.type === "pro");
+  const particulierClients = filteredClients.filter((c) => c.type !== "pro");
 
   const stats = {
     total: clients.length,
@@ -528,74 +526,54 @@ export default function ClientsPage() {
           </div>
         </div>
 
-        {/* SEARCH / FILTER */}
-        <div className="bg-[#16161d] border border-white/5 rounded-2xl p-4 mb-5 flex gap-3">
+        {/* SEARCH */}
+        <div className="bg-[#16161d] border border-white/5 rounded-2xl p-4 mb-5">
           <input
             type="text"
             placeholder="Rechercher par nom ou code..."
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
-            className={`flex-1 ${inputCls}`}
+            className={`w-full ${inputCls}`}
           />
-          <select
-            value={filterType}
-            onChange={(e) => setFilterType(e.target.value)}
-            className="bg-[#1a1d2e] border border-white/10 rounded-xl px-3 py-2.5 text-white text-sm outline-none focus:border-emerald-500/60 focus:ring-2 focus:ring-emerald-500/15 transition-all"
-          >
-            <option value="all">Tous</option>
-            <option value="pro">Professionnels</option>
-            <option value="particulier">Particuliers</option>
-          </select>
         </div>
 
-        {/* TABLE */}
-        <div className="bg-[#16161d] border border-white/5 rounded-2xl overflow-hidden">
-          <div className="overflow-x-auto">
-            <table className="w-full">
-              <thead>
-                <tr className="bg-emerald-500/10 border-b border-white/5">
-                  <th className="px-4 py-3 text-left text-xs font-bold text-emerald-400 uppercase tracking-widest">🔑 Code</th>
-                  <th className="px-4 py-3 text-left text-xs font-bold text-emerald-400 uppercase tracking-widest">👤 Nom</th>
-                  <th className="px-4 py-3 text-left text-xs font-bold text-emerald-400 uppercase tracking-widest">✉️ Email</th>
-                  <th className="px-4 py-3 text-left text-xs font-bold text-emerald-400 uppercase tracking-widest">📞 Téléphone</th>
-                  <th className="px-4 py-3 text-left text-xs font-bold text-emerald-400 uppercase tracking-widest">🏷️ Type</th>
-                  <th className="px-4 py-3 text-center text-xs font-bold text-emerald-400 uppercase tracking-widest">⚡ Actions</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-white/5">
-                {filteredClients.length === 0 ? (
-                  <tr>
-                    <td colSpan={6} className="px-4 py-12 text-center text-gray-500 text-sm">Aucun client trouvé</td>
-                  </tr>
+        {/* DEUX COLONNES : PRO (gauche) / PARTICULIER (droite) */}
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+          {[
+            { label: "🏢 Professionnels", accent: "blue", list: proClients },
+            { label: "👤 Particuliers", accent: "emerald", list: particulierClients },
+          ].map((col) => (
+            <div key={col.label} className="bg-[#16161d] border border-white/5 rounded-2xl overflow-hidden">
+              <div className={`px-4 py-3 border-b border-white/5 flex items-center justify-between ${col.accent === "blue" ? "bg-blue-500/10" : "bg-emerald-500/10"}`}>
+                <span className={`text-xs font-bold uppercase tracking-widest ${col.accent === "blue" ? "text-blue-400" : "text-emerald-400"}`}>{col.label}</span>
+                <span className={`text-xs font-bold px-2 py-0.5 rounded-full ${col.accent === "blue" ? "bg-blue-500/15 text-blue-300" : "bg-emerald-500/15 text-emerald-300"}`}>{col.list.length}</span>
+              </div>
+              <div className="divide-y divide-white/5 max-h-[70vh] overflow-y-auto">
+                {col.list.length === 0 ? (
+                  <div className="px-4 py-10 text-center text-gray-500 text-sm">Aucun client</div>
                 ) : (
-                  filteredClients.map((client) => (
-                    <tr key={client.id} className="hover:bg-white/5 transition-colors duration-150 cursor-pointer" onClick={() => router.push(`/clients/${client.id}`)}>
-                      <td className="px-4 py-3">
+                  col.list.map((client) => (
+                    <div key={client.id} className="flex items-center justify-between gap-3 px-4 py-3 hover:bg-white/5 transition-colors duration-150 cursor-pointer" onClick={() => router.push(`/clients/${client.id}`)}>
+                      <div className="min-w-0">
                         <div className="flex items-center gap-2">
-                          <code className="bg-emerald-500/10 text-emerald-400 px-2 py-1 rounded-lg text-xs font-mono">{client.client_code}</code>
-                          <button onClick={(e) => { e.stopPropagation(); copyClientCode(client.client_code); }} className="text-gray-500 hover:text-emerald-400 transition-colors" title="Copier">📋</button>
+                          <span className="font-semibold text-white text-sm truncate">{client.name}</span>
+                          <code className="bg-white/5 text-gray-400 px-1.5 py-0.5 rounded text-[10px] font-mono shrink-0">{client.client_code}</code>
                         </div>
-                      </td>
-                      <td className="px-4 py-3 font-semibold text-white text-sm">{client.name}</td>
-                      <td className="px-4 py-3 text-sm text-gray-400">{client.email !== "NC" ? client.email : "-"}</td>
-                      <td className="px-4 py-3 text-sm text-gray-400">{client.phone !== "NC" ? client.phone : "-"}</td>
-                      <td className="px-4 py-3">
-                        {client.type === "pro" ? (
-                          <span className="inline-flex items-center gap-1 px-2 py-1 bg-blue-500/10 text-blue-400 rounded-full text-xs font-medium">🏢 Pro</span>
-                        ) : (
-                          <span className="inline-flex items-center gap-1 px-2 py-1 bg-emerald-500/10 text-emerald-400 rounded-full text-xs font-medium">👤 Particulier</span>
-                        )}
-                      </td>
-                      <td className="px-4 py-3 text-center">
-                        <button onClick={(e) => { e.stopPropagation(); openEditModal(client); }} className="text-gray-400 hover:text-emerald-400 transition-colors mx-1 text-lg" title="Modifier">✏️</button>
-                        <button onClick={(e) => { e.stopPropagation(); openDeleteModal(client); }} className="text-gray-400 hover:text-red-400 transition-colors mx-1 text-lg" title="Supprimer">🗑️</button>
-                      </td>
-                    </tr>
+                        <div className="text-xs text-gray-500 truncate mt-0.5">
+                          {client.phone !== "NC" ? client.phone : ""}{client.phone !== "NC" && client.email !== "NC" ? " · " : ""}{client.email !== "NC" ? client.email : ""}
+                        </div>
+                      </div>
+                      <div className="flex items-center gap-1 shrink-0">
+                        <button onClick={(e) => { e.stopPropagation(); copyClientCode(client.client_code); }} className="text-gray-500 hover:text-emerald-400 transition-colors p-1" title="Copier le code">📋</button>
+                        <button onClick={(e) => { e.stopPropagation(); openEditModal(client); }} className="text-gray-400 hover:text-emerald-400 transition-colors p-1" title="Modifier">✏️</button>
+                        <button onClick={(e) => { e.stopPropagation(); openDeleteModal(client); }} className="text-gray-400 hover:text-red-400 transition-colors p-1" title="Supprimer">🗑️</button>
+                      </div>
+                    </div>
                   ))
                 )}
-              </tbody>
-            </table>
-          </div>
+              </div>
+            </div>
+          ))}
         </div>
       </div>
 

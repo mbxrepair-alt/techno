@@ -39,7 +39,7 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
   const { data: repairsData, error: repairsError } = await supabaseAdmin
     .from("repairs")
     .select(
-      "id, device, issue, status, created_at, technician, diagnostic_technicien, repair_description, risks, photos, client_response, client_response_type, imei, estimated_price, final_price, diagnostic_price"
+      "id, device, issue, status, created_at, technician, diagnostic_technicien, repair_description, risks, photos, diagnostic_photos, client_response, client_response_type, imei, estimated_price, final_price, diagnostic_price"
     )
     .eq("client_id", clientData.id)
     .order("created_at", { ascending: false });

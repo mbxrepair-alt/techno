@@ -110,6 +110,9 @@ export default function RepairsPage() {
 
 
   useEffect(() => {
+    const companyId = typeof window !== "undefined" ? localStorage.getItem("company_id") : null;
+    if (companyId) setUserId(companyId);
+
     loadCurrentTechnician();
     loadData();
     loadTechnicians();

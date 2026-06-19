@@ -11,6 +11,14 @@ const STATUS_MESSAGES: Record<string, { subject: string; title: string; body: st
       "Consultez le détail (travaux et tarif) puis donnez votre accord en ligne. La réparation démarrera dès votre confirmation.",
     cta: "Valider ma réparation",
   },
+  "etat_different": {
+    subject: "État de votre appareil à vérifier",
+    title: "⚠️ État différent constaté à la réception",
+    body:
+      "À la réception de votre {device}, notre technicien a constaté un état différent de celui présenté sur vos photos avant envoi. " +
+      "Nous avons pris des photos à la réception : merci de les comparer aux vôtres et de valider avant que nous démarrions la réparation.",
+    cta: "Voir les photos et valider",
+  },
   "🔐 Mot de passe incorrect": {
     subject: "Code de déverrouillage incorrect",
     title: "🔐 Nous avons besoin du bon code",
@@ -33,11 +41,11 @@ const STATUS_MESSAGES: Record<string, { subject: string; title: string; body: st
 
 export async function POST(request: NextRequest): Promise<NextResponse> {
   try {
-    const { to, clientName, device, status, trackingLink, companyName, companyPhone, companyEmail } =
+    const { to, clientName, device, status, reason, trackingLink, companyName, companyPhone, companyEmail } =
       await request.json();
 
     if (!to) return NextResponse.json({ error: "Email destinataire manquant" }, { status: 400 });
-    const cfg = STATUS_MESSAGES[status];
+    const cfg = STATUS_MESSAGES[reason] || STATUS_MESSAGES[status];
     if (!cfg) return NextResponse.json({ error: "Statut non concerné" }, { status: 400 });
 
     const transporter = createTransporter();

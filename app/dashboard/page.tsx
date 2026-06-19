@@ -260,6 +260,9 @@ export default function Dashboard() {
 
   // Charger les infos de l'atelier
   useEffect(() => {
+    const companyId = typeof window !== "undefined" ? localStorage.getItem("company_id") : null;
+    if (companyId) setUserId(companyId);
+
     const loadCompanyInfo = async () => {
       const companyId = typeof window !== "undefined" ? localStorage.getItem("company_id") : null;
       if (!companyId) return;
@@ -1457,7 +1460,7 @@ export default function Dashboard() {
       {/* ========== HEADER AVEC SCANNER QR ET RECHERCHE ========== */}
       <div className="mb-6 rounded-2xl border border-blue-500/25 bg-blue-500/[0.03] p-4">
         <div className="flex items-center gap-2 mb-3">
-          <span className="text-[10px] font-bold bg-blue-500/20 text-blue-300 px-2.5 py-1 rounded-full uppercase tracking-wider">🔍 Rechercher</span>
+          <span className="text-[10px] font-bold bg-orange-500/20 text-orange-300 px-2.5 py-1 rounded-full uppercase tracking-wider">🔍 Rechercher</span>
           <span className="text-sm font-semibold text-blue-200">Ouvrir un ticket existant</span>
         </div>
         <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
@@ -1688,11 +1691,11 @@ export default function Dashboard() {
                   value={intakeClient} onChange={(e) => handleClientSearch(e.target.value)}
                   onKeyDown={handleClientKeyDown} />
                 {showClientSuggestions && clientSuggestions.length > 0 && (
-                  <div className="absolute z-20 top-full left-0 right-0 mt-1 bg-[#2d3159] border border-white/10 rounded-xl shadow-2xl max-h-48 overflow-auto">
+                  <div className="absolute z-20 top-full left-0 right-0 mt-1 bg-[#16161d] border border-orange-500/20 rounded-xl shadow-2xl max-h-48 overflow-auto">
                     <div className="divide-y divide-white/5 p-1">
                       {clientSuggestions.map((c, idx) => (
                         <div key={c.id}
-                          className={`py-2.5 px-4 rounded-lg cursor-pointer text-sm transition-colors duration-150 ${selectedClientIndex === idx ? "bg-blue-500/20 text-blue-300" : "hover:bg-blue-500/10 hover:text-blue-400 text-gray-300"}`}
+                          className={`py-2.5 px-4 rounded-lg cursor-pointer text-sm transition-colors duration-150 ${selectedClientIndex === idx ? "bg-orange-500/20 text-orange-300" : "hover:bg-orange-500/10 hover:text-orange-400 text-gray-300"}`}
                           onMouseDown={() => selectClient(c)}>
                           <div className="font-medium">{c.name}</div>
                           {c.phone !== "NC" && <div className="text-xs text-gray-500">{c.phone}</div>}
@@ -1709,11 +1712,11 @@ export default function Dashboard() {
                   value={intakePhone} onChange={(e) => handlePhoneSearch(e.target.value)}
                   onKeyDown={handlePhoneKeyDown} />
                 {showPhoneSuggestions && phoneSuggestions.length > 0 && (
-                  <div className="absolute z-20 top-full left-0 right-0 mt-1 bg-[#2d3159] border border-white/10 rounded-xl shadow-2xl max-h-48 overflow-auto">
+                  <div className="absolute z-20 top-full left-0 right-0 mt-1 bg-[#16161d] border border-orange-500/20 rounded-xl shadow-2xl max-h-48 overflow-auto">
                     <div className="divide-y divide-white/5 p-1">
                       {phoneSuggestions.map((c, idx) => (
                         <div key={c.id}
-                          className={`py-2.5 px-4 rounded-lg cursor-pointer text-sm transition-colors duration-150 ${selectedPhoneIndex === idx ? "bg-blue-500/20 text-blue-300" : "hover:bg-blue-500/10 hover:text-blue-400 text-gray-300"}`}
+                          className={`py-2.5 px-4 rounded-lg cursor-pointer text-sm transition-colors duration-150 ${selectedPhoneIndex === idx ? "bg-orange-500/20 text-orange-300" : "hover:bg-orange-500/10 hover:text-orange-400 text-gray-300"}`}
                           onMouseDown={() => selectPhoneSuggestion(c)}>
                           <div className="font-medium">{c.phone}</div>
                           <div className="text-xs text-gray-500">{c.name}</div>
@@ -1744,7 +1747,7 @@ export default function Dashboard() {
                   onKeyDown={handleNumberKeyDown} />
               </div>
               <button type="button" onClick={generateRepairSlots}
-                className="bg-gradient-to-r from-blue-600 to-purple-600 text-white px-5 py-2.5 rounded-xl text-sm font-semibold hover:from-blue-500 hover:to-purple-500 transition-all duration-200 active:scale-95 flex items-center gap-1.5">
+                className="bg-gradient-to-r from-orange-600 to-amber-600 text-white px-5 py-2.5 rounded-xl text-sm font-semibold hover:from-orange-500 hover:to-amber-500 transition-all duration-200 active:scale-95 flex items-center gap-1.5">
                 ✨ Générer
               </button>
               <span className="text-xs text-gray-500">{repairsList.length} appareil(s)</span>
@@ -1778,10 +1781,10 @@ export default function Dashboard() {
                         <input autoComplete="new-password" className={inputCls} placeholder="iPhone 15 Pro Max..." value={repair.device}
                           onChange={(e) => handleDeviceSearch(repair.id, e.target.value)} />
                         {showDeviceSuggestionsMap[repair.id] && deviceSuggestionsMap[repair.id]?.length > 0 && (
-                          <div className="absolute z-20 top-full left-0 right-0 mt-1 bg-[#2d3159] border border-white/10 rounded-xl shadow-2xl max-h-40 overflow-auto">
+                          <div className="absolute z-20 top-full left-0 right-0 mt-1 bg-[#16161d] border border-orange-500/20 rounded-xl shadow-2xl max-h-40 overflow-auto">
                             <div className="divide-y divide-white/5 p-1">
                               {deviceSuggestionsMap[repair.id].map((d, i) => (
-                                <div key={i} className="py-2.5 px-4 rounded-lg cursor-pointer hover:bg-blue-500/10 hover:text-blue-400 text-gray-300 text-sm transition-colors duration-150"
+                                <div key={i} className="py-2.5 px-4 rounded-lg cursor-pointer hover:bg-orange-500/10 hover:text-orange-400 text-gray-300 text-sm transition-colors duration-150"
                                   onMouseDown={() => selectDevice(repair.id, d)}>📱 {d}</div>
                               ))}
                             </div>
@@ -1865,10 +1868,10 @@ export default function Dashboard() {
                         <input autoComplete="new-password" className={inputCls} placeholder="PIN..." value={repair.code}
                           onChange={(e) => { updateRepairField(repair.id, "code", e.target.value); searchCodeSuggestions(e.target.value, repair.id); }} />
                         {showCodeSuggestionsMap[repair.id] && codeSuggestionsMap[repair.id]?.length > 0 && (
-                          <div className="absolute z-20 top-full left-0 right-0 mt-1 bg-[#2d3159] border border-white/10 rounded-xl shadow-2xl max-h-40 overflow-auto">
+                          <div className="absolute z-20 top-full left-0 right-0 mt-1 bg-[#16161d] border border-orange-500/20 rounded-xl shadow-2xl max-h-40 overflow-auto">
                             <div className="divide-y divide-white/5 p-1">
                               {codeSuggestionsMap[repair.id].map((code, i) => (
-                                <div key={i} className="py-2.5 px-4 rounded-lg cursor-pointer hover:bg-blue-500/10 hover:text-blue-400 text-gray-300 text-sm transition-colors duration-150"
+                                <div key={i} className="py-2.5 px-4 rounded-lg cursor-pointer hover:bg-orange-500/10 hover:text-orange-400 text-gray-300 text-sm transition-colors duration-150"
                                   onMouseDown={() => selectCodeForRepair(repair.id, code)}>🔑 {code}</div>
                               ))}
                             </div>
@@ -1890,7 +1893,7 @@ export default function Dashboard() {
           </div>
 
           <button onClick={createIntake} disabled={loading}
-            className="relative w-full overflow-hidden bg-gradient-to-r from-blue-600 via-purple-600 to-blue-600 text-white py-4 rounded-xl font-bold text-lg hover:opacity-90 hover:scale-[1.01] hover:shadow-lg hover:shadow-purple-500/30 active:scale-[0.99] transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2">
+            className="relative w-full overflow-hidden bg-gradient-to-r from-orange-600 via-amber-600 to-orange-600 text-white py-4 rounded-xl font-bold text-lg hover:opacity-90 hover:scale-[1.01] hover:shadow-lg hover:shadow-orange-500/30 active:scale-[0.99] transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2">
             <span className="absolute inset-0 -translate-x-full animate-shimmer bg-gradient-to-r from-transparent via-white/15 to-transparent pointer-events-none" />
             <span className="relative">{loading ? "⏳ Création en cours..." : `🎫 Créer ${repairsList.length} ticket(s)  →`}</span>
           </button>

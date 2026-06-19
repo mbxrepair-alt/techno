@@ -1227,6 +1227,14 @@ export default function Dashboard() {
 
         if (repairError) throw repairError;
         createdRepairs.push(newRepair);
+
+        await addHistoriqueAction({
+          repairId: newRepair.id,
+          action: "creation",
+          description: `📦 Ticket créé par le technicien — ${repair.device} (${repair.issue})`,
+          oldValue: null,
+          newValue: null,
+        });
       }
 
       if (createdRepairs.length > 0 && clientData) {

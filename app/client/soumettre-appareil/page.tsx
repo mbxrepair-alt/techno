@@ -291,6 +291,19 @@ export default function SoumettreAppareilPage() {
           .select().single();
         if (insertError) throw insertError;
 
+        await fetch("/api/historique", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            entity_type: "appareil",
+            entity_id: newTicket.id,
+            action: "creation",
+            description: `📦 Appareil déclaré par le client — ${formData.device} (${formData.issue})`,
+            user_type: "client",
+            user_name: client?.name || "Client",
+          }),
+        }).catch(() => {});
+
         if (photos.length > 0) {
           const urls: string[] = [];
           for (const file of photos) {

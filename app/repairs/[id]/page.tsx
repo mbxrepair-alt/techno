@@ -1170,11 +1170,41 @@ export default function RepairDetailPage() {
               </div>
             </div>
 
-            {/* Description */}
+            {/* État physique constaté par le client + pièces manquantes (saisis à la déclaration) */}
+            {repair?.diagnosis && repair.diagnosis !== "NC" && repair.diagnosis !== "" && (() => {
+              const lines = repair.diagnosis.split("\n").map((l: string) => l.trim()).filter(Boolean);
+              const etat: string[] = [];
+              let pieces: string | null = null;
+              lines.forEach((line: string) => {
+                const m = line.match(/Pièces manquantes\s*:\s*(.+)$/i);
+                if (m) pieces = m[1].trim();
+                else etat.push(line.replace(/^⚠️\s*/, ""));
+              });
+              return (
+                <>
+                  {etat.length > 0 && (
+                    <div className="bg-amber-500/8 border border-amber-500/20 rounded-xl p-3 mb-3">
+                      <p className="text-[10px] font-bold text-amber-400 uppercase tracking-widest mb-1.5">⚠️ État physique constaté par le client</p>
+                      <ul className="text-gray-300 text-sm space-y-0.5">
+                        {etat.map((line, i) => <li key={i}>• {line}</li>)}
+                      </ul>
+                    </div>
+                  )}
+                  {pieces && (
+                    <div className="bg-orange-500/8 border border-orange-500/20 rounded-xl p-3 mb-3">
+                      <p className="text-[10px] font-bold text-orange-400 uppercase tracking-widest mb-1">🧩 Pièces manquantes</p>
+                      <p className="text-gray-300 text-sm">{pieces}</p>
+                    </div>
+                  )}
+                </>
+              );
+            })()}
+
+            {/* Diagnostic client */}
             {repair?.description && repair.description !== "NC" && repair.description !== "" && (
               <div className="bg-black/30 border border-white/5 rounded-xl p-3 mb-3">
-                <p className="text-[10px] font-bold text-gray-500 uppercase tracking-widest mb-1">📝 Description</p>
-                <p className="text-gray-300 text-sm">{repair.description}</p>
+                <p className="text-[10px] font-bold text-gray-500 uppercase tracking-widest mb-1">📝 Diagnostic client</p>
+                <p className="text-gray-300 text-sm whitespace-pre-wrap">{repair.description}</p>
               </div>
             )}
 

@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { supabase } from "../../../../lib/supabase";
 import PatternLock from "../../../../components/PatternLock";
+import { ISSUE_CATEGORIES } from "../../../../lib/devices-catalog";
 
 export default function SoumettreAppareilDirectPage() {
   const params = useParams();
@@ -17,6 +18,8 @@ export default function SoumettreAppareilDirectPage() {
   const [submittedTickets, setSubmittedTickets] = useState([]);
   const [photos, setPhotos] = useState([]);
   const [photoPreviews, setPhotoPreviews] = useState([]);
+  const [priceInfo, setPriceInfo] = useState(null);
+  const [openCategory, setOpenCategory] = useState(null);
 
   const addPhotos = (files: FileList | null) => {
     if (!files) return;
@@ -51,6 +54,45 @@ export default function SoumettreAppareilDirectPage() {
       loadClientFromToken();
     }
   }, [token]);
+
+  // Tarifs configurés pour le modèle sélectionné — seules ces pannes sont proposées au client
+  const [availablePrices, setAvailablePrices] = useState([]);
+
+  useEffect(() => {
+    if (!client?.user_id || !formData.device.trim()) {
+      setAvailablePrices([]);
+      return;
+    }
+    let cancelled = false;
+    (async () => {
+      const { data } = await supabase
+        .from("panne_prices")
+        .select("issue_label, price_min, price_max")
+        .eq("company_id", client.user_id)
+        .eq("device_model", formData.device.trim());
+      if (!cancelled) setAvailablePrices(data || []);
+    })();
+    return () => { cancelled = true; };
+  }, [client, formData.device]);
+
+  // "Changement d'écran" se décline en plusieurs qualités (ex: "Changement d'écran - Soft Oled")
+  const issueHasPrice = (issue) =>
+    issue === "Changement d'écran"
+      ? availablePrices.some((p) => p.issue_label.startsWith("Changement d'écran - "))
+      : availablePrices.some((p) => p.issue_label === issue);
+
+  const availableCategories = ISSUE_CATEGORIES.filter((cat) => cat.issues.some(issueHasPrice));
+
+  const [pendingScreenChange, setPendingScreenChange] = useState(false);
+  const screenQualityOptions = availablePrices
+    .filter((p) => p.issue_label.startsWith("Changement d'écran - "))
+    .map((p) => p.issue_label.replace("Changement d'écran - ", ""));
+
+  useEffect(() => {
+    if (!formData.issue.trim()) { setPriceInfo(null); return; }
+    const match = availablePrices.find((p) => p.issue_label === formData.issue.trim());
+    setPriceInfo(match ? { min: match.price_min, max: match.price_max } : null);
+  }, [availablePrices, formData.issue]);
 
   const loadClientFromToken = async () => {
     setLoading(true);
@@ -100,6 +142,12 @@ export default function SoumettreAppareilDirectPage() {
 
   const handleInputChange = (e) => {
     const { name, value, type, checked } = e.target;
+    if (name === "device") {
+      setFormData((prev) => ({ ...prev, device: value, issue: "" }));
+      setOpenCategory(null);
+      setPendingScreenChange(false);
+      return;
+    }
     setFormData((prev) => ({
       ...prev,
       [name]: type === "checkbox" ? checked : value,
@@ -144,6 +192,7 @@ export default function SoumettreAppareilDirectPage() {
 
   const handleSubmitAppareil = async (e) => {
     e.preventDefault();
+    if (!formData.issue.trim()) { setError("Sélectionnez une panne dans une catégorie."); return; }
     setLoading(true);
     setError(null);
 
@@ -330,15 +379,93 @@ export default function SoumettreAppareilDirectPage() {
               <label className="block text-sm font-semibold text-gray-700 mb-1">
                 🔧 Panne / Problème *
               </label>
-              <input
-                type="text"
-                name="issue"
-                required
-                placeholder="Ex: Ne charge plus, écran noir, batterie gonflée..."
-                value={formData.issue}
-                onChange={handleInputChange}
-                className="w-full px-4 py-3 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-orange-400"
-              />
+              {!formData.device.trim() ? (
+                <p className="text-xs text-gray-500 bg-gray-50 rounded-xl px-4 py-3">Sélectionnez d&apos;abord un modèle ci-dessus.</p>
+              ) : availableCategories.length === 0 ? (
+                <p className="text-xs text-amber-700 bg-amber-50 border border-amber-200 rounded-xl px-4 py-3">Aucune panne tarifée pour ce modèle pour le moment. Contactez l&apos;atelier pour un devis.</p>
+              ) : (
+                <>
+                  <div className="flex flex-wrap gap-1.5">
+                    {availableCategories.map((cat) => (
+                      <button
+                        key={cat.id}
+                        type="button"
+                        onClick={() => setOpenCategory(openCategory === cat.id ? null : cat.id)}
+                        className={`px-3 py-1.5 rounded-full text-xs font-medium transition border ${openCategory === cat.id ? "bg-orange-100 border-orange-400 text-orange-700" : "bg-gray-50 border-gray-200 text-gray-600 hover:border-orange-300"}`}
+                      >
+                        {cat.label}
+                      </button>
+                    ))}
+                  </div>
+                  {openCategory && (
+                    <div className="mt-2 flex flex-wrap gap-1.5 bg-gray-50 rounded-xl p-3">
+                      {ISSUE_CATEGORIES.find((c) => c.id === openCategory)?.issues
+                        .filter(issueHasPrice)
+                        .map((issue) => (
+                          <button
+                            key={issue}
+                            type="button"
+                            onClick={() => {
+                              if (issue === "Changement d'écran") { setPendingScreenChange(true); setFormData((p) => ({ ...p, issue: "" })); return; }
+                              setPendingScreenChange(false);
+                              setFormData((p) => ({ ...p, issue }));
+                              setOpenCategory(null);
+                            }}
+                            className={`px-3 py-1.5 rounded-full text-xs font-medium transition border ${formData.issue === issue || (issue === "Changement d'écran" && pendingScreenChange) ? "bg-green-100 border-green-400 text-green-700" : "bg-white border-gray-200 text-gray-600 hover:border-orange-300"}`}
+                          >
+                            {issue}
+                          </button>
+                        ))}
+                    </div>
+                  )}
+                  {(openCategory === "eau" || ISSUE_CATEGORIES.find((c) => c.id === "eau")?.issues.includes(formData.issue) || formData.issue === "Oxydation (carte mère)") && (
+                    <div className="mt-2 flex items-start gap-2 bg-amber-50 border border-amber-200 rounded-xl px-4 py-3">
+                      <span className="text-lg shrink-0">⚠️</span>
+                      <p className="text-[11px] text-amber-700">En cas de dégât des eaux ou d&apos;oxydation, le bon fonctionnement de l&apos;appareil après réparation n&apos;est pas garanti.</p>
+                    </div>
+                  )}
+                  {formData.issue === "Mise à jour et restauration" && (
+                    <div className="mt-2 flex items-start gap-2 bg-amber-50 border border-amber-200 rounded-xl px-4 py-3">
+                      <span className="text-lg shrink-0">⚠️</span>
+                      <p className="text-[11px] text-amber-700">Une mise à jour ou restauration logicielle comporte un risque de perte des données. Pensez à faire une sauvegarde si possible.</p>
+                    </div>
+                  )}
+                  {pendingScreenChange && (
+                    <div className="mt-2">
+                      <p className="text-[10px] text-gray-500 mb-1.5">✨ Quelle qualité d&apos;écran souhaitez-vous ?</p>
+                      <div className="flex flex-wrap gap-1.5 bg-gray-50 rounded-xl p-3">
+                        {screenQualityOptions.map((quality) => (
+                          <button
+                            key={quality}
+                            type="button"
+                            onClick={() => {
+                              setFormData((p) => ({ ...p, issue: `Changement d'écran - ${quality}` }));
+                              setPendingScreenChange(false);
+                              setOpenCategory(null);
+                            }}
+                            className={`px-3 py-1.5 rounded-full text-xs font-medium transition border ${formData.issue === `Changement d'écran - ${quality}` ? "bg-green-100 border-green-400 text-green-700" : "bg-white border-gray-200 text-gray-600 hover:border-orange-300"}`}
+                          >
+                            {quality}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                  {formData.issue && (
+                    <p className="text-xs text-gray-500 mt-2">✅ Panne sélectionnée : <span className="text-gray-900 font-medium">{formData.issue}</span></p>
+                  )}
+                </>
+              )}
+
+              {priceInfo && (
+                <div className="flex items-center gap-3 bg-green-50 border border-green-200 rounded-xl px-4 py-3 mt-2">
+                  <span className="text-2xl shrink-0">💰</span>
+                  <div>
+                    <p className="text-green-700 font-bold text-base">Entre {priceInfo.min}€ et {priceInfo.max}€</p>
+                    <p className="text-[10px] text-green-600">Estimation pour cette panne — prix final confirmé après diagnostic</p>
+                  </div>
+                </div>
+              )}
             </div>
 
             <div>
@@ -444,12 +571,12 @@ export default function SoumettreAppareilDirectPage() {
 
             <div>
               <label className="block text-sm font-semibold text-gray-700 mb-1">
-                📝 Description complète
+                📝 Diagnostic client
               </label>
               <textarea
                 name="description"
                 rows={4}
-                placeholder="Décrivez précisément les problèmes constatés, l'état général..."
+                placeholder="Qu'avez-vous déjà testé ou changé sur l'appareil ? Dans quel contexte le problème est apparu ? (ex : suite à un changement de châssis, le téléphone reboot...)"
                 value={formData.description}
                 onChange={handleInputChange}
                 className="w-full px-4 py-3 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-orange-400"

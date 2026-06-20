@@ -1433,6 +1433,79 @@ const ISSUES_BY_FAMILY: Record<string, string[]> = {
   generic: [],
 };
 
+// ─────────────────────────────────────────────
+// PANNES PAR CATÉGORIE — pour le catalogue de tarifs
+// (logique diagnostic : du plus simple/économique au plus coûteux)
+// ─────────────────────────────────────────────
+
+export interface IssueCategory {
+  id: string;
+  label: string;
+  issues: string[];
+}
+
+export const ISSUE_CATEGORIES: IssueCategory[] = [
+  {
+    id: "affichage",
+    label: "📺 Problème d'affichage",
+    issues: ["Changement d'écran", "Trappe d'affichage (connecteur)", "Circuit d'affichage (microsoudure)"],
+  },
+  {
+    id: "tactile",
+    label: "👆 Problème tactile",
+    issues: ["Changement de vitre tactile", "Connecteur tactile (nappe)", "Circuit tactile (microsoudure)"],
+  },
+  {
+    id: "charge",
+    label: "🔋 Problème de charge",
+    issues: ["Nettoyage port de charge", "Connecteur de charge", "Batterie", "Circuit de charge (microsoudure)"],
+  },
+  {
+    id: "audio",
+    label: "🔊 Problème audio / son",
+    issues: ["Haut-parleur", "Micro", "Circuit audio (microsoudure)"],
+  },
+  {
+    id: "camera",
+    label: "📷 Problème caméra",
+    issues: ["Caméra avant", "Caméra arrière", "Circuit caméra (microsoudure)"],
+  },
+  {
+    id: "reseau",
+    label: "📡 Problème réseau",
+    issues: ["Carte SIM", "Antennes réseau", "Circuit modem / baseband (microsoudure)"],
+  },
+  {
+    id: "eau",
+    label: "💧 Dégât des eaux / oxydation",
+    issues: ["Désoxydation + bain à ultrasons", "Recherche court-circuit (caméra thermique)", "Récupération de données"],
+  },
+  {
+    id: "boutons",
+    label: "🔧 Boutons & châssis",
+    issues: ["Bouton power", "Boutons volume", "Châssis / cadre", "Vitre arrière"],
+  },
+  {
+    id: "logiciel",
+    label: "🔓 Déverrouillage / logiciel",
+    issues: ["Mise à jour et restauration", "Flash", "Déverrouillage Gmail / FRP"],
+  },
+  {
+    id: "carte_mere",
+    label: "🔌 Ne s'allume pas / Carte mère",
+    issues: ["Ne s'allume pas (carte mère)", "Extinction intempestive (carte mère)", "Court-circuit (carte mère)", "Oxydation (carte mère)"],
+  },
+];
+
+// Qualités d'écran disponibles quand la panne sélectionnée est "Changement d'écran" (pour modèles Apple)
+export const SCREEN_QUALITIES: string[] = [
+  "Ecran Tactile Original Apple (Service Pack)",
+  "Ecran Tactile Original Pulled",
+  "Ecran Tactile Soft Oled",
+  "Ecran Tactile Hard Oled",
+  "Ecran Tactile Incell FHD",
+];
+
 /**
  * Retourne les pannes rapides (chips) pour un modèle donné
  * — Top 8 pannes les plus fréquentes pour cette famille

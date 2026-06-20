@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import QRCode from "qrcode";
 import { supabase } from "../../../lib/supabase";
 import PatternLock from "../../../components/PatternLock";
-import { DEVICES_LIST, getSmartIssueSuggestions, getQuickIssues } from "../../../lib/devices-catalog";
+import { DEVICES_LIST, ISSUE_CATEGORIES } from "../../../lib/devices-catalog";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -97,35 +97,67 @@ export default function SoumettreAppareilPage() {
     });
   };
 
+  // Prix estimé (modèle + panne → tarif configuré par l'atelier)
+  const [priceInfo, setPriceInfo] = useState<{ min: number; max: number } | null>(null);
+  const [openCategory, setOpenCategory] = useState<string | null>(null);
+
+  // Tarifs configurés pour le modèle sélectionné — seules ces pannes sont proposées au client
+  const [availablePrices, setAvailablePrices] = useState<{ issue_label: string; price_min: number; price_max: number }[]>([]);
+
+  useEffect(() => {
+    if (!client?.user_id || !formData.device.trim()) {
+      setAvailablePrices([]);
+      return;
+    }
+    let cancelled = false;
+    (async () => {
+      const { data } = await supabase
+        .from("panne_prices")
+        .select("issue_label, price_min, price_max")
+        .eq("company_id", client.user_id)
+        .eq("device_model", formData.device.trim());
+      if (!cancelled) setAvailablePrices(data || []);
+    })();
+    return () => { cancelled = true; };
+  }, [client, formData.device]);
+
+  // "Changement d'écran" se décline en plusieurs qualités (ex: "Changement d'écran - Soft Oled")
+  const issueHasPrice = (issue: string) =>
+    issue === "Changement d'écran"
+      ? availablePrices.some((p) => p.issue_label.startsWith("Changement d'écran - "))
+      : availablePrices.some((p) => p.issue_label === issue);
+
+  const availableCategories = ISSUE_CATEGORIES.filter((cat) => cat.issues.some(issueHasPrice));
+
+  const [pendingScreenChange, setPendingScreenChange] = useState(false);
+  const screenQualityOptions = availablePrices
+    .filter((p) => p.issue_label.startsWith("Changement d'écran - "))
+    .map((p) => p.issue_label.replace("Changement d'écran - ", ""));
+
+  useEffect(() => {
+    if (!formData.issue.trim()) { setPriceInfo(null); return; }
+    const match = availablePrices.find((p) => p.issue_label === formData.issue.trim());
+    setPriceInfo(match ? { min: match.price_min, max: match.price_max } : null);
+  }, [availablePrices, formData.issue]);
+
   // Autocomplete modèle
   const [allDevices, setAllDevices] = useState<string[]>([]);
   const [deviceSuggestions, setDeviceSuggestions] = useState<string[]>([]);
   const [showDeviceSuggestions, setShowDeviceSuggestions] = useState(false);
   const deviceRef = useRef<HTMLDivElement>(null);
 
-  // Autocomplete panne
-  const [customIssues, setCustomIssues] = useState<string[]>([]);
-  const [hiddenIssues, setHiddenIssues] = useState<Set<string>>(new Set());
-  const [issueSuggestions, setIssueSuggestions] = useState<string[]>([]);
-  const [showIssueSuggestions, setShowIssueSuggestions] = useState(false);
-  const issueRef = useRef<HTMLDivElement>(null);
-
-  // Charger les listes depuis Supabase via /api/catalog
+  // Charger les modèles personnalisés depuis Supabase via /api/catalog
   useEffect(() => {
     fetchCatalog().then((data) => {
       setAllDevices([...DEVICES_LIST, ...data.customDevices]);
-      setCustomIssues(data.customIssues);
-      setHiddenIssues(new Set(data.hiddenIssues));
     });
   }, []);
 
-  // Fermer les dropdowns au clic extérieur
+  // Fermer le dropdown modèle au clic extérieur
   useEffect(() => {
     const handler = (e: MouseEvent) => {
       if (deviceRef.current && !deviceRef.current.contains(e.target as Node))
         setShowDeviceSuggestions(false);
-      if (issueRef.current && !issueRef.current.contains(e.target as Node))
-        setShowIssueSuggestions(false);
     };
     document.addEventListener("mousedown", handler);
     return () => document.removeEventListener("mousedown", handler);
@@ -135,7 +167,8 @@ export default function SoumettreAppareilPage() {
 
   const handleDeviceInput = (value: string) => {
     setFormData((p) => ({ ...p, device: value, issue: "" }));
-    setIssueSuggestions([]);
+    setOpenCategory(null);
+    setPendingScreenChange(false);
     if (!value.trim()) { setDeviceSuggestions([]); setShowDeviceSuggestions(false); return; }
     const lower = value.toLowerCase();
     const matches = allDevices.filter((d) => d.toLowerCase().includes(lower)).slice(0, 8);
@@ -144,42 +177,25 @@ export default function SoumettreAppareilPage() {
   };
 
   const selectDevice = (device: string) => {
-    setFormData((p) => ({ ...p, device }));
+    setFormData((p) => ({ ...p, device, issue: "" }));
     setShowDeviceSuggestions(false);
-    // Pré-charger les pannes rapides
-    const quick = getQuickIssues(device).filter((i) => !hiddenIssues.has(i));
-    setIssueSuggestions(quick);
-  };
-
-  const handleIssueInput = (value: string) => {
-    setFormData((p) => ({ ...p, issue: value }));
-    if (!value.trim()) {
-      if (formData.device) {
-        const quick = getQuickIssues(formData.device).filter((i) => !hiddenIssues.has(i));
-        setIssueSuggestions(quick);
-        setShowIssueSuggestions(quick.length > 0);
-      } else {
-        setIssueSuggestions([]);
-        setShowIssueSuggestions(false);
-      }
-      return;
-    }
-    let results: string[];
-    if (formData.device) {
-      results = getSmartIssueSuggestions(formData.device, value).filter((i) => !hiddenIssues.has(i));
-    } else {
-      const lower = value.toLowerCase();
-      results = [...customIssues, ...getSmartIssueSuggestions("", value)]
-        .filter((i) => !hiddenIssues.has(i) && i.toLowerCase().includes(lower))
-        .slice(0, 8);
-    }
-    setIssueSuggestions(results);
-    setShowIssueSuggestions(results.length > 0);
+    setOpenCategory(null);
+    setPendingScreenChange(false);
   };
 
   const selectIssue = (issue: string) => {
+    if (issue === "Changement d'écran") {
+      setPendingScreenChange(true);
+      setFormData((p) => ({ ...p, issue: "" }));
+      return;
+    }
+    setPendingScreenChange(false);
     setFormData((p) => ({ ...p, issue }));
-    setShowIssueSuggestions(false);
+  };
+
+  const selectScreenQuality = (quality: string) => {
+    setFormData((p) => ({ ...p, issue: `Changement d'écran - ${quality}` }));
+    setPendingScreenChange(false);
   };
 
   // ─── Auth ──────────────────────────────────────────────────────────────────
@@ -231,6 +247,7 @@ export default function SoumettreAppareilPage() {
 
   const handleSubmitAppareil = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (!formData.issue.trim()) { setError("Sélectionnez une panne dans une catégorie."); return; }
     setLoading(true); setError("");
 
     const { data: clientWithUser, error: clientFetchError } = await supabase
@@ -743,41 +760,88 @@ export default function SoumettreAppareilPage() {
               </div>
 
               {/* Panne */}
-              <div ref={issueRef} className="relative">
-                <label className={labelCls}>
-                  🔧 Panne / Problème *
-                  {formData.device && <span className="ml-2 text-orange-400 normal-case font-semibold tracking-normal">✨ suggestions auto</span>}
-                </label>
-                <input type="text" name="issue" required
-                  placeholder="Ne charge plus, écran noir, batterie..."
-                  value={formData.issue}
-                  onChange={(e) => handleIssueInput(e.target.value)}
-                  onFocus={() => {
-                    if (issueSuggestions.length > 0) { setShowIssueSuggestions(true); return; }
-                    if (formData.device) {
-                      const q = getQuickIssues(formData.device).filter((i) => !hiddenIssues.has(i));
-                      setIssueSuggestions(q); setShowIssueSuggestions(q.length > 0);
-                    }
-                  }}
-                  className={inputCls}
-                />
-                {showIssueSuggestions && issueSuggestions.length > 0 && (
-                  <div className="absolute z-30 w-full mt-1 bg-[#16161d] border border-white/10 rounded-2xl shadow-2xl overflow-hidden max-h-52 overflow-y-auto">
-                    {formData.device && (
-                      <div className="px-4 py-2 text-[10px] font-bold text-orange-400 bg-orange-500/8 border-b border-orange-500/15 uppercase tracking-wider">
-                        ✨ Pour {formData.device.split(" ").slice(0, 3).join(" ")}
+              <div>
+                <label className={labelCls}>🔧 Panne / Problème *</label>
+
+                {!formData.device.trim() ? (
+                  <p className="text-xs text-gray-500 bg-white/3 rounded-xl px-4 py-3">Sélectionnez d&apos;abord un modèle ci-dessus.</p>
+                ) : availableCategories.length === 0 ? (
+                  <p className="text-xs text-amber-400/80 bg-amber-500/8 border border-amber-500/20 rounded-xl px-4 py-3">Aucune panne tarifée pour ce modèle pour le moment. Contactez l&apos;atelier pour un devis.</p>
+                ) : (
+                  <>
+                    <div className="flex flex-wrap gap-1.5">
+                      {availableCategories.map((cat) => (
+                        <button
+                          key={cat.id}
+                          type="button"
+                          onClick={() => setOpenCategory(openCategory === cat.id ? null : cat.id)}
+                          className={`px-3 py-1.5 rounded-full text-xs font-medium transition border ${openCategory === cat.id ? "bg-orange-500/20 border-orange-500/50 text-orange-300" : "bg-white/5 border-white/10 text-gray-400 hover:border-orange-500/30"}`}
+                        >
+                          {cat.label}
+                        </button>
+                      ))}
+                    </div>
+                    {openCategory && (
+                      <div className="mt-2 flex flex-wrap gap-1.5 bg-white/3 rounded-2xl p-3">
+                        {ISSUE_CATEGORIES.find((c) => c.id === openCategory)?.issues
+                          .filter(issueHasPrice)
+                          .map((issue) => (
+                            <button
+                              key={issue}
+                              type="button"
+                              onClick={() => { selectIssue(issue); if (issue !== "Changement d'écran") setOpenCategory(null); }}
+                              className={`px-3 py-1.5 rounded-full text-xs font-medium transition border ${formData.issue === issue || (issue === "Changement d'écran" && pendingScreenChange) ? "bg-green-500/20 border-green-500/50 text-green-300" : "bg-white/5 border-white/10 text-gray-300 hover:border-orange-500/30"}`}
+                            >
+                              {issue}
+                            </button>
+                          ))}
                       </div>
                     )}
-                    {issueSuggestions.map((s, i) => (
-                      <div key={i} onMouseDown={() => selectIssue(s)}
-                        className="px-4 py-3 hover:bg-orange-500/8 cursor-pointer text-sm text-gray-200 border-b border-white/5 last:border-0 flex items-center gap-2 transition active:bg-orange-500/15">
-                        <span className="shrink-0">🔧</span>
-                        <span className="truncate">{s}</span>
+                    {(openCategory === "eau" || ISSUE_CATEGORIES.find((c) => c.id === "eau")?.issues.includes(formData.issue) || formData.issue === "Oxydation (carte mère)") && (
+                      <div className="mt-2 flex items-start gap-2 bg-amber-500/8 border border-amber-500/25 rounded-2xl px-4 py-3">
+                        <span className="text-lg shrink-0">⚠️</span>
+                        <p className="text-[11px] text-amber-300/90">En cas de dégât des eaux ou d&apos;oxydation, le bon fonctionnement de l&apos;appareil après réparation n&apos;est pas garanti.</p>
                       </div>
-                    ))}
-                  </div>
+                    )}
+                    {formData.issue === "Mise à jour et restauration" && (
+                      <div className="mt-2 flex items-start gap-2 bg-amber-500/8 border border-amber-500/25 rounded-2xl px-4 py-3">
+                        <span className="text-lg shrink-0">⚠️</span>
+                        <p className="text-[11px] text-amber-300/90">Une mise à jour ou restauration logicielle comporte un risque de perte des données. Pensez à faire une sauvegarde si possible.</p>
+                      </div>
+                    )}
+                    {pendingScreenChange && (
+                      <div className="mt-2">
+                        <p className="text-[10px] text-gray-500 mb-1.5">✨ Quelle qualité d&apos;écran souhaitez-vous ?</p>
+                        <div className="flex flex-wrap gap-1.5 bg-white/3 rounded-2xl p-3">
+                          {screenQualityOptions.map((quality) => (
+                            <button
+                              key={quality}
+                              type="button"
+                              onClick={() => { selectScreenQuality(quality); setOpenCategory(null); }}
+                              className={`px-3 py-1.5 rounded-full text-xs font-medium transition border ${formData.issue === `Changement d'écran - ${quality}` ? "bg-green-500/20 border-green-500/50 text-green-300" : "bg-white/5 border-white/10 text-gray-300 hover:border-orange-500/30"}`}
+                            >
+                              {quality}
+                            </button>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+                    {formData.issue && (
+                      <p className="text-xs text-gray-400 mt-2">✅ Panne sélectionnée : <span className="text-white font-medium">{formData.issue}</span></p>
+                    )}
+                  </>
                 )}
               </div>
+
+              {priceInfo && (
+                <div className="flex items-center gap-3 bg-green-500/8 border border-green-500/25 rounded-2xl px-4 py-3">
+                  <span className="text-2xl shrink-0">💰</span>
+                  <div>
+                    <p className="text-green-400 font-black text-base">Entre {priceInfo.min}€ et {priceInfo.max}€</p>
+                    <p className="text-[10px] text-green-400/60">Estimation pour cette panne — prix final confirmé après diagnostic</p>
+                  </div>
+                </div>
+              )}
             </div>
 
             {/* Section déverrouillage */}
@@ -865,9 +929,9 @@ export default function SoumettreAppareilPage() {
                   className={inputCls} />
               </div>
               <div>
-                <label className={labelCls}>📝 Description</label>
-                <textarea name="description" rows={3}
-                  placeholder="Décrivez les problèmes constatés, depuis quand, contexte..."
+                <label className={labelCls}>📝 Diagnostic client</label>
+                <textarea name="description" rows={4}
+                  placeholder="Qu'avez-vous déjà testé ou changé sur l'appareil ? Dans quel contexte le problème est apparu ? (ex : suite à un changement de châssis, le téléphone reboot...)"
                   value={formData.description} onChange={handleInputChange}
                   className={inputCls + " resize-none"} />
               </div>

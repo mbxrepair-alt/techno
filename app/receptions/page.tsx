@@ -18,6 +18,21 @@ function toPhotoArray(v: unknown): string[] {
   return [];
 }
 
+// Le champ "diagnosis" rempli par le client à la déclaration contient l'état physique
+// constaté + les pièces manquantes, ligne par ligne. On les sépare pour l'affichage.
+function splitClientDiagnosis(diagnosis?: string | null): { etat: string[]; pieces: string | null } {
+  if (!diagnosis) return { etat: [], pieces: null };
+  const lines = diagnosis.split("\n").map((l) => l.trim()).filter(Boolean);
+  const etat: string[] = [];
+  let pieces: string | null = null;
+  for (const line of lines) {
+    const m = line.match(/Pièces manquantes\s*:\s*(.+)$/i);
+    if (m) pieces = m[1].trim();
+    else etat.push(line.replace(/^⚠️\s*/, ""));
+  }
+  return { etat, pieces };
+}
+
 export default function ReceptionsPage() {
   const router = useRouter();
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -308,7 +323,9 @@ export default function ReceptionsPage() {
                   )}
                 </div>
 
-                {g.items.map((r) => (
+                {g.items.map((r) => {
+                  const { etat, pieces } = splitClientDiagnosis(r.diagnosis);
+                  return (
                   <div key={r.id} className="bg-[#16161d] border border-white/8 rounded-2xl p-4">
                     <div className="flex items-start justify-end mb-2">
                       <span className="font-mono text-[10px] text-indigo-400 bg-indigo-500/10 px-2 py-0.5 rounded-md shrink-0">MBX-{r.id}</span>
@@ -320,8 +337,30 @@ export default function ReceptionsPage() {
                       {r.imei && r.imei !== "NC" && <div className="text-gray-500 text-xs">IMEI : {r.imei}</div>}
                       {r.unlock_code && r.unlock_code !== "NC" && <div className="text-gray-500 text-xs">🔑 Code : {r.unlock_code}</div>}
                       {r.unlock_pattern && <div className="text-gray-500 text-xs">✏️ Schéma : {r.unlock_pattern}</div>}
-                      {r.description && <div className="text-gray-400 text-xs mt-1">📝 {r.description}</div>}
                     </div>
+
+                    {etat.length > 0 && (
+                      <div className="bg-amber-500/8 border border-amber-500/20 rounded-xl p-3 mb-3">
+                        <div className="text-[10px] font-semibold text-amber-400 uppercase tracking-wider mb-1.5">⚠️ État physique constaté par le client</div>
+                        <ul className="text-xs text-amber-200/80 space-y-0.5">
+                          {etat.map((line, i) => <li key={i}>• {line}</li>)}
+                        </ul>
+                      </div>
+                    )}
+
+                    {pieces && (
+                      <div className="bg-orange-500/8 border border-orange-500/20 rounded-xl p-3 mb-3">
+                        <div className="text-[10px] font-semibold text-orange-400 uppercase tracking-wider mb-1">🧩 Pièces manquantes</div>
+                        <div className="text-xs text-orange-200/80">{pieces}</div>
+                      </div>
+                    )}
+
+                    {r.description && (
+                      <div className="bg-blue-500/8 border border-blue-500/20 rounded-xl p-3 mb-3">
+                        <div className="text-[10px] font-semibold text-blue-400 uppercase tracking-wider mb-1">📝 Diagnostic client</div>
+                        <div className="text-xs text-blue-200/80 whitespace-pre-wrap">{r.description}</div>
+                      </div>
+                    )}
 
                     {/* Photos CLIENT (envoyées avant expédition) — lecture seule */}
                     {toPhotoArray(r.photos).length > 0 && (
@@ -387,7 +426,8 @@ export default function ReceptionsPage() {
                       </button>
                     </div>
                   </div>
-                ))}
+                  );
+                })}
               </div>
             ))}
           </div>

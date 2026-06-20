@@ -21,6 +21,7 @@ import {
   MoreHorizontal,
   ChevronRight,
   Star,
+  Tag,
 } from "lucide-react";
 
 interface Permissions {
@@ -172,6 +173,14 @@ export default function Navigation({ user, permissions }: NavigationProps) {
       color: "text-fuchsia-400",
       activeBg: "bg-fuchsia-500/15 border-fuchsia-500/30",
       visible: !!(permissions?.can_access_repairs || isGerant),
+    },
+    {
+      href: "/tarifs",
+      label: "Tarifs",
+      icon: Tag,
+      color: "text-orange-400",
+      activeBg: "bg-orange-500/15 border-orange-500/30",
+      visible: isGerant,
     },
     {
       href: "/statistiques",

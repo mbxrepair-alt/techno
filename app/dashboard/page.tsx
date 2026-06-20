@@ -2072,7 +2072,8 @@ export default function Dashboard() {
                   { label: "🔧 Panne", value: selectedRepairDetail.issue },
                   selectedRepairDetail.imei && selectedRepairDetail.imei !== "NC" ? { label: "🔍 IMEI", value: selectedRepairDetail.imei } : null,
                   selectedRepairDetail.unlock_code && selectedRepairDetail.unlock_code !== "NC" ? { label: "🔓 Code déverrouillage", value: selectedRepairDetail.unlock_code } : null,
-                  selectedRepairDetail.description && selectedRepairDetail.description !== "NC" ? { label: "📝 Description", value: selectedRepairDetail.description } : null,
+                  selectedRepairDetail.diagnosis && selectedRepairDetail.diagnosis !== "NC" ? { label: "⚠️ État physique constaté", value: selectedRepairDetail.diagnosis } : null,
+                  selectedRepairDetail.description && selectedRepairDetail.description !== "NC" ? { label: "📝 Diagnostic client", value: selectedRepairDetail.description } : null,
                 ].filter(Boolean).map((row, i, arr) => (
                   <div key={i} className={`grid grid-cols-2 ${i < arr.length - 1 ? "border-b border-white/8" : ""}`}>
                     <div className="px-4 py-2.5 text-gray-400 text-xs font-semibold uppercase tracking-widest bg-white/5">{row!.label}</div>

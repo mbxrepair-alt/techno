@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { supabase } from "../../../../lib/supabase";
 import PatternLock from "../../../../components/PatternLock";
-import { ISSUE_CATEGORIES } from "../../../../lib/devices-catalog";
+import { fetchCustomCatalog, buildMergedCategories } from "../../../../lib/customCategories";
 
 export default function SoumettreAppareilDirectPage() {
   const params = useParams();
@@ -58,6 +58,19 @@ export default function SoumettreAppareilDirectPage() {
   // Tarifs configurés pour le modèle sélectionné — seules ces pannes sont proposées au client
   const [availablePrices, setAvailablePrices] = useState([]);
 
+  // Catalogue de catégories/pannes de l'atelier (standard + personnalisées, en respectant les masquées/renommées)
+  const [mergedCategories, setMergedCategories] = useState([]);
+
+  useEffect(() => {
+    if (!client?.user_id) { setMergedCategories([]); return; }
+    let cancelled = false;
+    (async () => {
+      const { customCategories, customIssues, hiddenItems } = await fetchCustomCatalog(client.user_id);
+      if (!cancelled) setMergedCategories(buildMergedCategories(customCategories, customIssues, hiddenItems));
+    })();
+    return () => { cancelled = true; };
+  }, [client]);
+
   useEffect(() => {
     if (!client?.user_id || !formData.device.trim()) {
       setAvailablePrices([]);
@@ -81,7 +94,7 @@ export default function SoumettreAppareilDirectPage() {
       ? availablePrices.some((p) => p.issue_label.startsWith("Changement d'écran - "))
       : availablePrices.some((p) => p.issue_label === issue);
 
-  const availableCategories = ISSUE_CATEGORIES.filter((cat) => cat.issues.some(issueHasPrice));
+  const availableCategories = mergedCategories.filter((cat) => cat.issues.some(issueHasPrice));
 
   const [pendingScreenChange, setPendingScreenChange] = useState(false);
   const screenQualityOptions = availablePrices
@@ -399,7 +412,7 @@ export default function SoumettreAppareilDirectPage() {
                   </div>
                   {openCategory && (
                     <div className="mt-2 flex flex-wrap gap-1.5 bg-gray-50 rounded-xl p-3">
-                      {ISSUE_CATEGORIES.find((c) => c.id === openCategory)?.issues
+                      {mergedCategories.find((c) => c.id === openCategory)?.issues
                         .filter(issueHasPrice)
                         .map((issue) => (
                           <button
@@ -418,7 +431,7 @@ export default function SoumettreAppareilDirectPage() {
                         ))}
                     </div>
                   )}
-                  {(openCategory === "eau" || ISSUE_CATEGORIES.find((c) => c.id === "eau")?.issues.includes(formData.issue) || formData.issue === "Oxydation (carte mère)") && (
+                  {(openCategory === "eau" || mergedCategories.find((c) => c.id === "eau")?.issues.includes(formData.issue) || formData.issue === "Oxydation (carte mère)") && (
                     <div className="mt-2 flex items-start gap-2 bg-amber-50 border border-amber-200 rounded-xl px-4 py-3">
                       <span className="text-lg shrink-0">⚠️</span>
                       <p className="text-[11px] text-amber-700">En cas de dégât des eaux ou d&apos;oxydation, le bon fonctionnement de l&apos;appareil après réparation n&apos;est pas garanti.</p>

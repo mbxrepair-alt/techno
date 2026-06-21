@@ -5,7 +5,8 @@ import { useRouter } from "next/navigation";
 import QRCode from "qrcode";
 import { supabase } from "../../../lib/supabase";
 import PatternLock from "../../../components/PatternLock";
-import { DEVICES_LIST, ISSUE_CATEGORIES } from "../../../lib/devices-catalog";
+import { DEVICES_LIST } from "../../../lib/devices-catalog";
+import { fetchCustomCatalog, buildMergedCategories } from "../../../lib/customCategories";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -104,6 +105,19 @@ export default function SoumettreAppareilPage() {
   // Tarifs configurés pour le modèle sélectionné — seules ces pannes sont proposées au client
   const [availablePrices, setAvailablePrices] = useState<{ issue_label: string; price_min: number; price_max: number }[]>([]);
 
+  // Catalogue de catégories/pannes de l'atelier (standard + personnalisées, en respectant les masquées/renommées)
+  const [mergedCategories, setMergedCategories] = useState<{ id: string; label: string; issues: string[] }[]>([]);
+
+  useEffect(() => {
+    if (!client?.user_id) { setMergedCategories([]); return; }
+    let cancelled = false;
+    (async () => {
+      const { customCategories, customIssues, hiddenItems } = await fetchCustomCatalog(client.user_id);
+      if (!cancelled) setMergedCategories(buildMergedCategories(customCategories, customIssues, hiddenItems));
+    })();
+    return () => { cancelled = true; };
+  }, [client]);
+
   useEffect(() => {
     if (!client?.user_id || !formData.device.trim()) {
       setAvailablePrices([]);
@@ -127,7 +141,7 @@ export default function SoumettreAppareilPage() {
       ? availablePrices.some((p) => p.issue_label.startsWith("Changement d'écran - "))
       : availablePrices.some((p) => p.issue_label === issue);
 
-  const availableCategories = ISSUE_CATEGORIES.filter((cat) => cat.issues.some(issueHasPrice));
+  const availableCategories = mergedCategories.filter((cat) => cat.issues.some(issueHasPrice));
 
   const [pendingScreenChange, setPendingScreenChange] = useState(false);
   const screenQualityOptions = availablePrices
@@ -783,7 +797,7 @@ export default function SoumettreAppareilPage() {
                     </div>
                     {openCategory && (
                       <div className="mt-2 flex flex-wrap gap-1.5 bg-white/3 rounded-2xl p-3">
-                        {ISSUE_CATEGORIES.find((c) => c.id === openCategory)?.issues
+                        {mergedCategories.find((c) => c.id === openCategory)?.issues
                           .filter(issueHasPrice)
                           .map((issue) => (
                             <button
@@ -797,7 +811,7 @@ export default function SoumettreAppareilPage() {
                           ))}
                       </div>
                     )}
-                    {(openCategory === "eau" || ISSUE_CATEGORIES.find((c) => c.id === "eau")?.issues.includes(formData.issue) || formData.issue === "Oxydation (carte mère)") && (
+                    {(openCategory === "eau" || mergedCategories.find((c) => c.id === "eau")?.issues.includes(formData.issue) || formData.issue === "Oxydation (carte mère)") && (
                       <div className="mt-2 flex items-start gap-2 bg-amber-500/8 border border-amber-500/25 rounded-2xl px-4 py-3">
                         <span className="text-lg shrink-0">⚠️</span>
                         <p className="text-[11px] text-amber-300/90">En cas de dégât des eaux ou d&apos;oxydation, le bon fonctionnement de l&apos;appareil après réparation n&apos;est pas garanti.</p>

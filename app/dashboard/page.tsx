@@ -5,6 +5,11 @@ import { supabase, getCurrentUser } from "../../lib/supabase";
 import { getCurrentTechnician, addHistoriqueAction } from "../../lib/historique";
 import { useRouter } from "next/navigation";
 import { DEVICES_LIST, getSmartIssueSuggestions, getQuickIssues } from "../../lib/devices-catalog";
+import {
+  fetchCustomCatalog, buildMergedCategories,
+  addCustomCategory as addCustomPanneCategory,
+  addCustomIssue as addCustomPanneIssue,
+} from "../../lib/customCategories";
 import Layout from "../../components/Layout";
 import QRCode from "qrcode";
 import ReturnModal from "../../components/ReturnModal";
@@ -240,6 +245,51 @@ export default function Dashboard() {
   const [showCodeSuggestionsMap, setShowCodeSuggestionsMap] = useState({});
   const [addModalSourceRepairId, setAddModalSourceRepairId] = useState<number | null>(null);
   const [deviceCategoryMap, setDeviceCategoryMap] = useState({});
+  // Pannes/prix configurés dans /tarifs pour le modèle de chaque réparation — affichées par catégorie
+  const [tarifPricesMap, setTarifPricesMap] = useState({});
+  const [openTarifCategoryMap, setOpenTarifCategoryMap] = useState({});
+  const [categorySearchMap, setCategorySearchMap] = useState({});
+  const [panneSearchMap, setPanneSearchMap] = useState({});
+  const [selectedIssuesMap, setSelectedIssuesMap] = useState({});
+
+  // Catégories/pannes personnalisées ajoutées par l'atelier (tarifs)
+  const [customPanneCategories, setCustomPanneCategories] = useState([]);
+  const [customPanneIssues, setCustomPanneIssues] = useState([]);
+  const mergedCategories = buildMergedCategories(customPanneCategories, customPanneIssues);
+  const reloadCustomCatalog = async () => {
+    if (!userId) return;
+    const { customCategories: cats, customIssues: iss } = await fetchCustomCatalog(userId);
+    setCustomPanneCategories(cats);
+    setCustomPanneIssues(iss);
+  };
+  useEffect(() => { reloadCustomCatalog(); }, [userId]);
+
+  const [newCategoryLabelMap, setNewCategoryLabelMap] = useState({});
+  const [showNewCategoryMap, setShowNewCategoryMap] = useState({});
+  const [newIssueLabelMap, setNewIssueLabelMap] = useState({});
+  const [showNewIssueMap, setShowNewIssueMap] = useState({});
+
+  const getSelectedIssues = (id, currentIssue) => selectedIssuesMap[id] ?? (currentIssue ? currentIssue.split(", ").filter(Boolean) : []);
+
+  const toggleSelectedIssue = (id, currentIssue, issueLabel) => {
+    const current = getSelectedIssues(id, currentIssue);
+    const next = current.includes(issueLabel) ? current.filter((i) => i !== issueLabel) : [...current, issueLabel];
+    setSelectedIssuesMap((prev) => ({ ...prev, [id]: next }));
+    updateRepairField(id, "issue", next.join(", "));
+  };
+
+  const fetchTarifsForDevice = async (id, device) => {
+    if (!userId || !device?.trim()) {
+      setTarifPricesMap((prev) => ({ ...prev, [id]: [] }));
+      return;
+    }
+    const { data } = await supabase
+      .from("panne_prices")
+      .select("issue_label, price_min, price_max")
+      .eq("company_id", userId)
+      .eq("device_model", device.trim());
+    setTarifPricesMap((prev) => ({ ...prev, [id]: data || [] }));
+  };
   const [deviceSuggestionIndex, setDeviceSuggestionIndex] = useState({});
   const [issueSuggestionIndex, setIssueSuggestionIndex] = useState({});
   const [codeSuggestionIndex, setCodeSuggestionIndex] = useState({});
@@ -672,6 +722,11 @@ export default function Dashboard() {
     const quickIssues = getQuickIssues(device);
     setIssueSuggestionsMap((prev) => ({ ...prev, [id]: quickIssues }));
     setShowIssueSuggestionsMap((prev) => ({ ...prev, [id]: false }));
+    setOpenTarifCategoryMap((prev) => ({ ...prev, [id]: null }));
+    setCategorySearchMap((prev) => ({ ...prev, [id]: "" }));
+    setPanneSearchMap((prev) => ({ ...prev, [id]: "" }));
+    setSelectedIssuesMap((prev) => ({ ...prev, [id]: [] }));
+    fetchTarifsForDevice(id, device);
   };
 
   const getIssueSuggestions = (input, deviceModel?: string) => {
@@ -1787,7 +1842,8 @@ export default function Dashboard() {
                       </label>
                       <div className="relative">
                         <input autoComplete="new-password" className={inputCls} placeholder="iPhone 15 Pro Max..." value={repair.device}
-                          onChange={(e) => handleDeviceSearch(repair.id, e.target.value)} />
+                          onChange={(e) => handleDeviceSearch(repair.id, e.target.value)}
+                          onBlur={() => fetchTarifsForDevice(repair.id, repair.device)} />
                         {showDeviceSuggestionsMap[repair.id] && deviceSuggestionsMap[repair.id]?.length > 0 && (
                           <div className="absolute z-20 top-full left-0 right-0 mt-1 bg-[#16161d] border border-orange-500/20 rounded-xl shadow-2xl max-h-40 overflow-auto">
                             <div className="divide-y divide-white/5 p-1">
@@ -1801,55 +1857,192 @@ export default function Dashboard() {
                       </div>
                     </div>
                     <div>
-                      <label className="flex items-center gap-1.5 text-xs font-semibold text-gray-400 uppercase tracking-widest mb-1.5">
-                        Panne *
-                        <button type="button" onClick={() => { setAddModalSourceRepairId(repair.id); setNewIssueInput(repair.issue || ""); setShowAddIssue(true); }}
-                          className="w-4 h-4 rounded-full bg-white/10 hover:bg-blue-500/30 hover:text-blue-400 text-gray-500 flex items-center justify-center text-[10px] font-black transition-colors leading-none">+</button>
-                        {repair.device && (
-                          <span className="text-[10px] font-bold text-blue-400 bg-blue-500/10 border border-blue-500/20 px-1.5 py-0.5 rounded-full normal-case tracking-normal">
-                            ✨ Suggestions auto
-                          </span>
-                        )}
-                      </label>
-                      <div className="relative">
-                        <input autoComplete="new-password"
-                          className={inputCls}
-                          placeholder={repair.device ? "Tapez ou cliquez pour voir les pannes fréquentes…" : "Écran cassé, batterie…"}
-                          value={repair.issue}
-                          onChange={(e) => handleIssueSearch(repair.id, e.target.value)}
-                          onFocus={() => {
-                            if (repair.device) {
-                              const quick = getQuickIssues(repair.device).filter((s) => !hiddenIssues.has(s));
-                              setIssueSuggestionsMap((prev) => ({ ...prev, [repair.id]: quick }));
-                              setShowIssueSuggestionsMap((prev) => ({ ...prev, [repair.id]: true }));
-                            }
-                          }}
-                          onBlur={() => setTimeout(() => setShowIssueSuggestionsMap((prev) => ({ ...prev, [repair.id]: false })), 150)}
-                        />
-                        {showIssueSuggestionsMap[repair.id] && issueSuggestionsMap[repair.id]?.length > 0 && (
-                          <div className="absolute z-20 top-full left-0 right-0 mt-1 bg-[#16161d] border border-white/10 rounded-xl shadow-2xl max-h-52 overflow-auto">
-                            {repair.device && !repair.issue && (
-                              <div className="px-3 pt-2 pb-1 text-[10px] font-bold text-blue-400/70 uppercase tracking-widest border-b border-white/5">
-                                Pannes fréquentes — {repair.device}
+                      <label className="block text-xs font-semibold text-gray-400 uppercase tracking-widest mb-1.5">Panne * {getSelectedIssues(repair.id, repair.issue).length > 1 && <span className="text-blue-400 normal-case font-semibold">({getSelectedIssues(repair.id, repair.issue).length} pannes)</span>}</label>
+                      {!repair.device ? (
+                        <p className="text-xs text-gray-500 bg-white/3 rounded-xl px-4 py-3">Sélectionnez d&apos;abord un modèle ci-dessus.</p>
+                      ) : !(tarifPricesMap[repair.id]?.length > 0) ? (
+                        <p className="text-xs text-amber-400/80 bg-amber-500/8 border border-amber-500/20 rounded-xl px-4 py-3">Aucune panne tarifée pour ce modèle. Configurez les prix dans /tarifs.</p>
+                      ) : (() => {
+                        const allIssuesForDevice = mergedCategories.flatMap((cat) =>
+                          cat.issues.flatMap((i) =>
+                            i === "Changement d'écran"
+                              ? tarifPricesMap[repair.id].filter((p) => p.issue_label.startsWith("Changement d'écran - ")).map((p) => ({ ...p, categoryId: cat.id, categoryLabel: cat.label }))
+                              : tarifPricesMap[repair.id].some((p) => p.issue_label === i) ? [{ ...tarifPricesMap[repair.id].find((p) => p.issue_label === i), categoryId: cat.id, categoryLabel: cat.label }] : []
+                          )
+                        );
+                        const availableCats = mergedCategories.filter((cat) => allIssuesForDevice.some((i) => i.categoryId === cat.id));
+                        const catSearch = (categorySearchMap[repair.id] || "").toLowerCase();
+                        const matchingCats = availableCats.filter((c) => c.label.toLowerCase().includes(catSearch));
+                        const activeCat = openTarifCategoryMap[repair.id];
+                        const panneSearch = (panneSearchMap[repair.id] || "").toLowerCase();
+                        const matchingIssues = activeCat
+                          ? allIssuesForDevice.filter((i) => i.categoryId === activeCat && i.issue_label.toLowerCase().includes(panneSearch))
+                          : [];
+                        const selected = getSelectedIssues(repair.id, repair.issue);
+                        const selectedTotal = selected.reduce((acc, lbl) => {
+                          const t = allIssuesForDevice.find((i) => i.issue_label === lbl);
+                          return t ? { min: acc.min + t.price_min, max: acc.max + t.price_max } : acc;
+                        }, { min: 0, max: 0 });
+
+                        return (
+                          <div className="space-y-2">
+                            {selected.length > 0 && (
+                              <div className="flex flex-wrap items-center gap-1.5">
+                                {selected.map((lbl) => (
+                                  <span key={lbl} className="flex items-center gap-1.5 bg-green-500/10 border border-green-500/25 text-green-300 text-xs rounded-full px-3 py-1">
+                                    {lbl}
+                                    <button type="button" onClick={() => toggleSelectedIssue(repair.id, repair.issue, lbl)} className="hover:text-red-400">×</button>
+                                  </span>
+                                ))}
+                                {selectedTotal.min > 0 && <span className="text-[11px] text-gray-500">💰 Total : {selectedTotal.min}–{selectedTotal.max}€</span>}
                               </div>
                             )}
-                            <div className="divide-y divide-white/5 p-1">
-                              {issueSuggestionsMap[repair.id].map((iss, i) => (
-                                <div
-                                  key={i}
-                                  className="py-2 px-3 rounded-lg cursor-pointer hover:bg-blue-500/10 hover:text-blue-300 text-gray-300 text-sm transition-colors duration-100 flex items-center gap-2"
-                                  onMouseDown={() => selectIssue(repair.id, iss)}
-                                >
-                                  <span className="text-[11px] text-blue-400/50">
-                                    {iss.startsWith("Remplacement") ? "🔩" : "🔧"}
-                                  </span>
-                                  {iss}
+
+                            {activeCat ? (
+                              <span className="inline-flex items-center gap-1.5 bg-blue-500/10 border border-blue-500/25 text-blue-300 text-xs rounded-full px-3 py-1.5">
+                                {availableCats.find((c) => c.id === activeCat)?.label}
+                                <button type="button" onClick={() => {
+                                  setOpenTarifCategoryMap((prev) => ({ ...prev, [repair.id]: null }));
+                                  setCategorySearchMap((prev) => ({ ...prev, [repair.id]: "" }));
+                                  setPanneSearchMap((prev) => ({ ...prev, [repair.id]: "" }));
+                                }} className="hover:text-red-400 font-bold">×</button>
+                              </span>
+                            ) : (
+                              <div>
+                                <div className="flex gap-1.5">
+                                  <input
+                                    className={inputCls + " flex-1"}
+                                    placeholder="🗂️ Rechercher une catégorie…"
+                                    value={categorySearchMap[repair.id] || ""}
+                                    onChange={(e) => setCategorySearchMap((prev) => ({ ...prev, [repair.id]: e.target.value }))}
+                                  />
+                                  <button type="button" title="Nouvelle catégorie"
+                                    onClick={() => setShowNewCategoryMap((prev) => ({ ...prev, [repair.id]: !prev[repair.id] }))}
+                                    className="shrink-0 bg-white/5 hover:bg-blue-500/20 border border-white/10 hover:border-blue-500/40 text-gray-400 hover:text-blue-400 rounded-xl px-3 transition">+</button>
                                 </div>
-                              ))}
-                            </div>
+                                {(categorySearchMap[repair.id] || "").trim().length > 0 && matchingCats.length > 0 && (
+                                  <div className="mt-1 bg-[#16161d] border border-white/10 rounded-xl max-h-40 overflow-y-auto">
+                                    <div className="divide-y divide-white/5 p-1">
+                                      {matchingCats.map((cat) => (
+                                        <div key={cat.id}
+                                          className="py-2 px-3 rounded-lg cursor-pointer hover:bg-blue-500/10 hover:text-blue-300 text-gray-300 text-sm transition-colors duration-100"
+                                          onClick={() => { setOpenTarifCategoryMap((prev) => ({ ...prev, [repair.id]: cat.id })); setPanneSearchMap((prev) => ({ ...prev, [repair.id]: "" })); }}
+                                        >
+                                          {cat.label}
+                                        </div>
+                                      ))}
+                                    </div>
+                                  </div>
+                                )}
+                                {showNewCategoryMap[repair.id] && (
+                                  <div className="flex gap-1.5 mt-1.5">
+                                    <input
+                                      className={inputCls + " flex-1"}
+                                      placeholder="Ex: 🎮 Boutons physiques"
+                                      value={newCategoryLabelMap[repair.id] || ""}
+                                      onChange={(e) => setNewCategoryLabelMap((prev) => ({ ...prev, [repair.id]: e.target.value }))}
+                                    />
+                                    <button type="button"
+                                      onClick={async () => {
+                                        const label = (newCategoryLabelMap[repair.id] || "").trim();
+                                        if (!label) return;
+                                        await addCustomPanneCategory(userId, label);
+                                        await reloadCustomCatalog();
+                                        setNewCategoryLabelMap((prev) => ({ ...prev, [repair.id]: "" }));
+                                        setShowNewCategoryMap((prev) => ({ ...prev, [repair.id]: false }));
+                                      }}
+                                      className="shrink-0 bg-blue-500 hover:bg-blue-400 text-white rounded-xl px-3 text-sm font-bold transition">Ajouter</button>
+                                  </div>
+                                )}
+                              </div>
+                            )}
+
+                            {activeCat && (
+                              <div className="bg-white/3 border border-white/10 rounded-xl overflow-hidden">
+                                <div className="flex items-center border-b border-white/10">
+                                  <input
+                                    className="flex-1 bg-transparent px-3 py-2.5 text-white text-sm outline-none placeholder-gray-600"
+                                    placeholder="🔧 Rechercher une panne…"
+                                    value={panneSearchMap[repair.id] || ""}
+                                    autoFocus
+                                    onChange={(e) => setPanneSearchMap((prev) => ({ ...prev, [repair.id]: e.target.value }))}
+                                  />
+                                  <button type="button" title="Nouvelle panne (avec prix)"
+                                    onClick={() => setShowNewIssueMap((prev) => ({ ...prev, [repair.id]: !prev[repair.id] }))}
+                                    className="shrink-0 text-gray-400 hover:text-blue-400 px-3 transition">+</button>
+                                </div>
+                                {showNewIssueMap[repair.id] && (
+                                  <div className="flex gap-1.5 p-2 border-b border-white/10 bg-blue-500/5">
+                                    <input
+                                      className="flex-1 bg-[#1a1d2e] border border-white/10 rounded-lg px-2.5 py-1.5 text-white text-xs outline-none focus:border-blue-500/60"
+                                      placeholder="Nom de la panne"
+                                      value={newIssueLabelMap[repair.id]?.label || ""}
+                                      onChange={(e) => setNewIssueLabelMap((prev) => ({ ...prev, [repair.id]: { ...prev[repair.id], label: e.target.value } }))}
+                                    />
+                                    <input type="number" min="0" placeholder="min€"
+                                      className="w-16 bg-[#1a1d2e] border border-white/10 rounded-lg px-2 py-1.5 text-white text-xs outline-none focus:border-blue-500/60"
+                                      value={newIssueLabelMap[repair.id]?.min || ""}
+                                      onChange={(e) => setNewIssueLabelMap((prev) => ({ ...prev, [repair.id]: { ...prev[repair.id], min: e.target.value } }))}
+                                    />
+                                    <input type="number" min="0" placeholder="max€"
+                                      className="w-16 bg-[#1a1d2e] border border-white/10 rounded-lg px-2 py-1.5 text-white text-xs outline-none focus:border-blue-500/60"
+                                      value={newIssueLabelMap[repair.id]?.max || ""}
+                                      onChange={(e) => setNewIssueLabelMap((prev) => ({ ...prev, [repair.id]: { ...prev[repair.id], max: e.target.value } }))}
+                                    />
+                                    <button type="button"
+                                      onClick={async () => {
+                                        const v = newIssueLabelMap[repair.id] || {};
+                                        const label = (v.label || "").trim();
+                                        const min = parseFloat(v.min);
+                                        const max = parseFloat(v.max);
+                                        if (!label || isNaN(min) || isNaN(max) || min < 0 || max < min) return;
+                                        await addCustomPanneIssue(userId, activeCat, label);
+                                        await supabase.from("panne_prices").upsert(
+                                          { company_id: userId, device_model: repair.device, issue_label: label, price_min: min, price_max: max },
+                                          { onConflict: "company_id,device_model,issue_label" }
+                                        );
+                                        await reloadCustomCatalog();
+                                        await fetchTarifsForDevice(repair.id, repair.device);
+                                        setNewIssueLabelMap((prev) => ({ ...prev, [repair.id]: {} }));
+                                        setShowNewIssueMap((prev) => ({ ...prev, [repair.id]: false }));
+                                      }}
+                                      className="shrink-0 bg-blue-500 hover:bg-blue-400 text-white rounded-lg px-2.5 text-xs font-bold transition">OK</button>
+                                  </div>
+                                )}
+                                <div className="max-h-44 overflow-y-auto divide-y divide-white/5">
+                                  {matchingIssues.length === 0 ? (
+                                    <p className="px-3 py-3 text-xs text-gray-500">Aucune panne trouvée.</p>
+                                  ) : (
+                                    matchingIssues.map((i) => (
+                                      <label key={i.issue_label}
+                                        className="flex items-center gap-2.5 py-2 px-3 cursor-pointer hover:bg-blue-500/8 transition-colors duration-100"
+                                      >
+                                        <input
+                                          type="checkbox"
+                                          checked={selected.includes(i.issue_label)}
+                                          onChange={() => toggleSelectedIssue(repair.id, repair.issue, i.issue_label)}
+                                          className="shrink-0 w-4 h-4 rounded accent-blue-500 cursor-pointer"
+                                        />
+                                        <span className={`flex-1 text-sm ${selected.includes(i.issue_label) ? "text-green-300" : "text-gray-300"}`}>{i.issue_label}</span>
+                                        <span className="text-green-400 text-xs font-medium shrink-0">{i.price_min}–{i.price_max}€</span>
+                                      </label>
+                                    ))
+                                  )}
+                                </div>
+                                <button type="button"
+                                  onClick={() => {
+                                    setOpenTarifCategoryMap((prev) => ({ ...prev, [repair.id]: null }));
+                                    setCategorySearchMap((prev) => ({ ...prev, [repair.id]: "" }));
+                                    setPanneSearchMap((prev) => ({ ...prev, [repair.id]: "" }));
+                                  }}
+                                  className="w-full text-center text-xs font-semibold text-blue-400 hover:text-blue-300 bg-blue-500/5 hover:bg-blue-500/10 py-2 transition-colors duration-100 border-t border-white/5">
+                                  ✓ Terminé
+                                </button>
+                              </div>
+                            )}
                           </div>
-                        )}
-                      </div>
+                        );
+                      })()}
                     </div>
                   </div>
 

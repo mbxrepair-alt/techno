@@ -4,8 +4,14 @@ import { useEffect, useState, useMemo } from "react";
 import { useRouter } from "next/navigation";
 import { supabase } from "../../lib/supabase";
 import Layout from "../../components/Layout";
-import { DEVICES_LIST, ISSUE_CATEGORIES, SCREEN_QUALITIES } from "../../lib/devices-catalog";
-import { Tag, Plus, Trash2, Search, Copy } from "lucide-react";
+import { DEVICES_LIST, SCREEN_QUALITIES } from "../../lib/devices-catalog";
+import { Tag, Plus, Trash2, Search, Copy, Settings, Pencil, X, Check } from "lucide-react";
+import {
+  fetchCustomCatalog, buildMergedCategories, addCustomCategory, removeCustomCategory, renameCustomCategory,
+  addCustomIssue, removeCustomIssue, renameCustomIssue,
+  hideBuiltinCategory, hideBuiltinIssue, renameBuiltinCategory, renameBuiltinIssue,
+  isCustomCategoryId, CustomCategoryRow, CustomIssueRow, HiddenItemRow,
+} from "../../lib/customCategories";
 
 interface PanneRow {
   id: number;
@@ -23,7 +29,30 @@ export default function TarifsPage() {
   const [search, setSearch] = useState("");
   const [userId, setUserId] = useState("");
 
-  const [form, setForm] = useState({ device_model: "", category_id: "", issue_label: "", price_min: "", price_max: "" });
+  // Catégories/pannes personnalisées + éléments masqués/renommés par l'atelier
+  const [customCategories, setCustomCategories] = useState<CustomCategoryRow[]>([]);
+  const [customIssues, setCustomIssues] = useState<CustomIssueRow[]>([]);
+  const [hiddenItems, setHiddenItems] = useState<HiddenItemRow[]>([]);
+  const mergedCategories = useMemo(() => buildMergedCategories(customCategories, customIssues, hiddenItems), [customCategories, customIssues, hiddenItems]);
+
+  const reloadCustomCatalog = async (companyId: string) => {
+    const { customCategories: cats, customIssues: iss, hiddenItems: hid } = await fetchCustomCatalog(companyId);
+    setCustomCategories(cats);
+    setCustomIssues(iss);
+    setHiddenItems(hid);
+  };
+
+  // Gestionnaire de catégories/pannes (modifier / supprimer, standard ou perso)
+  const [showCatalogManager, setShowCatalogManager] = useState(false);
+  const [managingCategoryId, setManagingCategoryId] = useState<string | null>(null);
+  const [editingCategoryId, setEditingCategoryId] = useState<string | null>(null);
+  const [editingCategoryLabel, setEditingCategoryLabel] = useState("");
+  const [editingIssueKey, setEditingIssueKey] = useState<string | null>(null);
+  const [editingIssueLabel, setEditingIssueLabel] = useState("");
+  const [newIssueForManager, setNewIssueForManager] = useState("");
+  const [newCategoryForManager, setNewCategoryForManager] = useState("");
+
+  const [form, setForm] = useState({ device_model: "" });
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
   const [deviceSuggestions, setDeviceSuggestions] = useState<string[]>([]);
@@ -32,8 +61,19 @@ export default function TarifsPage() {
   // Modèles supplémentaires pour appliquer le même tarif à plusieurs appareils d'un coup
   const [extraModels, setExtraModels] = useState<string[]>([]);
 
-  // Qualité d'écran (uniquement si la panne choisie est "Changement d'écran")
-  const [screenQuality, setScreenQuality] = useState("");
+  // Plusieurs pannes (catégorie + panne + prix) ajoutées d'un coup avec +/-
+  const EMPTY_PANNE_ROW = { category_id: "", issue_label: "", price_min: "", price_max: "", screenQuality: "" };
+  const [panneRows, setPanneRows] = useState([{ ...EMPTY_PANNE_ROW }]);
+
+  const updatePanneRow = (index: number, patch: Partial<typeof EMPTY_PANNE_ROW>) => {
+    setPanneRows((prev) => prev.map((r, i) => (i === index ? { ...r, ...patch } : r)));
+  };
+
+  const addPanneRow = () => setPanneRows((prev) => [...prev, { ...EMPTY_PANNE_ROW }]);
+
+  const removePanneRow = (index: number) => {
+    setPanneRows((prev) => (prev.length > 1 ? prev.filter((_, i) => i !== index) : [{ ...EMPTY_PANNE_ROW }]));
+  };
 
   // ─── Duplication des tarifs d'un modèle vers d'autres modèles ─────────────
   const [dupSource, setDupSource] = useState("");
@@ -44,6 +84,59 @@ export default function TarifsPage() {
   const [dupSaving, setDupSaving] = useState(false);
   const [dupError, setDupError] = useState("");
   const [dupSuccess, setDupSuccess] = useState("");
+
+  // Édition rapide des prix d'une panne existante (dans l'aperçu du modèle source)
+  const [editedPrices, setEditedPrices] = useState<Record<number, { price_min: string; price_max: string }>>({});
+
+  const handlePriceEdit = (id: number, field: "price_min" | "price_max", value: string, current: PanneRow) => {
+    setEditedPrices((prev) => ({
+      ...prev,
+      [id]: {
+        price_min: prev[id]?.price_min ?? String(current.price_min),
+        price_max: prev[id]?.price_max ?? String(current.price_max),
+        [field]: value,
+      },
+    }));
+  };
+
+  const saveEditedPrice = async (row: PanneRow) => {
+    const edited = editedPrices[row.id];
+    if (!edited) return;
+    const min = parseFloat(edited.price_min);
+    const max = parseFloat(edited.price_max);
+    if (isNaN(min) || isNaN(max) || min < 0 || max < min) return;
+    if (min === row.price_min && max === row.price_max) return;
+    await supabase.from("panne_prices").update({ price_min: min, price_max: max }).eq("id", row.id);
+    setRows((prev) => prev.map((r) => (r.id === row.id ? { ...r, price_min: min, price_max: max } : r)));
+  };
+
+  // Ajout rapide d'une panne supplémentaire pour le modèle source (depuis l'aperçu)
+  const [quickAdd, setQuickAdd] = useState({ category_id: "", issue_label: "", price_min: "", price_max: "" });
+  const [quickAddSaving, setQuickAddSaving] = useState(false);
+
+  const handleQuickAdd = async () => {
+    const min = parseFloat(quickAdd.price_min);
+    const max = parseFloat(quickAdd.price_max);
+    if (!dupSource || !quickAdd.issue_label || isNaN(min) || isNaN(max) || min < 0 || max < min) return;
+    setQuickAddSaving(true);
+    try {
+      const { data, error: upsertError } = await supabase
+        .from("panne_prices")
+        .upsert(
+          { company_id: userId, device_model: dupSource, issue_label: quickAdd.issue_label, price_min: min, price_max: max },
+          { onConflict: "company_id,device_model,issue_label" }
+        )
+        .select()
+        .single();
+      if (upsertError) throw upsertError;
+      setRows((prev) => [...prev.filter((r) => !(r.device_model === dupSource && r.issue_label === quickAdd.issue_label)), data]);
+      setQuickAdd({ category_id: "", issue_label: "", price_min: "", price_max: "" });
+    } catch (e) {
+      console.error(e);
+    } finally {
+      setQuickAddSaving(false);
+    }
+  };
 
   const handleDupTargetInput = (value: string) => {
     setDupTargetInput(value);
@@ -132,6 +225,7 @@ export default function TarifsPage() {
         .eq("company_id", companyId)
         .order("device_model", { ascending: true });
       setRows(data || []);
+      await reloadCustomCatalog(companyId);
     } catch (e) {
       console.error("Erreur chargement tarifs:", e);
     } finally {
@@ -144,31 +238,34 @@ export default function TarifsPage() {
   const handleAdd = async (e: React.FormEvent) => {
     e.preventDefault();
     setError("");
-    const min = parseFloat(form.price_min);
-    const max = parseFloat(form.price_max);
     const models = Array.from(new Set([...extraModels, form.device_model.trim()].filter(Boolean)));
-    const isScreenChange = form.issue_label === "Changement d'écran";
-    if (isScreenChange && !screenQuality) { setError("Choisissez la qualité de l'écran."); return; }
-    const finalIssueLabel = isScreenChange ? `Changement d'écran - ${screenQuality}` : form.issue_label.trim();
-    if (models.length === 0 || !finalIssueLabel) { setError("Modèle(s) et panne sont requis."); return; }
-    if (isNaN(min) || isNaN(max) || min < 0 || max < min) { setError("Prix invalide (min doit être ≤ max)."); return; }
+    if (models.length === 0) { setError("Au moins un modèle est requis."); return; }
+
+    const payloadRows: { issue_label: string; price_min: number; price_max: number }[] = [];
+    for (const row of panneRows) {
+      if (!row.issue_label) continue;
+      const isScreenChange = row.issue_label === "Changement d'écran";
+      if (isScreenChange && !row.screenQuality) { setError("Choisissez la qualité de l'écran pour chaque panne \"Changement d'écran\"."); return; }
+      const finalIssueLabel = isScreenChange ? `Changement d'écran - ${row.screenQuality}` : row.issue_label;
+      const min = parseFloat(row.price_min);
+      const max = parseFloat(row.price_max);
+      if (isNaN(min) || isNaN(max) || min < 0 || max < min) { setError(`Prix invalide pour "${finalIssueLabel}" (min doit être ≤ max).`); return; }
+      payloadRows.push({ issue_label: finalIssueLabel, price_min: min, price_max: max });
+    }
+    if (payloadRows.length === 0) { setError("Ajoutez au moins une panne."); return; }
 
     setSaving(true);
     try {
-      const { error: upsertError } = await supabase.from("panne_prices").upsert(
-        models.map((device_model) => ({
-          company_id: userId,
-          device_model,
-          issue_label: finalIssueLabel,
-          price_min: min,
-          price_max: max,
-        })),
-        { onConflict: "company_id,device_model,issue_label" }
+      const payload = models.flatMap((device_model) =>
+        payloadRows.map((r) => ({ company_id: userId, device_model, ...r }))
       );
+      const { error: upsertError } = await supabase
+        .from("panne_prices")
+        .upsert(payload, { onConflict: "company_id,device_model,issue_label" });
       if (upsertError) throw upsertError;
-      setForm({ device_model: "", category_id: "", issue_label: "", price_min: "", price_max: "" });
+      setForm({ device_model: "" });
       setExtraModels([]);
-      setScreenQuality("");
+      setPanneRows([{ ...EMPTY_PANNE_ROW }]);
       await load();
     } catch (e) {
       console.error(e);
@@ -203,6 +300,79 @@ export default function TarifsPage() {
     });
     return Array.from(map.entries());
   }, [filtered]);
+
+  // ─── Gestionnaire de catégories / pannes (modifier / supprimer) ───────────
+  const handleDeleteCategory = async (cat: { id: string; label: string }) => {
+    if (!confirm(`Supprimer la catégorie « ${cat.label} » ?`)) return;
+    if (isCustomCategoryId(cat.id)) {
+      await removeCustomCategory(Number(cat.id.replace("custom_", "")));
+    } else {
+      await hideBuiltinCategory(userId, cat.id);
+    }
+    await reloadCustomCatalog(userId);
+    if (managingCategoryId === cat.id) setManagingCategoryId(null);
+  };
+
+  const startEditCategory = (cat: { id: string; label: string }) => {
+    setEditingCategoryId(cat.id);
+    setEditingCategoryLabel(cat.label.replace(/^🆕 /, ""));
+  };
+
+  const confirmEditCategory = async (cat: { id: string; label: string; issues: string[] }) => {
+    const newLabel = editingCategoryLabel.trim();
+    if (!newLabel) return;
+    if (isCustomCategoryId(cat.id)) {
+      await renameCustomCategory(Number(cat.id.replace("custom_", "")), newLabel);
+    } else {
+      await renameBuiltinCategory(userId, cat.id, cat.label, cat.issues, newLabel);
+      if (managingCategoryId === cat.id) setManagingCategoryId(null);
+    }
+    await reloadCustomCatalog(userId);
+    setEditingCategoryId(null);
+  };
+
+  const handleDeleteIssue = async (catId: string, issueLabel: string) => {
+    if (!confirm(`Supprimer la panne « ${issueLabel} » ?`)) return;
+    const match = customIssues.find((ci) => ci.category_id === catId && ci.issue_label === issueLabel);
+    if (match) {
+      await removeCustomIssue(match.id);
+    } else {
+      await hideBuiltinIssue(userId, catId, issueLabel);
+    }
+    await reloadCustomCatalog(userId);
+  };
+
+  const startEditIssue = (catId: string, issueLabel: string) => {
+    setEditingIssueKey(`${catId}::${issueLabel}`);
+    setEditingIssueLabel(issueLabel);
+  };
+
+  const confirmEditIssue = async (catId: string, oldLabel: string) => {
+    const newLabel = editingIssueLabel.trim();
+    if (!newLabel) return;
+    const match = customIssues.find((ci) => ci.category_id === catId && ci.issue_label === oldLabel);
+    if (match) {
+      await renameCustomIssue(match.id, newLabel);
+    } else {
+      await renameBuiltinIssue(userId, catId, oldLabel, newLabel);
+    }
+    await reloadCustomCatalog(userId);
+    setEditingIssueKey(null);
+  };
+
+  const handleAddCategoryFromManager = async () => {
+    if (!newCategoryForManager.trim()) return;
+    await addCustomCategory(userId, newCategoryForManager.trim());
+    await reloadCustomCatalog(userId);
+    setNewCategoryForManager("");
+  };
+
+  const handleAddIssueFromManager = async (categoryId: string) => {
+    if (!newIssueForManager.trim()) return;
+    await addCustomIssue(userId, categoryId, newIssueForManager.trim());
+    await reloadCustomCatalog(userId);
+    setNewIssueForManager("");
+  };
 
   if (loading) {
     return (
@@ -272,57 +442,61 @@ export default function TarifsPage() {
                 <p className="text-[10px] text-gray-500 mt-1">💡 Tapez un modèle puis cliquez sur + pour appliquer le même tarif à plusieurs modèles (ex: toute la gamme iPhone 14 à 16 Pro Max).</p>
               </div>
             </div>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-              <div>
-                <label className="block text-[10px] font-bold text-gray-500 uppercase tracking-widest mb-1.5">🗂️ Catégorie</label>
-                <select
-                  value={form.category_id}
-                  onChange={(e) => setForm({ ...form, category_id: e.target.value, issue_label: "" })}
-                  className="w-full bg-[#1a1d2e] border border-white/10 rounded-xl px-3 py-2.5 text-white text-sm outline-none focus:border-orange-500/60"
-                >
-                  <option value="">— Choisir une catégorie —</option>
-                  {ISSUE_CATEGORIES.map((c) => <option key={c.id} value={c.id}>{c.label}</option>)}
-                </select>
+            <div className="space-y-2">
+              <div className="flex items-center justify-between">
+                <label className="block text-[10px] font-bold text-gray-500 uppercase tracking-widest">🗂️ Catégorie / 🔧 Panne</label>
+                <button type="button" onClick={() => setShowCatalogManager(true)}
+                  className="flex items-center gap-1 text-[10px] font-bold text-blue-400 hover:text-blue-300 transition">
+                  <Settings size={11} /> Gérer les catégories / pannes
+                </button>
               </div>
-              <div>
-                <label className="block text-[10px] font-bold text-gray-500 uppercase tracking-widest mb-1.5">🔧 Panne</label>
-                <select
-                  value={form.issue_label}
-                  onChange={(e) => { setForm({ ...form, issue_label: e.target.value }); setScreenQuality(""); }}
-                  disabled={!form.category_id}
-                  className="w-full bg-[#1a1d2e] border border-white/10 rounded-xl px-3 py-2.5 text-white text-sm outline-none focus:border-orange-500/60 disabled:opacity-40"
-                >
-                  <option value="">— Choisir une panne —</option>
-                  {ISSUE_CATEGORIES.find((c) => c.id === form.category_id)?.issues.map((i) => (
-                    <option key={i} value={i}>{i}</option>
-                  ))}
-                </select>
-              </div>
-              {form.issue_label === "Changement d'écran" && (
-                <div>
-                  <label className="block text-[10px] font-bold text-gray-500 uppercase tracking-widest mb-1.5">✨ Qualité de l&apos;écran</label>
+              {panneRows.map((row, index) => (
+                <div key={index} className="grid grid-cols-1 md:grid-cols-[1fr_1fr_auto_auto_auto] gap-2 items-start bg-white/3 rounded-xl p-2">
                   <select
-                    value={screenQuality}
-                    onChange={(e) => setScreenQuality(e.target.value)}
-                    className="w-full bg-[#1a1d2e] border border-white/10 rounded-xl px-3 py-2.5 text-white text-sm outline-none focus:border-orange-500/60"
+                    value={row.category_id}
+                    onChange={(e) => updatePanneRow(index, { category_id: e.target.value, issue_label: "", screenQuality: "" })}
+                    className="w-full bg-[#1a1d2e] border border-white/10 rounded-lg px-2.5 py-2 text-white text-sm outline-none focus:border-orange-500/60"
                   >
-                    <option value="">— Choisir la qualité —</option>
-                    {SCREEN_QUALITIES.map((q) => <option key={q} value={q}>{q}</option>)}
+                    <option value="">— Catégorie —</option>
+                    {mergedCategories.map((c) => <option key={c.id} value={c.id}>{c.label}</option>)}
                   </select>
+                  <select
+                    value={row.issue_label}
+                    onChange={(e) => updatePanneRow(index, { issue_label: e.target.value, screenQuality: "" })}
+                    disabled={!row.category_id}
+                    className="w-full bg-[#1a1d2e] border border-white/10 rounded-lg px-2.5 py-2 text-white text-sm outline-none focus:border-orange-500/60 disabled:opacity-40"
+                  >
+                    <option value="">— Panne —</option>
+                    {mergedCategories.find((c) => c.id === row.category_id)?.issues.map((i) => (
+                      <option key={i} value={i}>{i}</option>
+                    ))}
+                  </select>
+                  {row.issue_label === "Changement d'écran" && (
+                    <select
+                      value={row.screenQuality}
+                      onChange={(e) => updatePanneRow(index, { screenQuality: e.target.value })}
+                      className="w-full bg-[#1a1d2e] border border-white/10 rounded-lg px-2.5 py-2 text-white text-sm outline-none focus:border-orange-500/60"
+                    >
+                      <option value="">— Qualité —</option>
+                      {SCREEN_QUALITIES.map((q) => <option key={q} value={q}>{q}</option>)}
+                    </select>
+                  )}
+                  <input type="number" min="0" step="1" value={row.price_min} onChange={(e) => updatePanneRow(index, { price_min: e.target.value })}
+                    placeholder="60€" className="w-full md:w-20 bg-[#1a1d2e] border border-white/10 rounded-lg px-2.5 py-2 text-white text-sm outline-none focus:border-orange-500/60" />
+                  <div className="flex items-center gap-1">
+                    <input type="number" min="0" step="1" value={row.price_max} onChange={(e) => updatePanneRow(index, { price_max: e.target.value })}
+                      placeholder="120€" className="w-full md:w-20 bg-[#1a1d2e] border border-white/10 rounded-lg px-2.5 py-2 text-white text-sm outline-none focus:border-orange-500/60" />
+                    <button type="button" onClick={() => removePanneRow(index)} title="Supprimer cette panne"
+                      className="shrink-0 bg-white/5 hover:bg-red-500/20 border border-white/10 hover:border-red-500/40 text-gray-400 hover:text-red-400 rounded-lg p-2 transition">
+                      <Trash2 size={14} />
+                    </button>
+                  </div>
                 </div>
-              )}
-            </div>
-            <div className="grid grid-cols-2 gap-3">
-              <div>
-                <label className="block text-[10px] font-bold text-gray-500 uppercase tracking-widest mb-1.5">💰 Prix min (€)</label>
-                <input type="number" min="0" step="1" value={form.price_min} onChange={(e) => setForm({ ...form, price_min: e.target.value })}
-                  placeholder="60" className="w-full bg-[#1a1d2e] border border-white/10 rounded-xl px-3 py-2.5 text-white text-sm outline-none focus:border-orange-500/60" />
-              </div>
-              <div>
-                <label className="block text-[10px] font-bold text-gray-500 uppercase tracking-widest mb-1.5">💰 Prix max (€)</label>
-                <input type="number" min="0" step="1" value={form.price_max} onChange={(e) => setForm({ ...form, price_max: e.target.value })}
-                  placeholder="120" className="w-full bg-[#1a1d2e] border border-white/10 rounded-xl px-3 py-2.5 text-white text-sm outline-none focus:border-orange-500/60" />
-              </div>
+              ))}
+              <button type="button" onClick={addPanneRow}
+                className="flex items-center gap-1.5 text-xs text-orange-400 hover:text-orange-300 transition font-semibold">
+                <Plus size={14} /> Ajouter une autre panne
+              </button>
             </div>
             {error && <p className="text-xs text-red-400">{error}</p>}
             <button type="submit" disabled={saving} className="flex items-center gap-2 bg-orange-500 hover:bg-orange-400 disabled:opacity-50 text-white px-4 py-2.5 rounded-xl text-sm font-bold transition active:scale-95">
@@ -352,13 +526,74 @@ export default function TarifsPage() {
                 ))}
               </select>
               {dupSource && (
-                <div className="mt-2 bg-white/3 rounded-xl p-3 space-y-1.5">
-                  {rows.filter((r) => r.device_model === dupSource).map((r) => (
-                    <div key={r.id} className="flex items-center justify-between text-xs">
-                      <span className="text-gray-300">{r.issue_label}</span>
-                      <span className="text-green-400 font-semibold shrink-0">{r.price_min}€ – {r.price_max}€</span>
-                    </div>
-                  ))}
+                <div className="mt-2 bg-white/3 rounded-xl p-3 space-y-2">
+                  {rows.filter((r) => r.device_model === dupSource).map((r) => {
+                    const edited = editedPrices[r.id];
+                    return (
+                      <div key={r.id} className="flex items-center justify-between gap-2 text-xs">
+                        <span className="text-gray-300 truncate">{r.issue_label}</span>
+                        <div className="flex items-center gap-1 shrink-0">
+                          <input
+                            type="number" min="0"
+                            value={edited?.price_min ?? r.price_min}
+                            onChange={(e) => handlePriceEdit(r.id, "price_min", e.target.value, r)}
+                            onBlur={() => saveEditedPrice(r)}
+                            className="w-14 bg-[#1a1d2e] border border-white/10 rounded-lg px-1.5 py-1 text-green-400 font-semibold text-xs outline-none focus:border-orange-500/60"
+                          />
+                          <span className="text-gray-500">–</span>
+                          <input
+                            type="number" min="0"
+                            value={edited?.price_max ?? r.price_max}
+                            onChange={(e) => handlePriceEdit(r.id, "price_max", e.target.value, r)}
+                            onBlur={() => saveEditedPrice(r)}
+                            className="w-14 bg-[#1a1d2e] border border-white/10 rounded-lg px-1.5 py-1 text-green-400 font-semibold text-xs outline-none focus:border-orange-500/60"
+                          />
+                          <span className="text-gray-500">€</span>
+                          <button type="button" onClick={() => handleDelete(r.id)} className="text-gray-500 hover:text-red-400 transition p-1" title="Supprimer">
+                            <Trash2 size={12} />
+                          </button>
+                        </div>
+                      </div>
+                    );
+                  })}
+
+                  <div className="flex items-center gap-1.5 pt-2 border-t border-white/5">
+                    <select
+                      value={quickAdd.category_id}
+                      onChange={(e) => setQuickAdd({ ...quickAdd, category_id: e.target.value, issue_label: "" })}
+                      className="bg-[#1a1d2e] border border-white/10 rounded-lg px-1.5 py-1 text-white text-[11px] outline-none focus:border-orange-500/60 max-w-[110px]"
+                    >
+                      <option value="">Catégorie...</option>
+                      {mergedCategories.map((c) => <option key={c.id} value={c.id}>{c.label}</option>)}
+                    </select>
+                    <select
+                      value={quickAdd.issue_label}
+                      onChange={(e) => setQuickAdd({ ...quickAdd, issue_label: e.target.value })}
+                      disabled={!quickAdd.category_id}
+                      className="bg-[#1a1d2e] border border-white/10 rounded-lg px-1.5 py-1 text-white text-[11px] outline-none focus:border-orange-500/60 disabled:opacity-40 flex-1 min-w-0"
+                    >
+                      <option value="">Panne...</option>
+                      {mergedCategories.find((c) => c.id === quickAdd.category_id)?.issues.map((i) => (
+                        <option key={i} value={i}>{i}</option>
+                      ))}
+                    </select>
+                    <input
+                      type="number" min="0" placeholder="min"
+                      value={quickAdd.price_min}
+                      onChange={(e) => setQuickAdd({ ...quickAdd, price_min: e.target.value })}
+                      className="w-12 bg-[#1a1d2e] border border-white/10 rounded-lg px-1.5 py-1 text-white text-[11px] outline-none focus:border-orange-500/60"
+                    />
+                    <input
+                      type="number" min="0" placeholder="max"
+                      value={quickAdd.price_max}
+                      onChange={(e) => setQuickAdd({ ...quickAdd, price_max: e.target.value })}
+                      className="w-12 bg-[#1a1d2e] border border-white/10 rounded-lg px-1.5 py-1 text-white text-[11px] outline-none focus:border-orange-500/60"
+                    />
+                    <button type="button" onClick={handleQuickAdd} disabled={quickAddSaving}
+                      className="shrink-0 bg-orange-500 hover:bg-orange-400 disabled:opacity-50 text-white rounded-lg p-1.5 transition">
+                      <Plus size={12} />
+                    </button>
+                  </div>
                 </div>
               )}
             </div>
@@ -454,6 +689,95 @@ export default function TarifsPage() {
           </div>
         )}
       </div>
+
+      {showCatalogManager && (
+        <div className="fixed inset-0 z-50 bg-black/70 flex items-center justify-center p-4" onClick={() => { setShowCatalogManager(false); setManagingCategoryId(null); setEditingCategoryId(null); setEditingIssueKey(null); }}>
+          <div className="bg-[#16161d] border border-white/10 rounded-2xl w-full max-w-md max-h-[80vh] overflow-y-auto" onClick={(e) => e.stopPropagation()}>
+            <div className="sticky top-0 bg-[#16161d] flex items-center justify-between px-4 py-3 border-b border-white/10">
+              <div className="flex items-center gap-2">
+                {managingCategoryId && (
+                  <button onClick={() => setManagingCategoryId(null)} className="text-gray-400 hover:text-white">←</button>
+                )}
+                <h2 className="text-sm font-bold text-white">
+                  {managingCategoryId ? mergedCategories.find((c) => c.id === managingCategoryId)?.label : "Catégories / pannes"}
+                </h2>
+              </div>
+              <button onClick={() => { setShowCatalogManager(false); setManagingCategoryId(null); }} className="text-gray-400 hover:text-white"><X size={18} /></button>
+            </div>
+
+            <div className="p-3 space-y-1.5">
+              {!managingCategoryId ? (
+                <>
+                  {mergedCategories.map((cat) => (
+                    <div key={cat.id} className="bg-white/3 rounded-xl px-3 py-2.5">
+                      {editingCategoryId === cat.id ? (
+                        <div className="flex items-center gap-1.5">
+                          <input autoFocus value={editingCategoryLabel} onChange={(e) => setEditingCategoryLabel(e.target.value)}
+                            className="flex-1 bg-[#1a1d2e] border border-blue-500/40 rounded-lg px-2.5 py-1.5 text-white text-sm outline-none" />
+                          <button onClick={() => confirmEditCategory(cat)} className="text-green-400 hover:text-green-300 p-1"><Check size={14} /></button>
+                          <button onClick={() => setEditingCategoryId(null)} className="text-gray-500 hover:text-red-400 p-1"><X size={14} /></button>
+                        </div>
+                      ) : (
+                        <div className="flex items-center justify-between">
+                          <button onClick={() => setManagingCategoryId(cat.id)} className="flex-1 text-left text-sm text-gray-200 hover:text-white">
+                            {cat.label} <span className="text-gray-600 text-xs">({cat.issues.length})</span>
+                          </button>
+                          <div className="flex items-center gap-1 shrink-0">
+                            <button onClick={() => startEditCategory(cat)} title="Modifier" className="text-gray-500 hover:text-blue-400 p-1"><Pencil size={13} /></button>
+                            <button onClick={() => handleDeleteCategory(cat)} title="Supprimer" className="text-gray-500 hover:text-red-400 p-1"><Trash2 size={13} /></button>
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  ))}
+                  <div className="flex gap-1.5 pt-1">
+                    <input value={newCategoryForManager} onChange={(e) => setNewCategoryForManager(e.target.value)}
+                      placeholder="Ex: 🎮 Boutons physiques"
+                      className="flex-1 bg-[#1a1d2e] border border-white/10 rounded-lg px-2.5 py-2 text-white text-sm outline-none focus:border-blue-500/60" />
+                    <button onClick={handleAddCategoryFromManager} className="shrink-0 bg-blue-500 hover:bg-blue-400 text-white rounded-lg px-3 text-sm font-bold transition">
+                      <Plus size={14} />
+                    </button>
+                  </div>
+                </>
+              ) : (
+                <>
+                  {mergedCategories.find((c) => c.id === managingCategoryId)?.issues.map((issueLabel) => {
+                    const key = `${managingCategoryId}::${issueLabel}`;
+                    return (
+                      <div key={issueLabel} className="bg-white/3 rounded-xl px-3 py-2.5">
+                        {editingIssueKey === key ? (
+                          <div className="flex items-center gap-1.5">
+                            <input autoFocus value={editingIssueLabel} onChange={(e) => setEditingIssueLabel(e.target.value)}
+                              className="flex-1 bg-[#1a1d2e] border border-blue-500/40 rounded-lg px-2.5 py-1.5 text-white text-sm outline-none" />
+                            <button onClick={() => confirmEditIssue(managingCategoryId, issueLabel)} className="text-green-400 hover:text-green-300 p-1"><Check size={14} /></button>
+                            <button onClick={() => setEditingIssueKey(null)} className="text-gray-500 hover:text-red-400 p-1"><X size={14} /></button>
+                          </div>
+                        ) : (
+                          <div className="flex items-center justify-between">
+                            <span className="flex-1 text-sm text-gray-200">{issueLabel}</span>
+                            <div className="flex items-center gap-1 shrink-0">
+                              <button onClick={() => startEditIssue(managingCategoryId, issueLabel)} title="Modifier" className="text-gray-500 hover:text-blue-400 p-1"><Pencil size={13} /></button>
+                              <button onClick={() => handleDeleteIssue(managingCategoryId, issueLabel)} title="Supprimer" className="text-gray-500 hover:text-red-400 p-1"><Trash2 size={13} /></button>
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                    );
+                  })}
+                  <div className="flex gap-1.5 pt-1">
+                    <input value={newIssueForManager} onChange={(e) => setNewIssueForManager(e.target.value)}
+                      placeholder="Ex: Vibreur"
+                      className="flex-1 bg-[#1a1d2e] border border-white/10 rounded-lg px-2.5 py-2 text-white text-sm outline-none focus:border-blue-500/60" />
+                    <button onClick={() => handleAddIssueFromManager(managingCategoryId)} className="shrink-0 bg-blue-500 hover:bg-blue-400 text-white rounded-lg px-3 text-sm font-bold transition">
+                      <Plus size={14} />
+                    </button>
+                  </div>
+                </>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
     </Layout>
   );
 }

@@ -971,7 +971,7 @@ export default function Dashboard() {
       .info-block{flex:1;font-size:8.5px;line-height:1.6}
       .lbl{font-weight:700;font-size:7.5px;text-transform:uppercase;letter-spacing:.5px}
       .code-box{font-size:9px;font-weight:700;padding:1.5mm 2mm;border:1.5px solid #000;margin-top:2mm}
-      .note-box{font-size:8px;border:1px solid #000;padding:1.5mm 2mm;margin-top:2mm}
+      .note-box{font-size:8.5px;font-weight:700;border:1.5px solid #000;padding:1.5mm 2mm;margin-top:2mm}
       .qr-tech-area{text-align:center;margin-top:2mm}
       .qr-tech-area img{width:24mm;height:24mm;display:inline-block}
       .qr-tech-label{font-size:6.5px;font-weight:700;text-align:center;margin-top:1mm;line-height:1.2}
@@ -1013,8 +1013,8 @@ export default function Dashboard() {
             <div style="font-size:11px;font-weight:900;line-height:1.2">${escapeHtml(client.name).substring(0, 30)}</div>
             <div style="font-size:10px;font-weight:800;margin-top:1.5mm">${escapeHtml(ticket.device).substring(0, 28)}</div>
             <div style="font-size:12.5px;font-weight:900;border:2px solid #000;margin-top:1.5mm;margin-bottom:2mm;line-height:1.5;padding:1.5mm 2mm">${issueHtml}</div>
-            <div style="font-size:8px">${escapeHtml(client.phone) || ""}</div>
-            ${ticket.imei && ticket.imei !== "NC" ? `<div style="font-size:7.5px;margin-top:1mm">IMEI : ${ticket.imei}</div>` : ""}
+            <div style="font-size:9px;font-weight:700">${escapeHtml(client.phone) || ""}</div>
+            ${ticket.imei && ticket.imei !== "NC" ? `<div style="font-size:8px;font-weight:700;margin-top:1mm">IMEI : ${ticket.imei}</div>` : ""}
             ${codeValue ? `<div class="code-box">🔑 Code : ${escapeHtml(codeValue)}</div>` : ""}
             <div class="note-box">📝 ${note}</div>
           </div>

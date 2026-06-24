@@ -949,71 +949,72 @@ export default function Dashboard() {
     const codeValue = hasCode ? rawCode : null;
     const notesValue = ticket.description || ticket.notes || "";
     const note = notesValue && notesValue !== "NC" ? escapeHtml(notesValue) : "—";
+    const issueLines = (ticket.issue || "").split(", ").filter(Boolean).map((s) => escapeHtml(s).substring(0, 45));
+    const issueHtml = issueLines.length > 1
+      ? issueLines.map((s) => `• ${s}`).join("<br>")
+      : (issueLines[0] || "");
     const dateStr = new Date().toLocaleDateString("fr-FR");
     const timeStr = new Date().toLocaleTimeString("fr-FR", { hour: "2-digit", minute: "2-digit" });
 
     return `<!DOCTYPE html>
     <html><head><meta charset="UTF-8"><title>Ticket MBX-${ticket.id}</title>
     <style>
-      *{margin:0;padding:0;box-sizing:border-box}
-      body{font-family:'Courier New',monospace;background:#e5e7eb;display:flex;justify-content:center;padding:16px}
-      .wrapper{display:flex;flex-direction:column;align-items:center;gap:0;width:90mm}
-      .tech-card{width:90mm;background:#fff;border-radius:4mm;padding:4mm;border:1px solid #c7d2fe}
-      .tech-header{display:flex;justify-content:space-between;align-items:flex-start;border-bottom:1px solid #e0e7ff;padding-bottom:2mm;margin-bottom:2mm}
-      .tech-header-left h2{font-size:11px;font-weight:900;color:#1e3a8a;letter-spacing:.5px}
-      .tech-header-left p{font-size:8px;color:#64748b}
-      .badge-tech{background:#1e3a8a;color:#fff;font-size:8px;font-weight:700;padding:1mm 2.5mm;border-radius:2mm}
-      .ticket-id{text-align:center;font-size:20px;font-weight:900;color:#1e3a8a;letter-spacing:1px;padding:2mm 0;border-bottom:1px dashed #c7d2fe;margin-bottom:2mm}
-      .row{display:flex;justify-content:space-between;align-items:flex-start;gap:3mm}
-      .info-block{flex:1;font-size:8.5px;line-height:1.55}
-      .lbl{font-weight:700;color:#334155;font-size:7.5px;text-transform:uppercase;letter-spacing:.5px}
-      .val{color:#1e293b}
-      .code-box{font-size:8px;padding:1.5mm 2mm;border-radius:2mm;margin-top:2mm;border-left:2.5px solid #22c55e;background:#f0fdf4;color:#166534}
-      .code-box.no-code{border-left-color:#ef4444;background:#fef2f2;color:#991b1b;font-weight:700}
-      .note-box{font-size:8px;background:#fffbeb;border-left:2.5px solid #f59e0b;padding:1.5mm 2mm;border-radius:2mm;margin-top:2mm;color:#78350f}
-      .qr-tech-area{text-align:center;min-width:28mm}
-      .qr-tech-area img{width:28mm;height:28mm;display:block}
-      .qr-tech-label{font-size:6.5px;color:#1e3a8a;font-weight:700;text-align:center;margin-top:1mm;line-height:1.2}
-      .tech-footer{display:flex;justify-content:space-between;font-size:7.5px;color:#94a3b8;border-top:1px solid #e2e8f0;padding-top:1.5mm;margin-top:2mm}
-      .cut{width:90mm;text-align:center;font-size:8px;color:#9ca3af;letter-spacing:2px;padding:1.5mm 0;border-top:1.5px dashed #9ca3af}
-      .client-card{width:90mm;background:#fff;border-radius:4mm;padding:3mm 4mm;border:1px solid #bbf7d0}
-      .client-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:2mm}
-      .client-header-title{font-size:10px;font-weight:900;color:#166534}
-      .client-header-title span{font-size:8px;font-weight:normal;color:#64748b;display:block}
-      .badge-client{background:#166534;color:#fff;font-size:8px;font-weight:700;padding:1mm 2.5mm;border-radius:2mm}
-      .client-info-row{display:flex;justify-content:space-between;align-items:flex-start;gap:3mm}
+      *{margin:0;padding:0;box-sizing:border-box;-webkit-print-color-adjust:exact;print-color-adjust:exact;color-adjust:exact}
+      body{font-family:'Courier New',monospace;background:#fff;display:flex;justify-content:center;padding:8px;color:#000}
+      .wrapper{display:flex;flex-direction:column;align-items:center;gap:0;width:80mm}
+      .tech-card{width:80mm;background:#fff;padding:3mm 3.5mm}
+      .tech-header{display:flex;justify-content:space-between;align-items:center;border-bottom:1.5px solid #000;padding-bottom:1.5mm;margin-bottom:2mm}
+      .tech-header-left h2{font-size:11px;font-weight:900;letter-spacing:.5px}
+      .badge-tech{border:1.5px solid #000;font-size:8px;font-weight:700;padding:1mm 2.5mm}
+      .ticket-id{text-align:center;font-size:18px;font-weight:900;letter-spacing:1px;padding:2mm 0;border-bottom:1px dashed #000;margin-bottom:2mm}
+      .row{display:flex;flex-direction:column;gap:1mm}
+      .info-block{flex:1;font-size:8.5px;line-height:1.6}
+      .lbl{font-weight:700;font-size:7.5px;text-transform:uppercase;letter-spacing:.5px}
+      .code-box{font-size:9px;font-weight:700;padding:1.5mm 2mm;border:1.5px solid #000;margin-top:2mm}
+      .note-box{font-size:8px;border:1px solid #000;padding:1.5mm 2mm;margin-top:2mm}
+      .qr-tech-area{text-align:center;margin-top:2mm}
+      .qr-tech-area img{width:24mm;height:24mm;display:inline-block}
+      .qr-tech-label{font-size:6.5px;font-weight:700;text-align:center;margin-top:1mm;line-height:1.2}
+      .tech-footer{display:flex;justify-content:space-between;font-size:7.5px;border-top:1px solid #000;padding-top:1.5mm;margin-top:2mm}
+      .cut{width:80mm;text-align:center;font-size:7px;white-space:nowrap;padding:1.5mm 0;border-top:1.5px dashed #000}
+      .client-card{width:80mm;background:#fff;padding:3mm 3.5mm}
+      .client-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:2mm;border-bottom:1.5px solid #000;padding-bottom:1.5mm}
+      .client-header-title{font-size:10px;font-weight:900}
+      .client-header-title span{font-size:8px;font-weight:normal;display:block}
+      .badge-client{border:1.5px solid #000;font-size:8px;font-weight:700;padding:1mm 2.5mm}
+      .client-info-row{display:flex;flex-direction:column;gap:1mm}
       .client-info-block{flex:1;font-size:8.5px;line-height:1.6}
-      .client-code-big{font-size:15px;font-weight:900;color:#166534;letter-spacing:1px;margin:1mm 0}
-      .qr-client-area{text-align:center;min-width:28mm}
-      .qr-client-area img{width:28mm;height:28mm;display:block}
-      .qr-client-label{font-size:6.5px;color:#166534;font-weight:700;text-align:center;margin-top:1mm;line-height:1.2}
+      .client-code-big{font-size:15px;font-weight:900;letter-spacing:1px;margin:1mm 0;border:1.5px solid #000;display:inline-block;padding:1mm 3mm}
+      .qr-client-area{text-align:center;margin-top:2mm}
+      .qr-client-area img{width:24mm;height:24mm;display:inline-block}
+      .qr-client-label{font-size:6.5px;font-weight:700;text-align:center;margin-top:1mm;line-height:1.2}
       @media print{
         body{background:#fff;padding:0}
         .wrapper{gap:0}
         .no-print{display:none!important}
         .tech-card,.client-card,.cut{page-break-inside:avoid}
+        @page{size:80mm auto;margin:0}
       }
       .no-print{text-align:center;margin-top:6mm;display:flex;gap:3mm;justify-content:center}
-      button{padding:3mm 6mm;background:#1e3a8a;color:#fff;border:none;border-radius:3mm;font-size:10px;cursor:pointer}
-      button.close{background:#64748b}
+      button{padding:3mm 6mm;background:#000;color:#fff;border:none;font-size:10px;cursor:pointer}
+      button.close{background:#666}
     </style></head>
     <body><div class="wrapper">
       <div class="tech-card">
         <div class="tech-header">
           <div class="tech-header-left">
-            <h2>🔧 ${escapeHtml(companyInfo.name).substring(0, 22)}</h2>
-            <p>${companyInfo.phone ? `📞 ${companyInfo.phone}` : ""} ${companyInfo.address ? `· ${companyInfo.address.substring(0, 25)}` : ""}</p>
+            <h2>🔧 Fiche atelier</h2>
           </div>
           <span class="badge-tech">ATELIER</span>
         </div>
         <div class="ticket-id">MBX-${ticket.id}</div>
         <div class="row">
           <div class="info-block">
-            <div style="font-size:11px;font-weight:900;color:#1e293b;line-height:1.2">${escapeHtml(client.name).substring(0, 30)}</div>
-            <div style="font-size:10px;font-weight:800;color:#1e3a8a;margin-top:1.5mm">${escapeHtml(ticket.device).substring(0, 28)}</div>
-            <div style="font-size:9.5px;font-weight:700;color:#374151;margin-top:1mm;margin-bottom:2mm">${escapeHtml(ticket.issue).substring(0, 35)}</div>
-            <div style="font-size:8px;color:#64748b">${escapeHtml(client.phone) || ""}</div>
-            ${ticket.imei && ticket.imei !== "NC" ? `<div style="font-size:7.5px;color:#94a3b8;margin-top:1mm">IMEI : ${ticket.imei}</div>` : ""}
+            <div style="font-size:11px;font-weight:900;line-height:1.2">${escapeHtml(client.name).substring(0, 30)}</div>
+            <div style="font-size:10px;font-weight:800;margin-top:1.5mm">${escapeHtml(ticket.device).substring(0, 28)}</div>
+            <div style="font-size:12.5px;font-weight:900;border:2px solid #000;margin-top:1.5mm;margin-bottom:2mm;line-height:1.5;padding:1.5mm 2mm">${issueHtml}</div>
+            <div style="font-size:8px">${escapeHtml(client.phone) || ""}</div>
+            ${ticket.imei && ticket.imei !== "NC" ? `<div style="font-size:7.5px;margin-top:1mm">IMEI : ${ticket.imei}</div>` : ""}
             ${codeValue ? `<div class="code-box">🔑 Code : ${escapeHtml(codeValue)}</div>` : ""}
             <div class="note-box">📝 ${note}</div>
           </div>
@@ -1027,7 +1028,7 @@ export default function Dashboard() {
           <span>Réparation · ${escapeHtml(companyInfo.name).substring(0, 15)}</span>
         </div>
       </div>
-      <div class="cut">✂ - - - - - - - - -  DÉCOUPER · partie client  - - - - - - - - - ✂</div>
+      <div class="cut">✂ - - - - DÉCOUPER - - - - ✂</div>
       <div class="client-card">
         <div class="client-header">
           <div class="client-header-title">
@@ -1036,17 +1037,14 @@ export default function Dashboard() {
           </div>
           <span class="badge-client">CLIENT</span>
         </div>
+        <div style="font-size:9px;font-weight:800;margin-bottom:1.5mm">🔧 ${escapeHtml(companyInfo.name).substring(0, 28)}</div>
+        <div style="font-size:7.5px;font-weight:700;margin-bottom:2mm">${companyInfo.phone ? `📞 ${companyInfo.phone}` : ""} ${companyInfo.address ? `· ${companyInfo.address.substring(0, 30)}` : ""}</div>
         <div class="client-info-row">
           <div class="client-info-block">
             <div><span class="lbl">Client</span><br>${escapeHtml(client.name).substring(0, 28)}</div>
-            <div style="margin-top:2mm"><span class="lbl">Panne déclarée</span><br>${escapeHtml(ticket.issue).substring(0, 30)}</div>
-            ${ticket.estimated_price ? `<div style="margin-top:2mm"><span class="lbl">Prix estimé</span><br><span style="font-size:12px;font-weight:900;color:#166534">${Number(ticket.estimated_price).toFixed(2)} €</span></div>` : ""}
-            ${!codeValue ? `<div style="font-size:7.5px;background:#fef2f2;border-left:2px solid #ef4444;color:#991b1b;font-weight:700;padding:1.5mm 2mm;border-radius:2mm;margin-top:2mm">⚠️ Appareil non testé — pas pris en garantie (code non fourni)</div>` : ""}
-            <div style="margin-top:2mm">
-              <span class="lbl">Votre code de suivi</span>
-              <div class="client-code-big">${client.client_code || "—"}</div>
-              <span style="font-size:7px;color:#64748b">→ technophone.vercel.app/suivi-client</span>
-            </div>
+            <div style="margin-top:2mm"><span class="lbl">Panne déclarée</span><br><span style="display:inline-block;font-size:12px;font-weight:900;border:2px solid #000;line-height:1.5;padding:1.5mm 2mm;margin-top:1mm">${issueHtml}</span></div>
+            ${ticket.estimated_price ? `<div style="margin-top:2mm"><span class="lbl">Prix estimé</span><br><span style="font-size:12px;font-weight:900">${Number(ticket.estimated_price).toFixed(2)} €</span></div>` : ""}
+            ${!codeValue ? `<div style="font-size:9px;border:2px solid #000;font-weight:900;padding:1.5mm 2mm;margin-top:2mm">⚠️ APPAREIL NON TESTÉ — PAS PRIS EN GARANTIE (code/schéma non fourni)</div>` : ""}
           </div>
           <div class="qr-client-area">
             ${qrClientUrl ? `<img src="${qrClientUrl}"/>` : ""}
@@ -1860,17 +1858,20 @@ export default function Dashboard() {
                       <label className="block text-xs font-semibold text-gray-400 uppercase tracking-widest mb-1.5">Panne * {getSelectedIssues(repair.id, repair.issue).length > 1 && <span className="text-blue-400 normal-case font-semibold">({getSelectedIssues(repair.id, repair.issue).length} pannes)</span>}</label>
                       {!repair.device ? (
                         <p className="text-xs text-gray-500 bg-white/3 rounded-xl px-4 py-3">Sélectionnez d&apos;abord un modèle ci-dessus.</p>
-                      ) : !(tarifPricesMap[repair.id]?.length > 0) ? (
-                        <p className="text-xs text-amber-400/80 bg-amber-500/8 border border-amber-500/20 rounded-xl px-4 py-3">Aucune panne tarifée pour ce modèle. Configurez les prix dans /tarifs.</p>
                       ) : (() => {
+                        const pricesForDevice = tarifPricesMap[repair.id] || [];
                         const allIssuesForDevice = mergedCategories.flatMap((cat) =>
-                          cat.issues.flatMap((i) =>
-                            i === "Changement d'écran"
-                              ? tarifPricesMap[repair.id].filter((p) => p.issue_label.startsWith("Changement d'écran - ")).map((p) => ({ ...p, categoryId: cat.id, categoryLabel: cat.label }))
-                              : tarifPricesMap[repair.id].some((p) => p.issue_label === i) ? [{ ...tarifPricesMap[repair.id].find((p) => p.issue_label === i), categoryId: cat.id, categoryLabel: cat.label }] : []
-                          )
+                          cat.issues.flatMap((i) => {
+                            if (i === "Changement d'écran") {
+                              const variants = pricesForDevice.filter((p) => p.issue_label.startsWith("Changement d'écran - "));
+                              if (variants.length > 0) return variants.map((p) => ({ ...p, categoryId: cat.id, categoryLabel: cat.label }));
+                              return [{ issue_label: i, price_min: null, price_max: null, categoryId: cat.id, categoryLabel: cat.label }];
+                            }
+                            const tarif = pricesForDevice.find((p) => p.issue_label === i);
+                            return [{ issue_label: i, price_min: tarif?.price_min ?? null, price_max: tarif?.price_max ?? null, categoryId: cat.id, categoryLabel: cat.label }];
+                          })
                         );
-                        const availableCats = mergedCategories.filter((cat) => allIssuesForDevice.some((i) => i.categoryId === cat.id));
+                        const availableCats = mergedCategories;
                         const catSearch = (categorySearchMap[repair.id] || "").toLowerCase();
                         const matchingCats = availableCats.filter((c) => c.label.toLowerCase().includes(catSearch));
                         const activeCat = openTarifCategoryMap[repair.id];
@@ -1881,7 +1882,7 @@ export default function Dashboard() {
                         const selected = getSelectedIssues(repair.id, repair.issue);
                         const selectedTotal = selected.reduce((acc, lbl) => {
                           const t = allIssuesForDevice.find((i) => i.issue_label === lbl);
-                          return t ? { min: acc.min + t.price_min, max: acc.max + t.price_max } : acc;
+                          return t && t.price_min != null ? { min: acc.min + t.price_min, max: acc.max + t.price_max } : acc;
                         }, { min: 0, max: 0 });
 
                         return (
@@ -2024,7 +2025,9 @@ export default function Dashboard() {
                                           className="shrink-0 w-4 h-4 rounded accent-blue-500 cursor-pointer"
                                         />
                                         <span className={`flex-1 text-sm ${selected.includes(i.issue_label) ? "text-green-300" : "text-gray-300"}`}>{i.issue_label}</span>
-                                        <span className="text-green-400 text-xs font-medium shrink-0">{i.price_min}–{i.price_max}€</span>
+                                        {i.price_min != null && (
+                                          <span className="text-xs font-medium shrink-0 text-green-400">{i.price_min}–{i.price_max}€</span>
+                                        )}
                                       </label>
                                     ))
                                   )}

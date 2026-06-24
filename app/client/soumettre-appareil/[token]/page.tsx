@@ -94,7 +94,12 @@ export default function SoumettreAppareilDirectPage() {
       ? availablePrices.some((p) => p.issue_label.startsWith("Changement d'écran - "))
       : availablePrices.some((p) => p.issue_label === issue);
 
-  const availableCategories = mergedCategories.filter((cat) => cat.issues.some(issueHasPrice));
+  const availableCategories = mergedCategories;
+
+  const getIssuePrice = (issue) => {
+    if (issue === "Changement d'écran") return null;
+    return availablePrices.find((p) => p.issue_label === issue) || null;
+  };
 
   const [pendingScreenChange, setPendingScreenChange] = useState(false);
   const screenQualityOptions = availablePrices
@@ -394,8 +399,6 @@ export default function SoumettreAppareilDirectPage() {
               </label>
               {!formData.device.trim() ? (
                 <p className="text-xs text-gray-500 bg-gray-50 rounded-xl px-4 py-3">Sélectionnez d&apos;abord un modèle ci-dessus.</p>
-              ) : availableCategories.length === 0 ? (
-                <p className="text-xs text-amber-700 bg-amber-50 border border-amber-200 rounded-xl px-4 py-3">Aucune panne tarifée pour ce modèle pour le moment. Contactez l&apos;atelier pour un devis.</p>
               ) : (
                 <>
                   <div className="flex flex-wrap gap-1.5">
@@ -413,22 +416,28 @@ export default function SoumettreAppareilDirectPage() {
                   {openCategory && (
                     <div className="mt-2 flex flex-wrap gap-1.5 bg-gray-50 rounded-xl p-3">
                       {mergedCategories.find((c) => c.id === openCategory)?.issues
-                        .filter(issueHasPrice)
-                        .map((issue) => (
-                          <button
-                            key={issue}
-                            type="button"
-                            onClick={() => {
-                              if (issue === "Changement d'écran") { setPendingScreenChange(true); setFormData((p) => ({ ...p, issue: "" })); return; }
-                              setPendingScreenChange(false);
-                              setFormData((p) => ({ ...p, issue }));
-                              setOpenCategory(null);
-                            }}
-                            className={`px-3 py-1.5 rounded-full text-xs font-medium transition border ${formData.issue === issue || (issue === "Changement d'écran" && pendingScreenChange) ? "bg-green-100 border-green-400 text-green-700" : "bg-white border-gray-200 text-gray-600 hover:border-orange-300"}`}
-                          >
-                            {issue}
-                          </button>
-                        ))}
+                        .map((issue) => {
+                          const tarif = getIssuePrice(issue);
+                          const isScreenWithVariants = issue === "Changement d'écran" && screenQualityOptions.length > 0;
+                          return (
+                            <button
+                              key={issue}
+                              type="button"
+                              onClick={() => {
+                                if (isScreenWithVariants) { setPendingScreenChange(true); setFormData((p) => ({ ...p, issue: "" })); return; }
+                                setPendingScreenChange(false);
+                                setFormData((p) => ({ ...p, issue }));
+                                setOpenCategory(null);
+                              }}
+                              className={`px-3 py-1.5 rounded-full text-xs font-medium transition border flex items-center gap-1.5 ${formData.issue === issue || (issue === "Changement d'écran" && pendingScreenChange) ? "bg-green-100 border-green-400 text-green-700" : "bg-white border-gray-200 text-gray-600 hover:border-orange-300"}`}
+                            >
+                              {issue}
+                              {!isScreenWithVariants && tarif && (
+                                <span className="text-green-600">{tarif.price_min}–{tarif.price_max}€</span>
+                              )}
+                            </button>
+                          );
+                        })}
                     </div>
                   )}
                   {(openCategory === "eau" || mergedCategories.find((c) => c.id === "eau")?.issues.includes(formData.issue) || formData.issue === "Oxydation (carte mère)") && (

@@ -48,23 +48,34 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
 
     const atelier = atelierName || "MBX Réparations";
 
+    const issueList = (ticket.issue || "").split(",").map((s: string) => s.trim()).filter(Boolean);
+    const issueHtml = issueList.length > 1
+      ? `<ul style="margin:0;padding-left:18px">${issueList.map((s: string) => `<li style="font-weight:700;color:#1e293b;margin-bottom:2px">${s}</li>`).join("")}</ul>`
+      : `<span style="font-weight:700;color:#1e293b">${issueList[0] || "—"}</span>`;
+
+    const hasImei = ticket.imei && ticket.imei !== "NC" && String(ticket.imei).trim() !== "";
+
     const html = `
       <div style="font-family:Arial,sans-serif;max-width:520px;margin:auto;background:#f9fafb;padding:24px;border-radius:12px">
         <div style="background:#0f0f13;color:#fff;border-radius:10px;padding:20px 24px;margin-bottom:20px">
           <div style="font-size:20px;font-weight:900;letter-spacing:-0.5px">${atelier}</div>
           ${atelierAddress ? `<div style="font-size:12px;color:rgba(255,255,255,0.5);margin-top:4px">${atelierAddress}</div>` : ""}
-          ${atelierPhone ? `<div style="font-size:12px;color:rgba(255,255,255,0.5)">${atelierPhone}</div>` : ""}
+          ${atelierPhone ? `<div style="font-size:12px;color:rgba(255,255,255,0.5)">📞 ${atelierPhone}</div>` : ""}
           <div style="font-size:12px;color:rgba(255,255,255,0.4);margin-top:8px">Confirmation de dépôt</div>
         </div>
         <div style="background:#fff;border-radius:10px;padding:20px 24px;border:1px solid #e2e8f0">
-          <div style="font-size:28px;font-weight:900;color:#1e293b;text-align:center;margin-bottom:16px">MBX-${ticket.id}</div>
+          <div style="font-size:28px;font-weight:900;color:#1e293b;text-align:center;margin-bottom:16px">🎫 MBX-${ticket.id}</div>
           <table style="width:100%;font-size:14px;border-collapse:collapse">
-            <tr><td style="color:#64748b;padding:5px 0;width:40%">Client</td><td style="font-weight:700;color:#1e293b">${ticket.clients?.name || "—"}</td></tr>
-            <tr><td style="color:#64748b;padding:5px 0">Appareil</td><td style="font-weight:700;color:#1e293b">${ticket.device}</td></tr>
-            <tr><td style="color:#64748b;padding:5px 0">Panne déclarée</td><td style="font-weight:700;color:#1e293b">${ticket.issue}</td></tr>
-            ${ticket.estimated_price ? `<tr><td style="color:#64748b;padding:5px 0">Prix estimé</td><td style="font-weight:700;color:#1e293b">${Number(ticket.estimated_price).toFixed(2)} €</td></tr>` : ""}
-            <tr><td style="color:#64748b;padding:5px 0">Date de dépôt</td><td style="color:#1e293b">${new Date().toLocaleDateString("fr-FR")}</td></tr>
+            <tr><td style="color:#64748b;padding:5px 0;width:40%;vertical-align:top">Client</td><td style="font-weight:700;color:#1e293b">${ticket.clients?.name || "—"}</td></tr>
+            <tr><td style="color:#64748b;padding:5px 0;vertical-align:top">Appareil</td><td style="font-weight:700;color:#1e293b">${ticket.device}</td></tr>
+            ${hasImei ? `<tr><td style="color:#64748b;padding:5px 0;vertical-align:top">IMEI</td><td style="color:#1e293b">${ticket.imei}</td></tr>` : ""}
+            <tr><td style="color:#64748b;padding:5px 0;vertical-align:top">Date de dépôt</td><td style="color:#1e293b">${new Date().toLocaleDateString("fr-FR")}</td></tr>
           </table>
+          <div style="background:#fef3e2;border:1px solid #fde68a;border-radius:8px;padding:12px 14px;margin-top:14px">
+            <div style="font-size:11px;color:#92400e;font-weight:700;text-transform:uppercase;letter-spacing:.5px;margin-bottom:6px">🔧 Panne${issueList.length > 1 ? "s" : ""} déclarée${issueList.length > 1 ? "s" : ""}</div>
+            ${issueHtml}
+          </div>
+          ${ticket.estimated_price ? `<div style="background:#f0fdf4;border:1px solid #bbf7d0;border-radius:8px;padding:12px 14px;margin-top:10px;display:flex;justify-content:space-between;align-items:center"><span style="font-size:12px;color:#166534;font-weight:700;text-transform:uppercase;letter-spacing:.5px">💰 Prix estimé</span><span style="font-size:18px;font-weight:900;color:#166534">${Number(ticket.estimated_price).toFixed(2)} €</span></div>` : ""}
           ${noCodeWarning}
           <div style="background:#f0fdf4;border:1px solid #bbf7d0;border-radius:8px;padding:14px;margin-top:16px;text-align:center">
             <div style="font-size:11px;color:#64748b;font-weight:700;text-transform:uppercase;letter-spacing:1px;margin-bottom:4px">Votre code de suivi</div>

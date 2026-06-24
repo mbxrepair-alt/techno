@@ -141,7 +141,12 @@ export default function SoumettreAppareilPage() {
       ? availablePrices.some((p) => p.issue_label.startsWith("Changement d'écran - "))
       : availablePrices.some((p) => p.issue_label === issue);
 
-  const availableCategories = mergedCategories.filter((cat) => cat.issues.some(issueHasPrice));
+  const availableCategories = mergedCategories;
+
+  const getIssuePrice = (issue: string) => {
+    if (issue === "Changement d'écran") return null;
+    return availablePrices.find((p) => p.issue_label === issue) || null;
+  };
 
   const [pendingScreenChange, setPendingScreenChange] = useState(false);
   const screenQualityOptions = availablePrices
@@ -198,7 +203,7 @@ export default function SoumettreAppareilPage() {
   };
 
   const selectIssue = (issue: string) => {
-    if (issue === "Changement d'écran") {
+    if (issue === "Changement d'écran" && screenQualityOptions.length > 0) {
       setPendingScreenChange(true);
       setFormData((p) => ({ ...p, issue: "" }));
       return;
@@ -779,8 +784,6 @@ export default function SoumettreAppareilPage() {
 
                 {!formData.device.trim() ? (
                   <p className="text-xs text-gray-500 bg-white/3 rounded-xl px-4 py-3">Sélectionnez d&apos;abord un modèle ci-dessus.</p>
-                ) : availableCategories.length === 0 ? (
-                  <p className="text-xs text-amber-400/80 bg-amber-500/8 border border-amber-500/20 rounded-xl px-4 py-3">Aucune panne tarifée pour ce modèle pour le moment. Contactez l&apos;atelier pour un devis.</p>
                 ) : (
                   <>
                     <div className="flex flex-wrap gap-1.5">
@@ -798,17 +801,23 @@ export default function SoumettreAppareilPage() {
                     {openCategory && (
                       <div className="mt-2 flex flex-wrap gap-1.5 bg-white/3 rounded-2xl p-3">
                         {mergedCategories.find((c) => c.id === openCategory)?.issues
-                          .filter(issueHasPrice)
-                          .map((issue) => (
-                            <button
-                              key={issue}
-                              type="button"
-                              onClick={() => { selectIssue(issue); if (issue !== "Changement d'écran") setOpenCategory(null); }}
-                              className={`px-3 py-1.5 rounded-full text-xs font-medium transition border ${formData.issue === issue || (issue === "Changement d'écran" && pendingScreenChange) ? "bg-green-500/20 border-green-500/50 text-green-300" : "bg-white/5 border-white/10 text-gray-300 hover:border-orange-500/30"}`}
-                            >
-                              {issue}
-                            </button>
-                          ))}
+                          .map((issue) => {
+                            const tarif = getIssuePrice(issue);
+                            const isScreenWithVariants = issue === "Changement d'écran" && screenQualityOptions.length > 0;
+                            return (
+                              <button
+                                key={issue}
+                                type="button"
+                                onClick={() => { selectIssue(issue); if (!isScreenWithVariants) setOpenCategory(null); }}
+                                className={`px-3 py-1.5 rounded-full text-xs font-medium transition border flex items-center gap-1.5 ${formData.issue === issue || (issue === "Changement d'écran" && pendingScreenChange) ? "bg-green-500/20 border-green-500/50 text-green-300" : "bg-white/5 border-white/10 text-gray-300 hover:border-orange-500/30"}`}
+                              >
+                                {issue}
+                                {!isScreenWithVariants && tarif && (
+                                  <span className="text-green-400">{tarif.price_min}–{tarif.price_max}€</span>
+                                )}
+                              </button>
+                            );
+                          })}
                       </div>
                     )}
                     {(openCategory === "eau" || mergedCategories.find((c) => c.id === "eau")?.issues.includes(formData.issue) || formData.issue === "Oxydation (carte mère)") && (
